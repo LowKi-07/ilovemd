@@ -246,11 +246,43 @@
     color: var(--text-3); font-size: 13px; padding: 30px;
   }
   .placeholder .big { font-size: 26px; margin-bottom: 10px; opacity: .6; }
+  /* Glassmorphic, matching the tool cards on the homepage: diagonal purple
+     lighting from the top-left falling away to near-black. */
   .dropbox {
-    border: 1px dashed var(--hairline-strong); border-radius: var(--r-lg);
-    background: var(--panel); padding: 34px 30px; max-width: 420px;
+    position: relative; overflow: hidden;
+    border: 1px solid rgba(139,124,255,.09);
+    background:
+      linear-gradient(135deg,
+        rgba(139,124,255,.065) 0%,
+        rgba(111,139,255,.025) 40%,
+        rgba(8,8,16,.55) 100%);
+    backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+    border-radius: var(--r-lg); padding: 34px 30px; max-width: 420px;
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.05),
+      inset 1px 0 0 rgba(255,255,255,.025),
+      0 4px 24px rgba(0,0,0,.28);
   }
-  .dropbox--bare { border-color: transparent; background: transparent; }
+  .dropbox::before {
+    content: ''; position: absolute; inset: 0; pointer-events: none; border-radius: inherit;
+    background: linear-gradient(135deg,
+      rgba(255,255,255,.04) 0%,
+      rgba(139,124,255,.02) 30%,
+      transparent 55%);
+  }
+  /* Children sit above the lighting overlay. */
+  .dropbox > * { position: relative; z-index: 1; }
+  .dropbox--bare {
+    border-color: transparent; background: transparent;
+    backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: none;
+  }
+  .dropbox--bare::before { display: none; }
+  /* Back on the left, the primary action on the right. The preceding <p>
+     already carries a 16px bottom margin, so only a little is needed here. */
+  .dropbox__actions {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px; margin-top: 2px;
+  }
   .ftile {
     width: 58px; height: 58px; border-radius: 15px;
     display: grid; place-items: center;
@@ -1205,8 +1237,10 @@
           '<div class="placeholder"><div class="dropbox">' +
           '<h3>' + esc(cap(S.curName)) + '</h3>' +
           '<p>Claude reads ' + what + '. Nothing is sent until you generate.</p>' +
+          '<div class="dropbox__actions">' +
+          '<button class="btn btn--ghost btn--sm" id="btn-back-comp">&#8592; Back</button>' +
           '<button class="btn btn--primary" id="btn-gen">Generate Documentation</button>' +
-          '<button class="btn btn--ghost btn--sm" id="btn-back-comp" style="margin-top:8px">&#8592; Change component</button>' +
+          '</div>' +
           '</div></div>';
         $('btn-gen').onclick = generate;
         $('btn-back-comp').onclick = function () {
