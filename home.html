@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ilovemd — Anything to Markdown</title>
-<meta name="description" content="Turn natural language, UI components and Figma designs into structured Markdown documentation with AI.">
+<title>ilovemd — From Ideas to Markdown</title>
+<meta name="description" content="Turn your ideas, files, and designs into clean Markdown. Convert, create, compare, and start building faster.">
 <style>
   /* ------------------------------------------------------------ tokens
      Identical to app.html, so the homepage and the app read as one product. */
@@ -137,16 +137,22 @@
 
   /* --------------------------------------------------------------- hero */
   .hero { padding: 92px 0 30px; text-align: center; }
-  .pill {
-    display: inline-flex; align-items: center; gap: 8px;
-    border: 1px solid var(--hairline); background: var(--panel);
-    color: var(--text-2); border-radius: var(--r-pill);
-    padding: 5px 13px; font: 500 12px var(--font); margin-bottom: 26px;
+  .hero__badge {
+    display: inline-flex; align-items: center; gap: 9px;
+    border: 1px solid var(--hairline-strong); background: var(--panel);
+    color: var(--text); border-radius: var(--r-pill);
+    padding: 7px 18px 7px 8px; font: 500 14px var(--font); margin-bottom: 30px;
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
   }
-  .pill .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ok); }
+  .hero__badge .spark {
+    width: 26px; height: 26px; border-radius: 8px; flex: none;
+    display: grid; place-items: center;
+    background: rgba(139,124,255,.14); border: 1px solid rgba(139,124,255,.28);
+  }
+  .hero__badge .spark svg { width: 15px; height: 15px; display: block; }
   .hero h1 {
-    margin: 0 0 18px; font-size: clamp(40px, 6.5vw, 68px);
-    font-weight: 700; letter-spacing: -.035em; line-height: 1.05;
+    margin: 0 0 22px; font-size: clamp(40px, 7vw, 76px);
+    font-weight: 700; letter-spacing: -.035em; line-height: 1.04;
   }
   .hero h1 .grad {
     background: var(--gradient);
@@ -154,11 +160,53 @@
     -webkit-text-fill-color: transparent; color: transparent;
   }
   .hero .sub {
-    margin: 0 auto 34px; max-width: 56ch;
-    color: var(--text-2); font-size: 17px; line-height: 1.65;
+    margin: 0 auto 38px; max-width: 52ch;
+    color: var(--text-2); font-size: 17px; line-height: 1.6;
   }
   .hero__ctas { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
   .hero__hint { margin-top: 16px; font: 400 11.5px var(--mono); color: var(--text-3); }
+
+  /* ------------------------------------------- hero converter flip pair */
+  .convpair {
+    display: flex; align-items: center; justify-content: center; gap: 18px;
+    /* Gives the flip real depth instead of a flat squash. */
+    perspective: 700px;
+  }
+  .convtile {
+    width: 74px; height: 74px; border-radius: 18px;
+    display: grid; place-items: center; flex: none;
+    background: var(--tb, rgba(255,255,255,.05));
+    border: 1px solid var(--tl, var(--hairline));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.07);
+    transition: background-color .34s var(--ease), border-color .34s var(--ease);
+  }
+  .convtile svg { width: 38px; height: 38px; display: block; }
+  .convpair .arr { color: var(--text-3); font-size: 22px; flex: none; }
+  /* Split-flap: the face turns edge-on, swaps its glyph while invisible,
+     then turns back - so the change is never seen mid-swap. */
+  .flipface {
+    width: 100%; height: 100%; display: grid; place-items: center;
+    transform-style: preserve-3d; backface-visibility: hidden;
+  }
+  .flipface.is-flipping { animation: flipHalf .42s var(--ease); }
+  @keyframes flipHalf {
+    0%   { transform: rotateX(0deg);   }
+    49%  { transform: rotateX(-88deg); }
+    51%  { transform: rotateX(88deg);  }
+    100% { transform: rotateX(0deg);   }
+  }
+
+  /* --------------------------------------------------- load-in reveals */
+  @keyframes riseIn {
+    from { opacity: 0; transform: translateY(18px); }
+    to   { opacity: 1; transform: none; }
+  }
+  .reveal { opacity: 0; animation: riseIn .74s var(--ease) both; }
+  @media (prefers-reduced-motion: reduce) {
+    .reveal { animation: none; opacity: 1; }
+    .flipface.is-flipping { animation: none; }
+    body::before { animation: none; }
+  }
 
   /* -------------------------------------------------------- hero visual */
   .demo { padding: 54px 0 30px; }
@@ -272,15 +320,85 @@
     border-radius: var(--r-pill); padding: 2px 8px; white-space: nowrap;
   }
 
-  /* why */
-  .why { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-  .why__item {
+  /* core features
+     Each card ends in a mono "input -> Markdown" formula, so the card states
+     the transformation rather than describing it. */
+  .feat { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  .feat__card {
+    position: relative; display: flex; flex-direction: column;
     border: 1px solid var(--hairline); background: var(--panel);
-    border-radius: var(--r-md); padding: 20px;
+    border-radius: var(--r-lg); padding: 22px 20px 20px;
+    color: var(--text); text-decoration: none;
+    transition: transform .18s var(--ease), border-color .18s var(--ease), background-color .18s var(--ease);
   }
-  .why__item .ic { color: var(--accent); font-size: 16px; margin-bottom: 10px; }
-  .why__item h4 { margin: 0 0 6px; font-size: 14.5px; font-weight: 620; }
-  .why__item p { margin: 0; font-size: 13px; color: var(--text-2); line-height: 1.6; }
+  a.feat__card:hover {
+    transform: translateY(-3px);
+    border-color: rgba(139,124,255,.28);
+    background: var(--panel-raised);
+  }
+  .feat__icon {
+    width: 42px; height: 42px; border-radius: 12px;
+    display: grid; place-items: center; margin-bottom: 16px;
+    background: var(--tb, rgba(255,255,255,.05));
+    border: 1px solid var(--tl, var(--hairline));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
+  }
+  .feat__icon svg { width: 22px; height: 22px; display: block; }
+  .feat__card h3 { margin: 0 0 6px; font-size: 16px; font-weight: 650; letter-spacing: -.012em; }
+  .feat__card p { margin: 0 0 18px; font-size: 13px; color: var(--text-2); line-height: 1.6; }
+  .feat__io {
+    margin-top: auto; padding-top: 14px; border-top: 1px dashed var(--hairline);
+    font: 400 11.5px/1.5 var(--mono); color: var(--text-3);
+  }
+  .feat__io .to { color: var(--accent); margin: 0 5px; }
+  .feat__io .out { color: var(--text); }
+  .feat__tag {
+    position: absolute; top: 18px; right: 16px;
+    font: 600 9px var(--font); letter-spacing: .08em; text-transform: uppercase;
+    color: var(--warn); border: 1px solid rgba(251,191,36,.35);
+    border-radius: var(--r-pill); padding: 2px 8px; white-space: nowrap;
+  }
+  .feat__card--soon .feat__icon, .feat__card--soon h3, .feat__card--soon p { opacity: .55; }
+
+  /* bridge — the one non-card section on the page, so it breaks the rhythm */
+  .bridge { text-align: center; }
+  .bridge h2 {
+    margin: 0 auto 16px; max-width: 24ch;
+    font-size: clamp(28px, 4.4vw, 44px); font-weight: 680;
+    letter-spacing: -.03em; line-height: 1.12;
+  }
+  .bridge > p { margin: 0 auto; max-width: 56ch; color: var(--text-2); font-size: 16px; }
+  .bridge__flow {
+    display: flex; align-items: stretch; justify-content: center;
+    gap: 10px; flex-wrap: wrap; margin: 46px 0 44px;
+  }
+  .bnode {
+    flex: 0 1 216px; text-align: left;
+    border: 1px solid var(--hairline); background: var(--panel);
+    border-radius: var(--r-md); padding: 16px 18px;
+  }
+  .bnode__lbl {
+    font: 600 9.5px var(--font); letter-spacing: .12em; text-transform: uppercase;
+    color: var(--text-3); margin-bottom: 8px;
+  }
+  .bnode__name { font-size: 15px; font-weight: 620; letter-spacing: -.01em; }
+  .bnode__meta { margin-top: 5px; font: 400 11.5px/1.6 var(--mono); color: var(--text-3); }
+  .bnode--md {
+    border-color: rgba(139,124,255,.34);
+    background:
+      radial-gradient(22em 12em at 50% -30%, rgba(139,124,255,.2), transparent 70%),
+      var(--panel-raised);
+  }
+  .bnode--md .bnode__lbl { color: var(--accent); }
+  .bridge__arr {
+    align-self: center; color: var(--text-3); font-size: 16px; flex: none;
+  }
+  .bridge__close {
+    margin: 0; font-size: clamp(19px, 2.6vw, 26px); font-weight: 660; letter-spacing: -.02em;
+    background: var(--gradient);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent; color: transparent;
+  }
 
   /* cta */
   .cta {
@@ -304,6 +422,7 @@
 
   @media (max-width: 1080px) {
     .tools { grid-template-columns: repeat(2, 1fr); }
+    .feat { grid-template-columns: repeat(2, 1fr); }
   }
   @media (max-width: 940px) {
     section.wrap { padding-top: 72px; padding-bottom: 72px; }
@@ -311,11 +430,15 @@
     .demo__grid { grid-template-columns: 1fr; }
     .demo__arrow { flex-direction: row; padding: 2px 0; }
     .demo__line { transform: rotate(90deg); }
-    .why { grid-template-columns: 1fr; }
     .nav__links { display: none; }
+    /* The flow stacks, so the connectors have to turn with it. */
+    .bridge__flow { flex-direction: column; align-items: stretch; gap: 8px; }
+    .bnode { flex: 1 1 auto; }
+    .bridge__arr { transform: rotate(90deg); }
   }
   @media (max-width: 560px) {
     .tools { grid-template-columns: 1fr; }
+    .feat { grid-template-columns: 1fr; }
   }
 
   /* -------------------------------------------------------- filter pills */
@@ -425,18 +548,31 @@
 
 <!-- ------------------------------------------------------------- hero -->
 <header class="hero wrap">
-  <h1>Anything to <span class="grad">Markdown.</span></h1>
-  <p class="sub">
-    Turn natural language, UI components and Figma designs into structured
-    Markdown documentation with AI &mdash; with Excel files, Notion docs,
-    Confluence pages and more on the way. You don't need to know Markdown:
-    give ilovemd what you have, and it writes the document.
+  <span class="hero__badge reveal" style="animation-delay:.05s">
+    <span class="spark">
+      <svg viewBox="0 0 24 24" fill="#8b7cff" aria-hidden="true"><path d="M12 2.5l2.1 5.9 5.9 2.1-5.9 2.1L12 18.5l-2.1-5.9L4 10.5l5.9-2.1L12 2.5z"/></svg>
+    </span>
+    AI-Powered Markdown
+  </span>
+  <h1 class="reveal" style="animation-delay:.16s">From Ideas to <span class="grad">Markdown.</span></h1>
+  <p class="sub reveal" style="animation-delay:.27s">
+    Turn your ideas, files, and designs into clean Markdown.<br>
+    Convert, create, compare, and start building faster.
   </p>
+  <div class="convpair reveal" style="animation-delay:.38s">
+    <span class="convtile" id="flip-tile">
+      <span class="flipface" id="flip-face"></span>
+    </span>
+    <span class="arr">&rarr;</span>
+    <span class="convtile" style="--tb:rgba(139,124,255,.12);--tl:rgba(139,124,255,.3)" title="Markdown">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="5" width="19" height="14" rx="2.5" fill="none" stroke="#8b7cff" stroke-width="1.7"/><path d="M6 15.5v-7l2.6 3 2.6-3v7" fill="none" stroke="#8b7cff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 8.5v5.5m0 0-2-2m2 2 2-2" fill="none" stroke="#8b7cff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </span>
+  </div>
 </header>
 
 <!-- ------------------------------------------------------- converters -->
 <section id="converters" class="wrap" style="padding-top:48px">
-  <div class="filter-bar-wrap">
+  <div class="filter-bar-wrap reveal" style="animation-delay:.5s">
     <div class="filter-bar" id="filter-bar">
       <button class="fpill active" data-filter="all">All</button>
       <button class="fpill" data-filter="convert">Convert MD</button>
@@ -520,45 +656,76 @@
   </p>
 </section>
 
-<!-- -------------------------------------------------------------- why -->
-<section id="why" class="wrap">
+<!-- --------------------------------------------------- core features -->
+<section id="features" class="wrap">
   <div class="sec-h">
-    <div class="kicker">Why ilovemd</div>
-    <h2>A documentation workspace, not another dev tool</h2>
-    <p>Built for designers, design-system engineers and anyone who needs good documentation without learning Markdown first.</p>
+    <div class="kicker">Core features</div>
+    <h2>One format. A lot less work.</h2>
+    <p>Four things ilovemd does with Markdown &mdash; bring anything in, get something you can build from.</p>
   </div>
-  <div class="why">
-    <div class="why__item">
-      <div class="ic">&#10022;</div>
-      <h4>No Markdown knowledge needed</h4>
-      <p>You describe, import or connect. Claude handles the syntax, headings, tables and code blocks.</p>
+  <div class="feat">
+
+    <a class="feat__card" href="/convert?type=pdf">
+      <span class="feat__icon" style="--tb:rgba(251,113,133,.1);--tl:rgba(251,113,133,.28)"><svg viewBox="0 0 24 24" fill="none" stroke="#fb7185" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7z"/><path d="M14 2v5h5"/><path d="M12 11v6m0 0-2.5-2.5M12 17l2.5-2.5"/></svg></span>
+      <h3>Convert</h3>
+      <p>The documents you already have, turned into Markdown you can actually edit.</p>
+      <div class="feat__io">PDF, Word, Excel, PPT, HTML<span class="to">&rarr;</span><span class="out">Markdown</span></div>
+    </a>
+
+    <a class="feat__card" href="/text">
+      <span class="feat__icon" style="--tb:rgba(139,124,255,.12);--tl:rgba(139,124,255,.3)"><svg viewBox="0 0 24 24" fill="#8b7cff" aria-hidden="true"><path d="M12 2.5l2.1 5.9 5.9 2.1-5.9 2.1L12 18.5l-2.1-5.9L4 10.5l5.9-2.1L12 2.5z"/></svg></span>
+      <h3>Generate</h3>
+      <p>Describe it in plain English or point at a component. Claude writes the document.</p>
+      <div class="feat__io">Ideas<span class="to">&rarr;</span><span class="out">structured documentation</span></div>
+    </a>
+
+    <a class="feat__card" href="/compare">
+      <span class="feat__icon" style="--tb:rgba(251,191,36,.08);--tl:rgba(251,191,36,.25)"><svg viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h4"/><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="9" y1="12" x2="15" y2="12"/></svg></span>
+      <h3>Compare</h3>
+      <p>Two versions side by side, every change called out, with AI to explain the diff.</p>
+      <div class="feat__io">Markdown<span class="to">&rarr;</span><span class="out">see what&rsquo;s changed</span></div>
+    </a>
+
+    <div class="feat__card feat__card--soon">
+      <span class="feat__tag">Soon</span>
+      <span class="feat__icon" style="--tb:rgba(63,208,224,.09);--tl:rgba(63,208,224,.26)"><svg viewBox="0 0 24 24" fill="none" stroke="#3fd0e0" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2.5"/><path d="M3 9h18M9 21V9"/></svg></span>
+      <h3>Templates</h3>
+      <p>Start from a finished structure instead of a blank page &mdash; then ship it.</p>
+      <div class="feat__io">Ready-made Markdown<span class="to">&rarr;</span><span class="out">ready-to-build websites</span></div>
     </div>
-    <div class="why__item">
-      <div class="ic">&#9646;&#9646;</div>
-      <h4>Grounded in your source</h4>
-      <p>Documentation is generated from what is actually in your files. Missing information is marked for review, never invented.</p>
+
+  </div>
+</section>
+
+<!-- ----------------------------------------------------------- bridge -->
+<section id="future" class="wrap bridge">
+  <div class="kicker" style="font:600 11px var(--font);letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin-bottom:14px">
+    The future of talking to AI
+  </div>
+  <h2>Markdown is the bridge between your ideas and AI.</h2>
+  <p>Turn anything &mdash; from a thought to a Figma component &mdash; into structured context AI can understand.</p>
+
+  <div class="bridge__flow">
+    <div class="bnode">
+      <div class="bnode__lbl">What you have</div>
+      <div class="bnode__name">Anything</div>
+      <div class="bnode__meta">a thought &middot; a PDF<br>a deck &middot; a Figma frame</div>
     </div>
-    <div class="why__item">
-      <div class="ic">&#9998;</div>
-      <h4>Editable, always</h4>
-      <p>Generated output lands in a split editor with live preview. Review, edit, regenerate &mdash; then copy or download the .md file.</p>
+    <span class="bridge__arr">&rarr;</span>
+    <div class="bnode bnode--md">
+      <div class="bnode__lbl">The bridge</div>
+      <div class="bnode__name">Markdown</div>
+      <div class="bnode__meta">headings, tables, code<br>structure a model reads</div>
     </div>
-    <div class="why__item">
-      <div class="ic">&#128193;</div>
-      <h4>Your files stay yours</h4>
-      <p>Local components are read in your browser and only sent for analysis when you explicitly press Generate.</p>
-    </div>
-    <div class="why__item">
-      <div class="ic">&#9670;</div>
-      <h4>Design-system native</h4>
-      <p>A component documentation template covering anatomy, variants, states, usage, accessibility and design tokens.</p>
-    </div>
-    <div class="why__item">
-      <div class="ic">&#8635;</div>
-      <h4>Recent documents</h4>
-      <p>Everything you generate is kept locally, so you can come back, refine and re-download any document.</p>
+    <span class="bridge__arr">&rarr;</span>
+    <div class="bnode">
+      <div class="bnode__lbl">What you get</div>
+      <div class="bnode__name">Context AI understands</div>
+      <div class="bnode__meta">any model, any editor<br>any agent you work with</div>
     </div>
   </div>
+
+  <p class="bridge__close">Give AI better context. Get better things back.</p>
 </section>
 
 <!-- -------------------------------------------------------------- cta -->
@@ -577,7 +744,7 @@
     <span class="foot__note">Anything to Markdown &middot; powered by Claude</span>
     <div class="foot__links">
       <a href="#converters">Converters</a>
-      <a href="#why">Why ilovemd</a>
+      <a href="#features">Features</a>
       <a href="/text">Open the app</a>
     </div>
   </div>
@@ -597,6 +764,73 @@
     grid.querySelectorAll('.tool').forEach(function (t) {
       t.hidden = f !== 'all' && t.dataset.cat !== f;
     });
+  });
+})();
+
+/* Hero: cycle the source format like a split-flap departure board, and ease
+   the page in one band at a time. */
+(function () {
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  var SOURCES = [
+    { label: 'PDF', tb: 'rgba(251,113,133,.1)', tl: 'rgba(251,113,133,.28)',
+      svg: '<svg viewBox="0 0 24 24" fill="none" stroke="#fb7185" stroke-width="1.7" stroke-linejoin="round"><path d="M14 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7z"/><path d="M14 2v5h5"/><text x="12" y="17.5" text-anchor="middle" font-family="-apple-system,Segoe UI,sans-serif" font-size="6" font-weight="700" fill="#fb7185" stroke="none">PDF</text></svg>' },
+    { label: 'Figma', tb: 'rgba(255,255,255,.05)', tl: 'rgba(255,255,255,.14)',
+      svg: '<svg viewBox="0 0 24 24"><path fill="#F24E1E" d="M12 2H8.5a3.5 3.5 0 0 0 0 7H12V2z"/><path fill="#FF7262" d="M12 2h3.5a3.5 3.5 0 0 1 0 7H12V2z"/><path fill="#A259FF" d="M12 9H8.5a3.5 3.5 0 0 0 0 7H12V9z"/><path fill="#0ACF83" d="M8.5 16a3.5 3.5 0 1 0 3.5 3.5V16H8.5z"/><circle fill="#1ABCFE" cx="15.5" cy="12.5" r="3.5"/></svg>' },
+    { label: 'Word', tb: 'rgba(79,143,247,.1)', tl: 'rgba(79,143,247,.28)',
+      svg: '<svg viewBox="0 0 24 24" fill="none" stroke="#4f8ff7" stroke-width="1.7" stroke-linejoin="round"><path d="M14 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7z"/><path d="M14 2v5h5"/><text x="12" y="17.5" text-anchor="middle" font-family="-apple-system,Segoe UI,sans-serif" font-size="8" font-weight="700" fill="#4f8ff7" stroke="none">W</text></svg>' },
+    { label: 'Excel', tb: 'rgba(33,163,102,.1)', tl: 'rgba(33,163,102,.28)',
+      svg: '<svg viewBox="0 0 24 24" fill="none" stroke="#21A366" stroke-width="1.7" stroke-linejoin="round"><path d="M14 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7z"/><path d="M14 2v5h5"/><text x="12" y="17.5" text-anchor="middle" font-family="-apple-system,Segoe UI,sans-serif" font-size="8" font-weight="700" fill="#21A366" stroke="none">X</text></svg>' },
+    { label: 'PowerPoint', tb: 'rgba(237,108,71,.1)', tl: 'rgba(237,108,71,.28)',
+      svg: '<svg viewBox="0 0 24 24" fill="none" stroke="#ed6c47" stroke-width="1.7" stroke-linejoin="round"><path d="M14 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7z"/><path d="M14 2v5h5"/><text x="12" y="17.5" text-anchor="middle" font-family="-apple-system,Segoe UI,sans-serif" font-size="8" font-weight="700" fill="#ed6c47" stroke="none">P</text></svg>' },
+    { label: 'Text', tb: 'rgba(139,124,255,.12)', tl: 'rgba(139,124,255,.3)',
+      svg: '<svg viewBox="0 0 24 24" fill="none" stroke="#8b7cff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7z"/><path d="M14 2v5h5"/><path d="M9 12h6M9 16h6M9 8h2"/></svg>' },
+    { label: 'HTML / CSS', tb: 'rgba(228,77,38,.12)', tl: 'rgba(228,77,38,.32)',
+      svg: '<svg viewBox="0 0 24 24"><path fill="#E44D26" d="M3.5 2h17l-1.55 17.5L12 21.8l-6.95-2.3L3.5 2z"/><path fill="#F16529" d="M12 3.6v16.55l5.62-1.86L18.9 3.6H12z"/><polyline points="10,8.7 7,11.7 10,14.7" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><polyline points="14,8.7 17,11.7 14,14.7" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>' },
+    { label: 'React', tb: 'rgba(97,218,251,.08)', tl: 'rgba(97,218,251,.25)',
+      svg: '<svg viewBox="0 0 24 24" fill="none" stroke="#61DAFB" stroke-width="1"><circle cx="12" cy="12" r="2" fill="#61DAFB" stroke="none"/><ellipse cx="12" cy="12" rx="10" ry="4.2"/><ellipse cx="12" cy="12" rx="10" ry="4.2" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="10" ry="4.2" transform="rotate(120 12 12)"/></svg>' }
+  ];
+
+  var tile = document.getElementById('flip-tile');
+  var face = document.getElementById('flip-face');
+  if (tile && face) {
+    var idx = 0;
+    function paint(i) {
+      var s = SOURCES[i];
+      face.innerHTML = s.svg;
+      tile.style.setProperty('--tb', s.tb);
+      tile.style.setProperty('--tl', s.tl);
+      tile.title = s.label + ' to Markdown';
+    }
+    paint(0);
+
+    if (!reduce) {
+      setInterval(function () {
+        face.classList.add('is-flipping');
+        // Swap at the halfway point, while the face is edge-on and the old
+        // glyph cannot be seen changing.
+        setTimeout(function () { idx = (idx + 1) % SOURCES.length; paint(idx); }, 210);
+        setTimeout(function () { face.classList.remove('is-flipping'); }, 440);
+      }, 1000);
+    }
+  }
+
+  /* Cards stagger in after the hero has settled. The class is added here
+     rather than in the markup so the grid is never stuck hidden without JS. */
+  var cards = document.querySelectorAll('#tools-grid .tool');
+  if (!reduce) {
+    Array.prototype.forEach.call(cards, function (c, i) {
+      c.style.animationDelay = (0.58 + i * 0.045).toFixed(3) + 's';
+      c.classList.add('reveal');
+    });
+  }
+
+  // `both` fill keeps the animation's final transform, which would otherwise
+  // win over the hover lift - so drop the class once each reveal has played.
+  document.addEventListener('animationend', function (e) {
+    if (e.animationName !== 'riseIn') return;
+    e.target.classList.remove('reveal');
+    e.target.style.animationDelay = '';
   });
 })();
 </script>
