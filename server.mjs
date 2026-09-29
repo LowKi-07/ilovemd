@@ -22,10 +22,29 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import http from 'node:http';
+import zlib from 'node:zlib';
+import crypto from 'node:crypto';
 import { spawn, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
+
+/* Two deployment modes, one codebase.
+   - 'local' (default): exactly today's behavior - CLI-based AI, loopback only,
+     native macOS pickers, no login wall. This is the single-developer tool.
+   - 'public': a password-gated demo instance meant to be reachable from the
+     internet - direct Anthropic API calls (no local CLI needed), a shared
+     session cookie, per-IP rate limiting, and uploads instead of native
+     folder/file pickers. Set ILOVEMD_MODE=public to switch. */
+const MODE = process.env.ILOVEMD_MODE === 'public' ? 'public' : 'local';
+
+// A root for all writable state when hosting somewhere other than next to this
+// file (e.g. GoDaddy Node.js Hosting requires persistent writes under
+// /public/assets/). Local mode leaves this unset and keeps today's paths.
+const DATA_DIR = process.env.ILOVEMD_DATA_DIR ? path.resolve(process.env.ILOVEMD_DATA_DIR) : null;
+// In public mode, component/kit source folders must live under here - never an
+// arbitrary path on the host's disk. Populated via /api/kit-upload.
+const WORKSPACE_DIR = MODE === 'public' ? path.join(DATA_DIR || HERE, 'workspace') : null;
 
 /* Documentation rules loaded from prompts/ at startup.
    These travel with the repo and are injected into every doc-generation prompt,
@@ -45,10 +64,12 @@ const DOC_RULES = loadDocRules();
 
 const DOCS = process.env.ILOVEMD_DOCS
   ? path.resolve(process.env.ILOVEMD_DOCS)
-  : path.join(HERE, 'documents');
+  : DATA_DIR ? path.join(DATA_DIR, 'documents') : path.join(HERE, 'documents');
 
 const PORT = Number(process.env.PORT || 7777);
-const HOST = '127.0.0.1';
+// Local mode stays loopback-only by default. Public hosting (e.g. GoDaddy) sets
+// HOST=0.0.0.0 explicitly - the default here never changes on its own.
+const HOST = process.env.HOST || '127.0.0.1';
 const BUILD = 'ilovemd-1';
 
 /* Finding the CLI. `claude` on PATH is the normal case, but a GUI-launched
@@ -73,7 +94,7 @@ const CLI_CANDIDATES = [
 
    The file is read once at startup and passed only to the child process - it is
    never sent to the browser and never appears in an API response. */
-const KEY_FILE = path.join(HERE, '.anthropic-key');
+const KEY_FILE = DATA_DIR ? path.join(DATA_DIR, '.anthropic-key') : path.join(HERE, '.anthropic-key');
 function readKeyFile() {
   try {
     const raw = fs.readFileSync(KEY_FILE, 'utf8').trim();
@@ -92,6 +113,26 @@ const AI = {
   pinned: process.env.ILOVEMD_AI_STRATEGY || '',
   winner: null,
 };
+
+/* ---- public-mode-only configuration ----
+   None of this is read or used when MODE is 'local'. */
+const GATE_PASSWORD = process.env.ILOVEMD_GATE_PASSWORD || '';
+const SESSION_SECRET = process.env.ILOVEMD_SESSION_SECRET || '';
+const SESSION_COOKIE = 'ilovemd_session';
+const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
+const RATE_LIMIT_PER_HOUR = Number(process.env.ILOVEMD_RATE_LIMIT_PER_HOUR || 20);
+const MAX_CALLS_PER_DAY = Number(process.env.ILOVEMD_MAX_CALLS_PER_DAY || 200);
+
+// One fixed Figma file the owner controls - never a visitor-supplied URL. Keeps
+// the public demo from being used to pull a stranger's Figma design.
+const FIGMA_TOKEN = process.env.FIGMA_TOKEN || '';
+const DEMO_FIGMA_KEY = process.env.ILOVEMD_DEMO_FIGMA_KEY || '';
+
+if (MODE === 'public' && (!GATE_PASSWORD || !SESSION_SECRET)) {
+  console.error('ILOVEMD_MODE=public requires ILOVEMD_GATE_PASSWORD and ILOVEMD_SESSION_SECRET to be set.');
+  process.exit(1);
+}
 
 /* How the CLI wants to be called varies by version, and two things vary
    independently: how the prompt is delivered, and which flags are accepted. So
@@ -148,6 +189,120 @@ function readBody(req) {
       try { done(b ? JSON.parse(b) : {}); } catch (e) { fail(new Error('invalid JSON body')); }
     });
   });
+}
+
+/* ---------------------------------------------------- public-mode: auth */
+
+function parseCookies(req) {
+  const out = {};
+  const h = req.headers.cookie;
+  if (!h) return out;
+  for (const part of h.split(';')) {
+    const i = part.indexOf('=');
+    if (i === -1) continue;
+    out[part.slice(0, i).trim()] = decodeURIComponent(part.slice(i + 1).trim());
+  }
+  return out;
+}
+
+function makeSessionToken() {
+  const exp = Date.now() + SESSION_TTL_MS;
+  const sig = crypto.createHmac('sha256', SESSION_SECRET).update(String(exp)).digest('hex');
+  return exp + '.' + sig;
+}
+
+function verifySessionToken(tok) {
+  if (!tok) return false;
+  const i = String(tok).indexOf('.');
+  if (i === -1) return false;
+  const exp = Number(tok.slice(0, i));
+  const sig = tok.slice(i + 1);
+  if (!exp || Date.now() > exp) return false;
+  const expected = crypto.createHmac('sha256', SESSION_SECRET).update(String(exp)).digest('hex');
+  const a = Buffer.from(sig), b = Buffer.from(expected);
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
+function clientIp(req) {
+  const xf = req.headers['x-forwarded-for'];
+  if (xf) return String(xf).split(',')[0].trim();
+  return req.socket.remoteAddress || 'unknown';
+}
+
+/* Per-IP hourly cap plus a global daily cap. This is a courtesy limiter on top
+   of the shared password, not a substitute for a spending limit set on the
+   Anthropic API key itself - a leaked password could still be reused fast. */
+const ipHits = new Map();
+let dailyCalls = { day: new Date().toDateString(), count: 0 };
+
+function checkRateLimit(ip) {
+  const now = Date.now();
+  const hourAgo = now - 3600000;
+  const hits = (ipHits.get(ip) || []).filter((t) => t > hourAgo);
+  if (hits.length >= RATE_LIMIT_PER_HOUR) return false;
+  hits.push(now);
+  ipHits.set(ip, hits);
+  return true;
+}
+
+function checkDailyCap() {
+  const today = new Date().toDateString();
+  if (dailyCalls.day !== today) dailyCalls = { day: today, count: 0 };
+  if (dailyCalls.count >= MAX_CALLS_PER_DAY) return false;
+  dailyCalls.count++;
+  return true;
+}
+
+/* ------------------------------------------------- public-mode: zip reader
+   DOCX/PPTX/XLSX are all ZIP archives of XML parts. Reading them used to shell
+   out to the system `unzip` binary, which is macOS-specific-ish and not
+   guaranteed on managed Linux hosting. This is a minimal pure-JS reader
+   (central directory + local file header, stored or deflate) - no dependency,
+   works everywhere Node does. */
+function readZipEntries(buf) {
+  const EOCD_SIG = 0x06054b50;
+  let eocd = -1;
+  for (let i = buf.length - 22; i >= Math.max(0, buf.length - 22 - 65557); i--) {
+    if (buf.readUInt32LE(i) === EOCD_SIG) { eocd = i; break; }
+  }
+  if (eocd === -1) throw new Error('not a valid zip file');
+  const count = buf.readUInt16LE(eocd + 10);
+  let off = buf.readUInt32LE(eocd + 16);
+  const entries = {};
+  for (let i = 0; i < count; i++) {
+    if (buf.readUInt32LE(off) !== 0x02014b50) break;
+    const method = buf.readUInt16LE(off + 10);
+    const compSize = buf.readUInt32LE(off + 20);
+    const nameLen = buf.readUInt16LE(off + 28);
+    const extraLen = buf.readUInt16LE(off + 30);
+    const commentLen = buf.readUInt16LE(off + 32);
+    const localOffset = buf.readUInt32LE(off + 42);
+    const name = buf.slice(off + 46, off + 46 + nameLen).toString('utf8');
+    entries[name] = { method, compSize, localOffset };
+    off += 46 + nameLen + extraLen + commentLen;
+  }
+  return entries;
+}
+
+function readZipEntry(buf, entries, name) {
+  const e = entries[name];
+  if (!e) throw new Error('zip entry not found: ' + name);
+  const nameLen = buf.readUInt16LE(e.localOffset + 26);
+  const extraLen = buf.readUInt16LE(e.localOffset + 28);
+  const dataStart = e.localOffset + 30 + nameLen + extraLen;
+  const data = buf.slice(dataStart, dataStart + e.compSize);
+  if (e.method === 0) return data;
+  if (e.method === 8) return zlib.inflateRawSync(data);
+  throw new Error('unsupported zip compression method ' + e.method);
+}
+
+function zipReadText(file, part) {
+  const buf = fs.readFileSync(file);
+  return readZipEntry(buf, readZipEntries(buf), part).toString('utf8');
+}
+
+function zipList(file) {
+  return Object.keys(readZipEntries(fs.readFileSync(file)));
 }
 
 /* A document name is a bare filename, never a path. Anything with a separator,
@@ -266,6 +421,12 @@ function realDir(raw) {
   const s = String(raw || '').trim();
   if (!s) return null;
   const dir = path.resolve(s);
+  // Public mode never trusts a client-supplied path outside the upload
+  // workspace - local mode's whole point is browsing the developer's own disk.
+  if (MODE === 'public') {
+    if (!WORKSPACE_DIR) return null;
+    if (dir !== WORKSPACE_DIR && !dir.startsWith(WORKSPACE_DIR + path.sep)) return null;
+  }
   try { if (fs.statSync(dir).isDirectory()) return dir; } catch (e) { /* fall through */ }
   return null;
 }
@@ -652,6 +813,54 @@ function unitPrompt(src) {
   ]).join('\n');
 }
 
+/* ---- public-mode Figma demo -----
+   No MCP, no CLI - a direct call to Figma's REST API for the one file the
+   owner configured, summarized down to what's useful for documentation
+   (styles, named components, top-level structure) rather than the full node
+   tree, which can be enormous. */
+async function fetchFigmaFile(key, token) {
+  const r = await fetch(`https://api.figma.com/v1/files/${encodeURIComponent(key)}`, {
+    headers: { 'X-Figma-Token': token },
+  });
+  if (!r.ok) {
+    const body = await r.text().catch(() => '');
+    throw new Error(`Figma API ${r.status}: ${(body || r.statusText).slice(0, 200)}`);
+  }
+  return r.json();
+}
+
+function summarizeFigmaFile(data) {
+  const lines = ['Figma file: ' + (data.name || 'Untitled')];
+  const styles = data.styles ? Object.values(data.styles).map((s) => `- ${s.name} (${s.styleType})`) : [];
+  if (styles.length) lines.push('\nStyles:\n' + styles.slice(0, 60).join('\n'));
+  const comps = data.components ? Object.values(data.components).map((c) => `- ${c.name}${c.description ? ': ' + c.description : ''}`) : [];
+  if (comps.length) lines.push('\nComponents:\n' + comps.slice(0, 60).join('\n'));
+  const structure = [];
+  (function walk(node, depth) {
+    if (!node || depth > 2) return;
+    structure.push('  '.repeat(depth) + '- ' + (node.name || node.type) + ' (' + node.type + ')');
+    if (node.children) for (const c of node.children) walk(c, depth + 1);
+  })(data.document, -1);
+  if (structure.length) lines.push('\nStructure (top levels):\n' + structure.slice(1, 120).join('\n'));
+  return lines.join('\n');
+}
+
+function figmaDemoPrompt(summary, fileName) {
+  const rulesBlock = DOC_RULES ? [DOC_RULES.rules, '', '---', ''] : [];
+  return [
+    ...rulesBlock,
+    'Write component/design documentation in Markdown from this REAL Figma file data.',
+    'Map the data into sections chosen from: Overview, Anatomy, Variants,',
+    'Design Tokens (from styles), Components, Structure - but ONLY where the data',
+    'below actually supports them. Never invent properties, variants or tokens the',
+    'data does not show. Preserve exact names.',
+    '',
+    'Figma file: ' + fileName,
+    '',
+    summary,
+  ].join('\n');
+}
+
 /* The generator is asked to END with an "## Open questions" section so the
    clarification flow has material - but questions never belong in the saved
    document. This splits them out and cleans the markdown. */
@@ -713,7 +922,7 @@ function run(cmd, args, opts) {
   if (r.error) throw r.error;
   return r.stdout || '';
 }
-const unzipPart = (file, part) => run('unzip', ['-p', file, part]);
+const unzipPart = (file, part) => zipReadText(file, part);
 function unXml(t) {
   return String(t || '')
     .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"')
@@ -774,8 +983,7 @@ function xlsxText(file) {
 }
 
 function pptxText(file) {
-  const listing = run('unzip', ['-Z1', file]);
-  const slides = listing.split('\n')
+  const slides = zipList(file)
     .filter((l) => /^ppt\/slides\/slide\d+\.xml$/.test(l))
     .sort((a, b) => Number(a.match(/\d+/)) - Number(b.match(/\d+/)));
   if (!slides.length) throw new Error('no slides found in the deck');
@@ -795,13 +1003,38 @@ function pptxText(file) {
 }
 
 // Returns { content } for extracted text, or { selfRead: true } when the CLI
-// should read the file itself (PDF - the CLI's Read tool parses those).
-function extractFile(file, ext) {
-  if (ext === '.pdf') return { selfRead: true };
+// should read the file itself (local mode PDFs - the CLI's Read tool parses
+// those directly). Public mode has no CLI/Read tool, so PDF and DOCX go
+// through npm packages instead - loaded with a dynamic import so local mode
+// (zero npm dependencies) never has to have them installed.
+async function extractFile(file, ext) {
+  if (ext === '.pdf') {
+    if (MODE === 'public') {
+      const { default: pdfParse } = await import('pdf-parse');
+      const data = await pdfParse(fs.readFileSync(file));
+      if (!data.text.trim()) throw new Error('pdf-parse could not read this file');
+      return { content: data.text };
+    }
+    return { selfRead: true };
+  }
   if (['.txt', '.md', '.csv', '.tsv', '.html', '.htm'].includes(ext)) {
     return { content: fs.readFileSync(file, 'utf8') };
   }
-  if (['.docx', '.doc', '.rtf', '.rtfd', '.odt'].includes(ext)) {
+  if (ext === '.docx') {
+    if (MODE === 'public') {
+      const { default: mammoth } = await import('mammoth');
+      const result = await mammoth.convertToHtml({ buffer: fs.readFileSync(file) });
+      if (!result.value.trim()) throw new Error('mammoth could not read this file');
+      return { content: result.value };
+    }
+    const html = run('textutil', ['-convert', 'html', '-stdout', file]);
+    if (!html.trim()) throw new Error('textutil could not read this file');
+    return { content: html };
+  }
+  if (['.doc', '.rtf', '.rtfd', '.odt'].includes(ext)) {
+    if (MODE === 'public') {
+      throw new Error('This file type is not supported in the public demo. Please use PDF, DOCX, PPTX, XLSX, TXT, CSV or MD.');
+    }
     const html = run('textutil', ['-convert', 'html', '-stdout', file]);
     if (!html.trim()) throw new Error('textutil could not read this file');
     return { content: html };
@@ -874,6 +1107,15 @@ function tryVersion(cmd) {
 }
 
 async function checkAI() {
+  // Public mode never shells out to a CLI - it calls the Anthropic API
+  // directly, so "available" just means a key is configured.
+  if (MODE === 'public') {
+    return {
+      available: !!AI.apiKey,
+      detail: AI.apiKey ? 'Anthropic API key configured' : 'ANTHROPIC_API_KEY is not set',
+      command: 'direct API', resolvedFrom: 'env', model: AI.model || 'default', searched: [],
+    };
+  }
   // The configured name first, then the usual install locations.
   const tries = [{ cmd: AI.command, from: 'PATH' }];
   if (!process.env.ILOVEMD_AI_CMD) {
@@ -1049,7 +1291,77 @@ function explain(blob) {
   return '';
 }
 
-async function runAI(prompt) {
+// Public mode's error surface (human-readable, mapped by HTTP status) mirrors
+// what explain() does for the CLI's stderr patterns in local mode.
+function explainApiError(status, bodyText) {
+  if (status === 401) return 'The Anthropic API key configured on this server is invalid.';
+  if (status === 429) return 'The Anthropic API rate limit or quota was hit - try again shortly.';
+  if (status >= 500) return 'The Anthropic API is having issues right now - try again shortly.';
+  return String(bodyText || '').slice(0, 200);
+}
+
+async function runAIViaAPI(prompt) {
+  if (!AI.apiKey) {
+    const err = new Error('No Anthropic API key is configured on this server.');
+    err.explain = 'Set ANTHROPIC_API_KEY in the environment.';
+    throw err;
+  }
+  let resp;
+  try {
+    resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': AI.apiKey,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json',
+      },
+      // A fixed, known-good snapshot by default - override with ILOVEMD_AI_MODEL
+      // to point at whichever current model the deployment should use.
+      body: JSON.stringify({
+        model: AI.model || 'claude-3-5-sonnet-20241022',
+        max_tokens: 8000,
+        system: SYSTEM_PROMPT,
+        messages: [{ role: 'user', content: prompt }],
+      }),
+    });
+  } catch (e) {
+    const err = new Error('Could not reach the Anthropic API: ' + e.message);
+    err.explain = 'Check that this server has outbound HTTPS access to api.anthropic.com.';
+    throw err;
+  }
+  if (!resp.ok) {
+    const bodyText = await resp.text().catch(() => '');
+    const err = new Error(`Anthropic API responded ${resp.status}`);
+    err.explain = explainApiError(resp.status, bodyText);
+    throw err;
+  }
+  const data = await resp.json();
+  const text = (data.content || []).map((b) => b.text || '').join('').trim();
+  if (!text) {
+    const err = new Error('Anthropic API returned no text');
+    err.explain = '';
+    throw err;
+  }
+  return { text, strategy: 'direct-api' };
+}
+
+async function runAI(prompt, req) {
+  if (MODE === 'public') {
+    if (!checkDailyCap()) {
+      const err = new Error('This public demo has reached its daily AI usage limit.');
+      err.explain = 'It resets at midnight server time - please try again tomorrow.';
+      err.limited = true;
+      throw err;
+    }
+    if (!checkRateLimit(clientIp(req))) {
+      const err = new Error('Rate limit reached - please slow down.');
+      err.explain = `This demo allows ${RATE_LIMIT_PER_HOUR} AI calls per hour per visitor.`;
+      err.limited = true;
+      throw err;
+    }
+    return runAIViaAPI(prompt);
+  }
+
   const tried = [];
   for (const s of ordered(prompt)) {
     const budget = tried.length === 0 ? AI.timeoutMs : Math.min(AI.timeoutMs, 120000);
@@ -1077,6 +1389,40 @@ const server = http.createServer(async (req, res) => {
   const route = url.pathname;
 
   try {
+    /* ---- public-mode password gate ----
+       Local mode never runs this - it has no login wall at all. */
+    const isLoginRoute = route === '/login' || route === '/login.html' || route === '/api/login';
+    if (MODE === 'public' && !isLoginRoute) {
+      const authed = verifySessionToken(parseCookies(req)[SESSION_COOKIE]);
+      if (!authed) {
+        if (route.startsWith('/api/')) return sendJson(res, 401, { error: 'sign in required' });
+        res.writeHead(302, { Location: '/login' });
+        return res.end();
+      }
+    }
+
+    if (route === '/login' || route === '/login.html') {
+      const html = fs.readFileSync(path.join(HERE, 'login.html'));
+      res.writeHead(200, { 'Content-Type': MIME['.html'], 'Cache-Control': 'no-store' });
+      return res.end(html);
+    }
+
+    if (route === '/api/login' && req.method === 'POST') {
+      const body = await readBody(req);
+      const given = Buffer.from(String(body.password || ''));
+      const expected = Buffer.from(GATE_PASSWORD);
+      const ok = GATE_PASSWORD.length > 0 && given.length === expected.length && crypto.timingSafeEqual(given, expected);
+      if (!ok) return sendJson(res, 401, { error: 'wrong password' });
+      const token = makeSessionToken();
+      res.setHeader('Set-Cookie', `${SESSION_COOKIE}=${token}; HttpOnly; Path=/; Max-Age=${Math.floor(SESSION_TTL_MS / 1000)}; SameSite=Lax`);
+      return sendJson(res, 200, { ok: true });
+    }
+
+    if (route === '/api/logout' && req.method === 'POST') {
+      res.setHeader('Set-Cookie', `${SESSION_COOKIE}=; HttpOnly; Path=/; Max-Age=0`);
+      return sendJson(res, 200, { ok: true });
+    }
+
     /* ---- homepage ---- */
     if (route === '/' || route === '/index.html' || route === '/home.html') {
       const html = fs.readFileSync(path.join(HERE, 'home.html'));
@@ -1117,6 +1463,13 @@ const server = http.createServer(async (req, res) => {
       const body = await readBody(req);
       const patch = {};
       if (typeof body.kit === 'string' && body.kit.length < 80) patch.kit = body.kit;
+      // Public mode has no native folder picker - the upload flow sets the
+      // workspace folder it just populated as the active import dir instead.
+      // realDir() already confines this to the workspace root in public mode.
+      if (typeof body.importDir === 'string') {
+        const dir = realDir(body.importDir);
+        if (dir) patch.importDir = dir;
+      }
       if (Object.keys(patch).length) writeState(patch);
       return sendJson(res, 200, { ok: true });
     }
@@ -1150,35 +1503,6 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, { frames: frames.slice(0, 20) });
     }
 
-    if (route === '/api/pick-file' && req.method === 'POST') {
-      const body = await readBody(req);
-      const script = [
-        'tell application "System Events"',
-        'activate',
-        'set f to choose file with prompt "' + String(body.prompt || 'Choose a file').replace(/[\\"]/g, '\\$&') + '"',
-        'end tell',
-        'POSIX path of f',
-      ].join('\n');
-      const r = await new Promise((done) => {
-        let p2;
-        try { p2 = spawn('osascript', ['-e', script], { stdio: ['ignore', 'pipe', 'pipe'] }); }
-        catch (e) { return done({ error: e.message }); }
-        let out = '', err = '';
-        const timer = setTimeout(() => { p2.kill('SIGKILL'); done({ canceled: true }); }, 180000);
-        p2.stdout.on('data', (d) => (out += d));
-        p2.stderr.on('data', (d) => (err += d));
-        p2.on('error', (e) => { clearTimeout(timer); done({ error: e.message }); });
-        p2.on('close', (code) => {
-          clearTimeout(timer);
-          if (code === 0 && out.trim()) return done({ path: out.trim() });
-          if (/cancel/i.test(err)) return done({ canceled: true });
-          done({ error: err.trim() || ('osascript exited ' + code) });
-        });
-      });
-      if (r.error) return sendJson(res, 500, { error: r.error });
-      if (r.canceled) return sendJson(res, 200, { canceled: true });
-      return sendJson(res, 200, { path: r.path });
-    }
 
     /* Browser upload: the file is copied into ./.uploads so extraction (and,
        for PDFs, the CLI's own Read) happens on a file inside this folder. */
@@ -1206,6 +1530,31 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, { path: file, size: buf.length });
     }
 
+    /* Public mode's replacement for the native folder picker: the browser's
+       <input webkitdirectory> gives one File per picked file, each carrying
+       its own relative path - the client uploads them one at a time here and
+       we reconstruct the folder tree under the confined workspace root. No
+       zip/multipart parsing needed. */
+    if (route === '/api/kit-upload' && req.method === 'POST' && MODE === 'public') {
+      const kit = String(url.searchParams.get('kit') || 'kit').replace(/[^A-Za-z0-9 _-]/g, '_').slice(0, 60) || 'kit';
+      const relParts = String(url.searchParams.get('relpath') || '')
+        .split('/').filter((p) => p && p !== '.' && p !== '..');
+      if (!relParts.length) return sendJson(res, 400, { error: 'bad relative path' });
+      const ext = path.extname(relParts[relParts.length - 1]).toLowerCase();
+      if (!SRC_EXT.has(ext)) return sendJson(res, 400, { error: 'only .html/.htm/.css files are accepted' });
+      let buf;
+      try { buf = await readRawBody(req, 5e6); }
+      catch (e) { return sendJson(res, 413, { error: 'file too large (5 MB max)' }); }
+      const kitDir = path.join(WORKSPACE_DIR, kit);
+      const dest = path.join(kitDir, ...relParts);
+      if (dest !== kitDir && !dest.startsWith(kitDir + path.sep)) {
+        return sendJson(res, 400, { error: 'bad path' });
+      }
+      fs.mkdirSync(path.dirname(dest), { recursive: true });
+      fs.writeFileSync(dest, buf);
+      return sendJson(res, 200, { ok: true, dir: kitDir });
+    }
+
     if (route === '/api/convert' && req.method === 'POST') {
       const body = await readBody(req);
       const file = path.resolve(String(body.path || ''));
@@ -1219,7 +1568,7 @@ const server = http.createServer(async (req, res) => {
       }
 
       let extracted;
-      try { extracted = extractFile(file, ext); }
+      try { extracted = await extractFile(file, ext); }
       catch (e) { return sendJson(res, 400, { error: 'Could not read the file: ' + e.message }); }
       let truncated = false;
       if (extracted.content && extracted.content.length > CONVERT_MAX) {
@@ -1241,7 +1590,7 @@ const server = http.createServer(async (req, res) => {
       const rel = path.relative(HERE, file);
       const readable = rel && !rel.startsWith('..') ? rel : file;
       try {
-        const r = await runAI(convertPrompt(path.basename(file), extracted, readable));
+        const r = await runAI(convertPrompt(path.basename(file), extracted, readable), req);
         const ms = Date.now() - started;
         console.log(`${(ms / 1000).toFixed(1)}s  ${r.text.length} chars`);
         const split = extractQuestions(r.text); // converters ask nothing; strip any stray section
@@ -1253,11 +1602,12 @@ const server = http.createServer(async (req, res) => {
         });
       } catch (e) {
         console.log('failed');
-        return sendJson(res, 502, { error: e.message, explain: e.explain || '' });
+        return sendJson(res, e.limited ? 429 : 502, { error: e.message, explain: e.explain || '' });
       }
     }
 
     if (route === '/api/pick-folder' && req.method === 'POST') {
+      if (MODE === 'public') return sendJson(res, 404, { error: 'not available in this deployment' });
       const body = await readBody(req);
       const r = await pickFolder(body.prompt);
       if (r.error) return sendJson(res, 500, { error: r.error });
@@ -1322,7 +1672,7 @@ const server = http.createServer(async (req, res) => {
       const started = Date.now();
       process.stdout.write(`ai  component: ${src.name} (${src.files.length} files) ... `);
       try {
-        const r = await runAI(src.type ? unitPrompt(src) : componentPrompt(src));
+        const r = await runAI(src.type ? unitPrompt(src) : componentPrompt(src), req);
         const ms = Date.now() - started;
         console.log(`${(ms / 1000).toFixed(1)}s  ${r.text.length} chars  via ${r.strategy}`);
         const split = extractQuestions(r.text);
@@ -1333,7 +1683,7 @@ const server = http.createServer(async (req, res) => {
       } catch (e) {
         console.log('failed');
         if (e.tried) for (const t of e.tried) console.log(`      ${t.form}: ${t.why}`);
-        return sendJson(res, 502, {
+        return sendJson(res, e.limited ? 429 : 502, {
           error: e.message,
           explain: e.explain || '',
           tried: (e.tried || []).map((t) => `${t.form}: ${t.why}`),
@@ -1342,8 +1692,40 @@ const server = http.createServer(async (req, res) => {
     }
 
     /* ---- figma frame -> md ----
-       The CLI may have Figma access through its own MCP configuration. We ask it
-       to use the REAL data or to say plainly that it cannot - never to invent. */
+       Local mode: the CLI may have Figma access through its own MCP
+       configuration. We ask it to use the REAL data or say plainly it cannot.
+       Public mode: no CLI, no MCP, and no visitor-supplied URL - a single
+       fixed file the owner controls (FIGMA_TOKEN + ILOVEMD_DEMO_FIGMA_KEY),
+       fetched via Figma's REST API, so the public demo never touches anyone
+       else's design. */
+    if (route === '/api/figma-doc' && req.method === 'POST' && MODE === 'public') {
+      if (!FIGMA_TOKEN || !DEMO_FIGMA_KEY) {
+        return sendJson(res, 503, { error: 'The Figma demo is not configured on this server.' });
+      }
+      if (!aiStatus.available) {
+        aiStatus = await checkAI();
+        if (!aiStatus.available) {
+          return sendJson(res, 503, { error: aiStatus.detail, explain: explain(aiStatus.detail) });
+        }
+      }
+      const started = Date.now();
+      process.stdout.write('ai  figma demo ... ');
+      try {
+        const data = await fetchFigmaFile(DEMO_FIGMA_KEY, FIGMA_TOKEN);
+        const r = await runAI(figmaDemoPrompt(summarizeFigmaFile(data), data.name || 'Demo file'), req);
+        const ms = Date.now() - started;
+        console.log(`${(ms / 1000).toFixed(1)}s  ${r.text.length} chars`);
+        const split = extractQuestions(r.text);
+        return sendJson(res, 200, {
+          markdown: split.markdown, questions: split.questions, ms,
+          suggestedName: nameFromMarkdown(split.markdown, 'Figma demo').replace(/ \d+\.md$/, '.md'),
+        });
+      } catch (e) {
+        console.log('failed');
+        return sendJson(res, e.limited ? 429 : 502, { error: e.message, explain: e.explain || '' });
+      }
+    }
+
     if (route === '/api/figma-doc' && req.method === 'POST') {
       const body = await readBody(req);
       const rawUrl = String(body.url || '').trim();
@@ -1386,7 +1768,7 @@ const server = http.createServer(async (req, res) => {
       const started = Date.now();
       process.stdout.write(`ai  figma: ${rawUrl.slice(0, 60)} ... `);
       try {
-        const r = await runAI(prompt);
+        const r = await runAI(prompt, req);
         const ms = Date.now() - started;
         if (/^\s*FIGMA_UNAVAILABLE\s*:/i.test(r.text)) {
           console.log('unavailable');
@@ -1448,6 +1830,8 @@ const server = http.createServer(async (req, res) => {
       aiStatus = await checkAI();
       return sendJson(res, 200, {
         build: BUILD,
+        mode: MODE,
+        figmaDemo: MODE === 'public' ? !!(FIGMA_TOKEN && DEMO_FIGMA_KEY) : null,
         documentsDir: DOCS,
         documents: listDocs().length,
         ai: {
@@ -1574,12 +1958,12 @@ const server = http.createServer(async (req, res) => {
         const t0 = Date.now();
         process.stdout.write(`ai  ask: ${instruction.slice(0, 48)} ... `);
         try {
-          const r = await runAI(askPrompt);
+          const r = await runAI(askPrompt, req);
           console.log(`${((Date.now() - t0) / 1000).toFixed(1)}s`);
           return sendJson(res, 200, { answer: r.text, ms: Date.now() - t0 });
         } catch (e) {
           console.log('failed');
-          return sendJson(res, 502, { error: e.message, explain: e.explain || '' });
+          return sendJson(res, e.limited ? 429 : 502, { error: e.message, explain: e.explain || '' });
         }
       }
 
@@ -1602,7 +1986,7 @@ const server = http.createServer(async (req, res) => {
       const started = Date.now();
       process.stdout.write(`ai  ${editing ? 'edit' : 'new'}: ${instruction.slice(0, 48)} ... `);
       try {
-        const r = await runAI(prompt);
+        const r = await runAI(prompt, req);
         const ms = Date.now() - started;
         console.log(`${(ms / 1000).toFixed(1)}s  ${r.text.length} chars  via ${r.strategy}`);
         // A new document gets a filename from its own H1.
@@ -1612,7 +1996,7 @@ const server = http.createServer(async (req, res) => {
       } catch (e) {
         console.log('failed');
         if (e.tried) for (const t of e.tried) console.log(`      ${t.form}: ${t.why}`);
-        return sendJson(res, 502, {
+        return sendJson(res, e.limited ? 429 : 502, {
           error: e.message,
           explain: e.explain || '',
           tried: (e.tried || []).map((t) => `${t.form}: ${t.why}`),
@@ -1663,7 +2047,7 @@ const server = http.createServer(async (req, res) => {
       process.stdout.write(`ai  compare: ${instruction.slice(0, 48)} ... `);
       const t0 = Date.now();
       try {
-        const r = await runAI(prompt);
+        const r = await runAI(prompt, req);
         console.log(`${((Date.now() - t0) / 1000).toFixed(1)}s`);
         // Extract any UPDATED_A or UPDATED_B blocks
         const rxA = /```UPDATED_A\r?\n([\s\S]*?)```/;
@@ -1679,7 +2063,7 @@ const server = http.createServer(async (req, res) => {
         });
       } catch (e) {
         console.log('failed');
-        return sendJson(res, 502, { error: e.message, explain: e.explain || '' });
+        return sendJson(res, e.limited ? 429 : 502, { error: e.message, explain: e.explain || '' });
       }
     }
 
@@ -1710,23 +2094,30 @@ const server = http.createServer(async (req, res) => {
 /* ------------------------------------------------------------------ boot */
 
 fs.mkdirSync(DOCS, { recursive: true });
+if (WORKSPACE_DIR) fs.mkdirSync(WORKSPACE_DIR, { recursive: true });
 aiStatus = await checkAI();
 
 server.listen(PORT, HOST, () => {
   console.log('');
-  console.log('  ilovemd');
+  console.log('  ilovemd' + (MODE === 'public' ? '  (public mode)' : ''));
   console.log('  http://' + HOST + ':' + PORT + '           homepage');
   console.log('  http://' + HOST + ':' + PORT + '/text      workspace');
   console.log('');
   console.log('  build      ' + BUILD);
   console.log('  documents  ' + DOCS + '   (' + listDocs().length + ' files)');
-  console.log('  prompt bar ' + (aiStatus.available
-    ? `${AI.command} - ${aiStatus.detail}` + (AI.model ? ' - model ' + AI.model : '') + '  (no API key needed)'
-    : 'unavailable - the claude command could not be run'));
-  if (!aiStatus.available) {
-    for (const line of aiStatus.searched || []) console.log('             tried ' + line);
-    console.log('             If Claude Code IS installed, run `which claude` and start with:');
-    console.log('               ILOVEMD_AI_CMD=/full/path/to/claude node server.mjs');
+  if (MODE === 'public') {
+    console.log('  ai backend direct Anthropic API' + (aiStatus.available ? '' : ' - ANTHROPIC_API_KEY is not set'));
+    console.log('  workspace  ' + WORKSPACE_DIR);
+    console.log('  figma demo ' + (FIGMA_TOKEN && DEMO_FIGMA_KEY ? 'configured' : 'not configured'));
+  } else {
+    console.log('  prompt bar ' + (aiStatus.available
+      ? `${AI.command} - ${aiStatus.detail}` + (AI.model ? ' - model ' + AI.model : '') + '  (no API key needed)'
+      : 'unavailable - the claude command could not be run'));
+    if (!aiStatus.available) {
+      for (const line of aiStatus.searched || []) console.log('             tried ' + line);
+      console.log('             If Claude Code IS installed, run `which claude` and start with:');
+      console.log('               ILOVEMD_AI_CMD=/full/path/to/claude node server.mjs');
+    }
   }
   console.log('');
   console.log('  Editing and saving work regardless of the prompt bar.');

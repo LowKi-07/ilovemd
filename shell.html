@@ -525,6 +525,7 @@
   <button class="btn btn--ghost btn--sm" id="btn-copy">Copy</button>
   <button class="btn btn--primary btn--sm" id="btn-save">Save</button>
   <button class="burger" id="btn-chat" title="Show or hide the assistant" aria-pressed="true">&#10022;</button>
+  <button class="btn btn--ghost btn--sm" id="btn-signout" style="display:none" title="Sign out of this demo">Sign out</button>
 </header>
 
 <div class="shell" id="shell" data-side="closed" data-chat="open" data-view="split">
@@ -1141,6 +1142,19 @@
       };
       return;
     }
+    if (!S.md && MODE === 'figma' && !S.busy && S.siteMode === 'public') {
+      wrap.innerHTML =
+        '<div class="placeholder"><div class="dropbox">' +
+        '<h3>Figma &rarr; Markdown</h3>' +
+        '<p>This public demo generates documentation from one pre-selected Figma file - ' +
+        'it does not accept arbitrary Figma links, so no one’s design but the demo’s own gets pulled in.</p>' +
+        (S.figmaDemo
+          ? '<button class="btn btn--primary" id="btn-fig-demo">View Figma Demo</button>'
+          : '<p class="hint">The Figma demo is not configured on this server.</p>') +
+        '</div></div>';
+      if ($('btn-fig-demo')) $('btn-fig-demo').onclick = figGenerateDemo;
+      return;
+    }
     if (!S.md && MODE === 'figma' && !S.busy) {
       wrap.innerHTML =
         '<div class="placeholder"><div class="dropbox">' +
@@ -1384,6 +1398,7 @@
 
   /* ================================================================== ui */
   async function pickImport() {
+    if (S.siteMode === 'public') return pickImportPublic();
     try {
       var r = await post('/api/pick-folder', { for: 'import', prompt: 'Choose the folder that contains your components (HTML and CSS)' });
       if (r.canceled) return;
@@ -1392,6 +1407,44 @@
       await loadComponents();
       toast('Imported ' + S.importDir);
     } catch (e) { notify('error', 'Could not open the folder picker.', e.message); }
+  }
+
+  // Public mode has no native folder picker (there is no local disk to browse
+  // on a public host) - the browser's own folder-upload input replaces it,
+  // and the files land in this visitor's confined workspace folder on the
+  // server via /api/kit-upload.
+  function pickImportPublic() {
+    var inp = document.createElement('input');
+    inp.type = 'file'; inp.webkitdirectory = true; inp.multiple = true; inp.style.display = 'none';
+    inp.addEventListener('change', function () { uploadKitFolder(inp.files); document.body.removeChild(inp); });
+    document.body.appendChild(inp);
+    inp.click();
+  }
+  async function uploadKitFolder(fileList) {
+    var files = Array.prototype.filter.call(fileList || [], function (f) { return /\.(html?|css)$/i.test(f.name); });
+    if (!files.length) { notify('warn', 'No HTML/CSS files found', 'Pick a folder that contains component markup.'); return; }
+    var kitName = ((files[0].webkitRelativePath || files[0].name).split('/')[0] || 'kit').slice(0, 60);
+    setStatus('busy', 'Uploading 0/' + files.length + '…');
+    var dir = null, failed = 0;
+    for (var i = 0; i < files.length; i++) {
+      var f = files[i];
+      var rel = (f.webkitRelativePath || f.name).split('/').slice(1).join('/') || f.name;
+      try {
+        var j = await api('/api/kit-upload?kit=' + encodeURIComponent(kitName) + '&relpath=' + encodeURIComponent(rel),
+          { method: 'POST', body: f });
+        if (j && j.dir) dir = j.dir;
+      } catch (e) { failed++; }
+      setStatus('busy', 'Uploading ' + (i + 1) + '/' + files.length + '…');
+    }
+    setStatus('', '');
+    if (!dir) { notify('error', 'Upload failed', 'Could not upload the folder. Try again.'); return; }
+    S.importDir = dir;
+    try {
+      await api('/api/state', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ importDir: dir }) });
+    } catch (e) { /* non-fatal */ }
+    await loadKits();
+    await loadComponents();
+    toast('Imported ' + files.length + ' files' + (failed ? ' (' + failed + ' failed)' : ''));
   }
   async function loadKits() {
     if (!S.importDir) { paintSidebar(); return; }
@@ -1493,6 +1546,38 @@
   }
 
   /* =============================================================== figma */
+  // Public mode only: no URL, no recents bookkeeping - always the one file
+  // the server operator configured.
+  async function figGenerateDemo() {
+    if (S.busy) return;
+    S.busy = true;
+    paintTop(); paintChips();
+    say('u', 'Generate documentation for the Figma demo');
+    var t0 = Date.now();
+    var tick = setInterval(function () {
+      $('valid').innerHTML = '<span style="color:var(--accent)">&#9679;</span> Retrieving from Figma & writing… ' + Math.round((Date.now() - t0) / 1000) + 's';
+    }, 500);
+    var prevDoc = S.md;
+    try {
+      var r = await post('/api/figma-doc', {}, true);
+      clearInterval(tick);
+      S.qList = r.questions || [];
+      S.before = prevDoc; S.pending = true; S.last = { figDemo: true };
+      setDoc(r.markdown, (r.suggestedName || 'Figma demo.md'));
+      setStatus('dirty', 'generated, not saved');
+      say('a', '<b>Generated documentation</b> from the Figma demo in ' + Math.round(r.ms / 1000) + 's. Review it, tell me what to change, or press Save.');
+      startQuestions(true);
+    } catch (e) {
+      clearInterval(tick);
+      if (!isAbort(e)) {
+        var p = e.payload || {};
+        say('a', '<b>We couldn’t generate your Markdown.</b> ' + esc(p.explain || e.message), true);
+      }
+      $('valid').innerHTML = '';
+    }
+    S.busy = false;
+    paintTop(); paintEditor(); paintChat(); validate();
+  }
   async function figGenerate(url) {
     if (S.busy) return;
     if (!/^https:\/\/(www\.)?figma\.com\//.test(url || '')) {
@@ -1703,6 +1788,7 @@
   function regen() {
     if (!S.last) return;
     if (S.last.gen) return generate();
+    if (S.last.figDemo) return figGenerateDemo();
     if (S.last.fig) return figGenerate(S.last.fig);
     $('prompt').value = S.last.instruction;
     send(S.last.asking);
@@ -1831,6 +1917,18 @@
     paintTop(); paintSidebar(); paintEditor(); paintPreview(); paintChat();
 
     try {
+      var setup = await api('/api/setup');
+      S.siteMode = setup.mode;
+      S.figmaDemo = setup.figmaDemo;
+    } catch (e) { S.siteMode = 'local'; }
+    if (S.siteMode === 'public') {
+      $('btn-signout').style.display = '';
+      $('btn-signout').onclick = function () {
+        api('/api/logout', { method: 'POST' }).catch(function () {}).then(function () { location.href = '/login'; });
+      };
+    }
+
+    try {
       var st = await api('/api/state');
       S.importDir = st.importDir;
       S.frames = st.frames || [];
@@ -1845,6 +1943,7 @@
       await loadComponents();
     } else {
       paintSidebar();
+      paintEditor(); // siteMode just resolved - repaints the figma tab correctly
     }
     paintTop();
   })();

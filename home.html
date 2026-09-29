@@ -265,8 +265,19 @@
     <span class="sp"></span>
     <a class="btn btn--ghost" href="/text">Recent</a>
     <a class="btn btn--primary" href="/text">Open the app</a>
+    <button class="btn btn--ghost" id="btn-signout" style="display:none" title="Sign out of this demo">Sign out</button>
   </div>
 </nav>
+<script>
+  fetch('/api/setup', { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (s) {
+    if (s.mode !== 'public') return;
+    var b = document.getElementById('btn-signout');
+    b.style.display = '';
+    b.onclick = function () {
+      fetch('/api/logout', { method: 'POST' }).catch(function () {}).then(function () { location.href = '/login'; });
+    };
+  }).catch(function () {});
+</script>
 
 <!-- ------------------------------------------------------------- hero -->
 <header class="hero wrap">

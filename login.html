@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ilovemd — Sign in</title>
+<style>
+  :root {
+    --canvas: #08080c; --panel: rgba(255,255,255,.038); --panel-raised: rgba(255,255,255,.062);
+    --hairline: rgba(255,255,255,.085); --hairline-strong: rgba(255,255,255,.16);
+    --text: #f5f5fa; --text-2: #a3a3b4; --text-3: #6d6d7e;
+    --primary: #4f46e5; --primary-hov: #4338ca; --danger: #fb7185;
+    --gradient: linear-gradient(135deg,#8b7cff 0%,#6f8bff 45%,#3fd0e0 100%);
+    --r-md: 12px; --r-lg: 18px;
+    --ease: cubic-bezier(.2,.8,.3,1);
+    --font: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--canvas); color: var(--text); font: 400 15px/1.6 var(--font);
+    -webkit-font-smoothing: antialiased;
+    display: flex; align-items: center; justify-content: center;
+  }
+  body::before {
+    content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background:
+      radial-gradient(52em 34em at 8% -6%, rgba(139,124,255,.17), transparent 62%),
+      radial-gradient(46em 30em at 102% 104%, rgba(63,208,224,.11), transparent 60%);
+  }
+  .card {
+    position: relative; z-index: 1; width: 100%; max-width: 360px; margin: 24px;
+    background: var(--panel); border: 1px solid var(--hairline); border-radius: var(--r-lg);
+    padding: 32px 28px; backdrop-filter: saturate(180%) blur(16px);
+  }
+  .brand {
+    font-size: 17px; font-weight: 660; letter-spacing: -.015em;
+    background: var(--gradient); -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent; color: transparent; margin-bottom: 22px;
+  }
+  h1 { margin: 0 0 6px; font-size: 20px; font-weight: 650; letter-spacing: -.02em; }
+  p.sub { margin: 0 0 22px; color: var(--text-2); font-size: 13.5px; }
+  label { display: block; font: 550 12.5px var(--font); color: var(--text-2); margin-bottom: 7px; }
+  input[type=password] {
+    width: 100%; padding: 11px 13px; border-radius: 10px;
+    border: 1px solid var(--hairline-strong); background: rgba(255,255,255,.04);
+    color: var(--text); font: 400 14px var(--font); outline: none;
+  }
+  input[type=password]:focus { border-color: var(--primary); }
+  button {
+    width: 100%; margin-top: 16px; padding: 11px 16px; border: none; border-radius: 10px;
+    background: var(--primary); color: #fff; font: 620 14px var(--font); cursor: pointer;
+    transition: background-color .16s var(--ease), opacity .16s var(--ease);
+  }
+  button:hover { background: var(--primary-hov); }
+  button:disabled { opacity: .6; cursor: default; }
+  .err {
+    display: none; margin-top: 14px; padding: 9px 12px; border-radius: 8px;
+    background: rgba(251,113,133,.12); border: 1px solid rgba(251,113,133,.3);
+    color: var(--danger); font-size: 13px;
+  }
+</style>
+</head>
+<body>
+  <form class="card" id="f">
+    <div class="brand">ilovemd</div>
+    <h1>Sign in</h1>
+    <p class="sub">This is a shared demo instance. Enter the access password to continue.</p>
+    <label for="pw">Password</label>
+    <input id="pw" type="password" autocomplete="current-password" autofocus required>
+    <button id="go" type="submit">Sign in</button>
+    <div class="err" id="err">Wrong password. Try again.</div>
+  </form>
+  <script>
+    const f = document.getElementById('f');
+    const err = document.getElementById('err');
+    const go = document.getElementById('go');
+    const next = new URLSearchParams(location.search).get('next') || '/';
+    f.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      err.style.display = 'none';
+      go.disabled = true;
+      go.textContent = 'Signing in…';
+      try {
+        const r = await fetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password: document.getElementById('pw').value }),
+        });
+        if (!r.ok) throw new Error('bad password');
+        location.href = next;
+      } catch (e) {
+        err.style.display = 'block';
+        go.disabled = false;
+        go.textContent = 'Sign in';
+      }
+    });
+  </script>
+</body>
+</html>

@@ -7,6 +7,10 @@
 # User-generated output documents (these are personal, not part of the tool)
 documents/
 
+# Public-mode-only: uploaded component-kit folders (replaces local mode's
+# native folder picker) and any custom data root
+workspace/
+
 # Optional API key escape hatch (never commit real keys)
 .anthropic-key
 .env

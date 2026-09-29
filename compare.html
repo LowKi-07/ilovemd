@@ -145,7 +145,18 @@
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
     Ask AI
   </button>
+  <button class="hdr__ai-btn" id="btn-signout" style="display:none" title="Sign out of this demo">Sign out</button>
 </header>
+<script>
+  fetch('/api/setup', { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (s) {
+    if (s.mode !== 'public') return;
+    var b = document.getElementById('btn-signout');
+    b.style.display = '';
+    b.onclick = function () {
+      fetch('/api/logout', { method: 'POST' }).catch(function () {}).then(function () { location.href = '/login'; });
+    };
+  }).catch(function () {});
+</script>
 
 <div class="page">
   <div class="main" id="main">
