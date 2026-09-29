@@ -1134,19 +1134,19 @@
     $('shell').dataset.side = S.side ? 'open' : 'closed';
     $('shell').dataset.chat = S.chat ? 'open' : 'closed';
     $('shell').dataset.view = S.view;
-    var noprev = !S.md;
-    var nochat = !S.md || MODE === 'convert';
+    var noprev = (MODE === 'ui' || MODE === 'convert' || MODE === 'figma') && !S.md;
+    var nochat = ((MODE === 'ui' || MODE === 'figma') && !S.md) || MODE === 'convert';
     $('shell').dataset.noprev = noprev ? '1' : '';
     $('shell').dataset.nochat = nochat ? '1' : '';
     $('btn-chat').style.display = nochat ? 'none' : '';
-    $('btn-side').style.display = (MODE === 'convert' || MODE === 'ui' || !S.md) ? 'none' : '';
+    $('btn-side').style.display = (MODE === 'convert' || MODE === 'ui' || (MODE === 'figma' && !S.md)) ? 'none' : '';
     $('viewmode').style.display = noprev ? 'none' : '';
     Array.prototype.forEach.call($('viewmode').querySelectorAll('[data-v]'), function (b) {
       b.setAttribute('aria-pressed', String(b.getAttribute('data-v') === S.view));
     });
     document.body.classList.toggle('subtop-on', MODE === 'ui' && !!S.md);
     var none = !S.md;
-    var hideActions = none;
+    var hideActions = none && MODE !== 'text';
     $('btn-copy').disabled = none;
     $('btn-copy').style.display = hideActions ? 'none' : '';
     $('btn-save').disabled = none || S.busy;
