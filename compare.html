@@ -178,31 +178,96 @@
   .sdiff__line--empty .sdiff__text { color: transparent; }
   .no-diff { padding: 32px; text-align: center; font: 400 13px var(--mono); color: var(--text-3); background: var(--panel); border: 1px solid var(--hairline); border-radius: var(--r); }
 
-  /* ---- AI chat panel (fixed to viewport right) ---- */
-  .chat { position: fixed; top: 52px; right: 0; bottom: 0; width: var(--chat-w); border-left: 1px solid var(--hairline); display: flex; flex-direction: column; background: var(--panel); transform: translateX(100%); transition: transform .22s ease; z-index: 10; }
+  /* ---- AI chat panel ----
+     Styled to match shell.html's assistant panel. The sliding-overlay
+     mechanics stay, because this page is a single scrolling column rather
+     than shell.html's fixed flex row. */
+  .chat {
+    position: fixed; top: 52px; right: 0; bottom: 0; width: var(--chat-w);
+    border-left: 1px solid var(--hairline); background: var(--canvas);
+    display: flex; flex-direction: column; overflow: hidden;
+    transform: translateX(100%); transition: transform .22s var(--ease); z-index: 10;
+  }
   .chat.open { transform: translateX(0); }
-  .chat__hdr { display: flex; align-items: center; gap: 8px; padding: 0 14px; height: 48px; border-bottom: 1px solid var(--hairline); flex: none; }
-  .chat__title { font: 600 13px var(--font); color: var(--text); flex: 1; }
-  .chat__close { background: none; border: none; color: var(--text-3); cursor: pointer; padding: 4px; border-radius: 6px; display: flex; align-items: center; }
-  .chat__close:hover { background: rgba(255,255,255,.06); color: var(--text-2); }
-  .chat__msgs { flex: 1; overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 10px; }
-  .chat__hint { margin: auto; text-align: center; padding: 24px 12px; color: var(--text-3); font: 400 12px var(--font); line-height: 1.6; }
-  .chat__hint ul { list-style: none; margin-top: 10px; }
-  .chat__hint li { padding: 3px 0; }
-  .msg { padding: 10px 12px; border-radius: 8px; font: 400 12.5px/1.65 var(--font); max-width: 100%; }
-  .msg--u { background: rgba(139,124,255,.15); border: 1px solid rgba(139,124,255,.25); color: var(--text); align-self: flex-end; }
-  .msg--a { background: rgba(255,255,255,.04); border: 1px solid var(--hairline); color: var(--text-2); align-self: flex-start; }
-  .msg--err { border-color: rgba(251,113,133,.4); background: rgba(251,113,133,.06); color: #fda4af; }
-  .msg__apply { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
-  .msg__apply-btn { background: rgba(139,124,255,.15); border: 1px solid rgba(139,124,255,.3); color: var(--accent); font: 600 11px var(--font); padding: 4px 12px; border-radius: 6px; cursor: pointer; }
-  .msg__apply-btn:hover { background: rgba(139,124,255,.25); }
-  .chat__foot { flex: none; border-top: 1px solid var(--hairline); padding: 10px 12px; display: flex; gap: 8px; align-items: flex-end; }
-  .chat__inp { flex: 1; background: rgba(255,255,255,.05); border: 1px solid var(--hairline); border-radius: 8px; color: var(--text); font: 400 12.5px/1.5 var(--font); padding: 8px 12px; outline: none; resize: none; min-height: 38px; max-height: 120px; overflow-y: auto; }
-  .chat__inp:focus { border-color: rgba(139,124,255,.5); }
-  .chat__inp::placeholder { color: var(--text-3); }
-  .chat__send { flex: none; background: var(--primary); border: none; border-radius: 8px; color: #fff; cursor: pointer; padding: 8px 10px; display: flex; align-items: center; justify-content: center; }
-  .chat__send:hover { background: var(--primary-hov); }
-  .chat__send:disabled { opacity: .4; cursor: not-allowed; }
+  .phead {
+    flex: none; display: flex; align-items: center; gap: 8px;
+    height: 36px; padding: 0 14px;
+    border-bottom: 1px solid var(--hairline);
+    background: rgba(10,10,16,.4);
+  }
+  .phead .lbl {
+    font: 600 10.5px var(--font); letter-spacing: .09em;
+    text-transform: uppercase; color: var(--text-3); white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis;
+  }
+  .phead .sp { flex: 1 1 auto; min-width: 0; }
+  .ibtn {
+    width: 26px; height: 26px; border: 0; background: none; border-radius: 8px;
+    color: var(--text-3); cursor: pointer; display: grid; place-items: center;
+    transition: background-color .16s var(--ease), color .16s var(--ease);
+  }
+  .ibtn:hover { background: var(--panel-raised, rgba(255,255,255,.062)); color: var(--text); }
+  .ibtn svg { width: 14px; height: 14px; display: block; }
+
+  .msgs { flex: 1; min-height: 0; overflow: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 10px; }
+  .msg { max-width: 92%; border-radius: 12px; padding: 8px 12px; font-size: 13px; line-height: 1.55; }
+  .msg--u { align-self: flex-end; background: var(--accent-soft); border: 1px solid rgba(139,124,255,.3); color: var(--text); }
+  .msg--a { align-self: flex-start; background: var(--panel); border: 1px solid var(--hairline); color: var(--text-2); }
+  .msg--a b { color: var(--text); font-weight: 620; }
+  .msg--err { border-color: rgba(251,113,133,.4); background: rgba(251,113,133,.08); color: #fda4af; }
+  .chatempty { color: var(--text-3); font-size: 12.5px; text-align: center; margin: auto 10px; line-height: 1.6; }
+  .msg__apply { display: flex; gap: 5px; margin-top: 9px; flex-wrap: wrap; }
+  .msg__apply-btn {
+    border: 1px solid var(--hairline); background: var(--panel);
+    color: var(--text-2); border-radius: var(--r-pill);
+    padding: 3px 10px; font: 500 11px var(--font); cursor: pointer;
+    transition: color .16s var(--ease), border-color .16s var(--ease), background-color .16s var(--ease);
+  }
+  .msg__apply-btn:hover { color: var(--text); border-color: rgba(139,124,255,.55); background: var(--accent-soft); }
+
+  .chatfoot {
+    flex: none; border-top: 1px solid var(--hairline);
+    background: rgba(10,10,16,.66);
+    backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
+    padding: 9px 10px 10px; display: flex; flex-direction: column; gap: 7px;
+  }
+  .chips { display: flex; flex-wrap: wrap; gap: 5px; }
+  .chip {
+    border: 1px solid var(--hairline); background: var(--panel);
+    color: var(--text-2); border-radius: var(--r-pill);
+    padding: 3px 10px; font: 500 11px var(--font); cursor: pointer;
+    transition: color .16s var(--ease), border-color .16s var(--ease), background-color .16s var(--ease);
+  }
+  .chip:hover:not(:disabled) { color: var(--text); border-color: rgba(139,124,255,.55); background: var(--accent-soft); }
+  .chip:disabled { opacity: .4; cursor: default; }
+  .prow {
+    display: flex; align-items: center; gap: 8px;
+    border: 1px solid var(--hairline-strong); background: rgba(255,255,255,.05);
+    border-radius: var(--r-md); padding: 7px 7px 7px 12px;
+    transition: border-color .16s var(--ease), box-shadow .16s var(--ease);
+  }
+  .prow:focus-within { border-color: rgba(139,124,255,.6); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .spark { color: var(--accent); font-size: 13px; line-height: 21px; flex: none; }
+  /* Multi-line typing pins the icons back to the bottom row. */
+  .prow:has(#chat-inp[data-tall="1"]) { align-items: flex-end; }
+  .prow:has(#chat-inp[data-tall="1"]) .spark { align-self: flex-start; }
+  #chat-inp {
+    flex: 1; min-width: 0; border: 0; outline: none; resize: none;
+    background: transparent; color: var(--text);
+    font: 400 13.5px/1.55 var(--font); padding: 0; max-height: 180px;
+    min-height: 21px; height: 21px;
+  }
+  #chat-inp::placeholder { color: var(--text-3); }
+  .sendbtn {
+    flex: none; width: 32px; height: 32px; border: 0; border-radius: 10px;
+    background: var(--primary); color: #fff; cursor: pointer;
+    display: grid; place-items: center;
+    transition: transform .16s var(--ease), opacity .16s var(--ease), background-color .16s var(--ease);
+  }
+  .sendbtn:hover:not(:disabled) { transform: translateY(-1px); background: var(--primary-hov); }
+  .sendbtn:disabled { opacity: .35; cursor: default; }
+  .sendbtn svg { width: 16px; height: 16px; display: block; }
+  .valid { font: 400 10.5px var(--mono); color: var(--text-3); min-height: 14px; }
   .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(139,124,255,.3); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
@@ -318,28 +383,25 @@
 
   <!-- AI chat panel -->
   <div class="chat" id="chat-panel">
-    <div class="chat__hdr">
-      <span class="chat__title">AI Chat</span>
-      <button class="chat__close" onclick="toggleChat()" title="Close">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    <div class="phead">
+      <span class="lbl">AI Assistant</span>
+      <span class="sp"></span>
+      <button class="ibtn" onclick="toggleChat()" title="Hide the assistant" aria-label="Hide the assistant">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
     </div>
-    <div class="chat__msgs" id="chat-msgs">
-      <div class="chat__hint">
-        <b style="color:var(--text-2)">Ask anything about the two files</b>
-        <ul>
-          <li>Which is better for AI to understand?</li>
-          <li>Which has clearer structure?</li>
-          <li>Improve File A to match File B's style</li>
-          <li>Make File B more concise</li>
-        </ul>
+    <div class="msgs" id="chat-msgs"></div>
+    <div class="chatfoot">
+      <div class="chips" id="chat-chips"></div>
+      <div class="prow">
+        <span class="spark">&#10022;</span>
+        <textarea id="chat-inp" rows="1" spellcheck="false"
+          placeholder="Ask or instruct&#8230;  (Enter to send)" onkeydown="chatKeydown(event)"></textarea>
+        <button class="sendbtn" id="chat-send" onclick="sendChat()" title="Send" aria-label="Send">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12.5 5.5 19 12l-6.5 6.5"/></svg>
+        </button>
       </div>
-    </div>
-    <div class="chat__foot">
-      <textarea class="chat__inp" id="chat-inp" placeholder="Ask about the files…" rows="1" onkeydown="chatKeydown(event)"></textarea>
-      <button class="chat__send" id="chat-send" onclick="sendChat()" title="Send">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-      </button>
+      <div class="valid" id="chat-valid"></div>
     </div>
   </div>
 
@@ -679,6 +741,8 @@ function closeMenus() {
 document.addEventListener('click', closeMenus);
 document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeMenus(); });
 
+document.getElementById('chat-inp').addEventListener('input', growPrompt);
+
 // ---- AI chat ----
 var chatOpen = false;
 
@@ -694,10 +758,48 @@ function chatKeydown(e) {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); }
 }
 
+var CHAT_CHIPS = [
+  'Which is better for AI to understand?',
+  'Which has clearer structure?',
+  'Improve File A to match File B’s style',
+  'Make File B more concise',
+];
+
+function paintChatEmpty() {
+  var msgs = document.getElementById('chat-msgs');
+  if (msgs.querySelector('.msg')) return;
+  msgs.innerHTML = '<div class="chatempty">&#10022;<br>Ask anything about the two files ' +
+    '- which reads better, which is clearer, or how to bring one in line with the other.</div>';
+}
+
+function paintChatChips() {
+  var bar = document.getElementById('chat-chips');
+  bar.innerHTML = CHAT_CHIPS.map(function (c) {
+    return '<button class="chip" type="button">' + esc(c) + '</button>';
+  }).join('');
+  Array.prototype.forEach.call(bar.querySelectorAll('.chip'), function (b) {
+    b.onclick = function () {
+      var inp = document.getElementById('chat-inp');
+      inp.value = b.textContent;
+      growPrompt();
+      inp.focus();
+    };
+  });
+}
+
+// Mirrors shell.html: the row bottom-aligns its icons once the prompt wraps.
+function growPrompt() {
+  var inp = document.getElementById('chat-inp');
+  inp.style.height = 'auto';
+  var h = Math.min(180, Math.max(21, inp.scrollHeight));
+  inp.style.height = h + 'px';
+  inp.dataset.tall = h > 30 ? '1' : '';
+}
+
 function addMsg(cls, html) {
   var msgs = document.getElementById('chat-msgs');
-  var hint = msgs.querySelector('.chat__hint');
-  if (hint) hint.remove();
+  var empty = msgs.querySelector('.chatempty');
+  if (empty) empty.remove();
   var d = document.createElement('div');
   d.className = 'msg ' + cls;
   d.innerHTML = html;
@@ -712,7 +814,7 @@ function sendChat() {
   if (!txt) return;
   var btn = document.getElementById('chat-send');
   inp.value = '';
-  inp.style.height = '';
+  growPrompt();
 
   addMsg('msg--u', esc(txt));
 
@@ -780,11 +882,11 @@ function applyUpdate(which, key) {
   if (lastChanges) runDiff();
 }
 
-// auto-grow textarea
-document.getElementById('chat-inp').addEventListener('input', function() {
-  this.style.height = 'auto';
-  this.style.height = Math.min(this.scrollHeight, 120) + 'px';
-});
+// Runs last: CHAT_CHIPS is a var, so it is only assigned once execution
+// reaches its declaration.
+paintChatEmpty();
+paintChatChips();
+growPrompt();
 </script>
 </body>
 </html>
