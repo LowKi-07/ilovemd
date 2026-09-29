@@ -409,12 +409,27 @@
   .cta p { margin: 0 auto 28px; max-width: 52ch; color: var(--text-2); }
 
   /* footer */
-  footer { border-top: 1px solid var(--hairline); padding: 34px 0 46px; margin-top: 40px; }
-  .foot { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
-  .foot__note { color: var(--text-3); font-size: 12.5px; }
-  .foot__links { margin-left: auto; display: flex; gap: 4px; }
-  .foot__links a { color: var(--text-3); font-size: 12.5px; padding: 4px 9px; border-radius: 7px; }
+  footer { border-top: 1px solid var(--hairline); padding: 26px 0; margin-top: 40px; }
+  /* Logo left, links right, copyright centred on the footer itself rather
+     than in the gap between them. */
+  .foot {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 16px; position: relative;
+  }
+  .foot__logo { flex: none; }
+  .foot__logo svg { height: 26px; width: auto; display: block; }
+  .foot__note {
+    color: var(--text-3); font-size: 13.5px; white-space: nowrap;
+    position: absolute; left: 50%; transform: translateX(-50%);
+  }
+  .foot__links { display: flex; align-items: center; gap: 10px; flex: none; }
+  .foot__links a { color: var(--text-2); font-size: 13.5px; padding: 5px 10px; border-radius: 7px; }
   .foot__links a:hover { color: var(--text); background: var(--panel); }
+  /* Too narrow to keep the copyright centred without it colliding - stack. */
+  @media (max-width: 760px) {
+    .foot { flex-direction: column; gap: 14px; text-align: center; }
+    .foot__note { position: static; left: auto; transform: none; white-space: normal; }
+  }
 
   @media (max-width: 1080px) {
     .tools { grid-template-columns: repeat(2, 1fr); }
@@ -736,12 +751,19 @@
 <!-- ----------------------------------------------------------- footer -->
 <footer>
   <div class="wrap foot">
-    <span class="brandname">ilovemd</span>
-    <span class="foot__note">Anything to Markdown &middot; powered by Claude</span>
+    <a href="/" class="brand-logo foot__logo" aria-label="ilovemd home">
+      <svg width="65" height="28" viewBox="0 0 121 60" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <path d="M9.32 15.92V44H2.48V15.92H9.32Z" fill="white"/>
+        <path fill-rule="evenodd" clip-rule="evenodd" d="M41.4423 15C41.0385 15 40.5 15 39.9615 15.1364C37.2692 15.5455 34.8462 17.0455 33.5 19.2273C32.0192 17.0455 29.7308 15.5455 27.0385 15.1364C26.5 15 25.9615 15 25.5577 15C20.3077 15 16 19.2273 16 24.4091C16 24.8182 16 25.2273 16.1346 25.7727C16.4038 27.8182 17.3462 29.5909 18.8269 31.0909L33.5 45L48.1731 31.0909C49.6538 29.7273 50.5962 27.8182 50.8654 25.7727C51 25.2273 51 24.8182 51 24.4091C51 19.2273 46.6923 15 41.4423 15Z" fill="#D64022"/>
+        <path d="M89.28 15.92V44H82.44V27.16L76.16 44H70.64L64.32 27.12V44H57.48V15.92H65.56L73.44 35.36L81.24 15.92H89.28ZM104.719 15.92C107.679 15.92 110.265 16.5067 112.479 17.68C114.692 18.8533 116.399 20.5067 117.599 22.64C118.825 24.7467 119.439 27.1867 119.439 29.96C119.439 32.7067 118.825 35.1467 117.599 37.28C116.399 39.4133 114.679 41.0667 112.439 42.24C110.225 43.4133 107.652 44 104.719 44H94.1988V15.92H104.279ZM104.279 38.08C106.865 38.08 108.879 37.3733 110.319 35.96C111.759 34.5467 112.479 32.5467 112.479 29.96C112.479 27.3733 111.759 25.36 110.319 23.92C108.879 22.48 106.865 21.76 104.279 21.76H101.039V38.08H104.279Z" fill="white"/>
+      </svg>
+    </a>
+    <span class="foot__note">&copy; <span id="foot-year">2026</span> ilovemd. All rights reserved.</span>
     <div class="foot__links">
-      <a href="#converters">Converters</a>
-      <a href="#features">Features</a>
-      <a href="/text">Open the app</a>
+      <a href="#">Contact</a>
+      <a href="#">Support</a>
+      <a href="#">Privacy</a>
+      <a href="#">Terms</a>
     </div>
   </div>
 </footer>
@@ -828,6 +850,9 @@
     e.target.classList.remove('reveal');
     e.target.style.animationDelay = '';
   });
+
+  var year = document.getElementById('foot-year');
+  if (year) year.textContent = new Date().getFullYear();
 })();
 </script>
 </body>
