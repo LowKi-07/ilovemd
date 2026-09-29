@@ -1165,13 +1165,14 @@
 
   function paintEditor() {
     var wrap = $('edwrap');
-    if (!S.md && (MODE === 'ui' || MODE === 'convert') && S.busy && S.curName) {
+    var genFigma = MODE === 'figma' && S.busy;
+    if (!S.md && S.busy && (genFigma || ((MODE === 'ui' || MODE === 'convert') && S.curName))) {
       // Generating: spinner above the component name, chrome stripped away.
       wrap.innerHTML =
         '<div class="placeholder"><div class="dropbox dropbox--bare">' +
         '<div class="loader" role="status" aria-label="Generating"></div>' +
-        '<h3>' + esc(cap(S.curName)) + '</h3>' +
-        '<p id="gen-live">Reading the source…</p>' +
+        '<h3>' + (genFigma ? 'Figma &rarr; Markdown' : esc(cap(S.curName))) + '</h3>' +
+        '<p id="gen-live">' + (genFigma ? 'Retrieving from Figma…' : 'Reading the source…') + '</p>' +
         '<button class="btn btn--stroke" id="btn-cancel">Cancel</button>' +
         '</div></div>';
       $('btn-cancel').onclick = function () { if (S.ctrl) S.ctrl.abort(); };
@@ -1772,7 +1773,7 @@
       return;
     }
     S.busy = true;
-    paintTop(); paintChips();
+    paintTop(); paintChips(); paintEditor();   // swap the form for the spinner
     say('u', 'Generate documentation for ' + url);
     try {
       var fr = await post('/api/frame', { url: url });
@@ -1782,7 +1783,12 @@
 
     var t0 = Date.now();
     var tick = setInterval(function () {
-      $('valid').innerHTML = '<span style="color:var(--accent)">&#9679;</span> Retrieving from Figma & writing… ' + Math.round((Date.now() - t0) / 1000) + 's';
+      var secs = Math.round((Date.now() - t0) / 1000);
+      // #valid sits in the validation bar, which the landing view hides - the
+      // spinner's own line is the one the user can actually see.
+      var live = $('gen-live');
+      if (live) live.textContent = 'Retrieving from Figma & writing… ' + secs + 's';
+      $('valid').innerHTML = '<span style="color:var(--accent)">&#9679;</span> Retrieving from Figma & writing… ' + secs + 's';
     }, 500);
 
     var prevDoc = S.md;
