@@ -41,11 +41,19 @@
     font: 400 15px/1.6 var(--font);
     -webkit-font-smoothing: antialiased;
   }
+  @keyframes bgDrift {
+    0%   { transform: scale(1)    translate(0,    0   ); }
+    40%  { transform: scale(1.05) translate(-1.5%, 2% ); }
+    70%  { transform: scale(1.03) translate(1%,  -1.5%); }
+    100% { transform: scale(1.06) translate(-0.5%, 1% ); }
+  }
   body::before {
     content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
     background:
       radial-gradient(52em 34em at 8% -6%, rgba(139,124,255,.17), transparent 62%),
       radial-gradient(46em 30em at 102% 104%, rgba(63,208,224,.11), transparent 60%);
+    animation: bgDrift 22s ease-in-out infinite alternate;
+    will-change: transform;
   }
   ::-webkit-scrollbar { width: 10px; height: 10px; }
   ::-webkit-scrollbar-track { background: transparent; }
@@ -84,9 +92,9 @@
     background: rgba(10,10,16,.62);
     backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
   }
-  .nav__in { display: flex; align-items: center; gap: 10px; height: 60px; }
+  .nav__in { display: flex; align-items: center; gap: 10px; height: 60px; position: relative; }
   .brandname { font-size: 16px; font-weight: 660; letter-spacing: -.015em; color: var(--text); }
-  .nav__links { display: flex; align-items: center; gap: 2px; margin-left: 22px; }
+  .nav__links { display: flex; align-items: center; gap: 2px; position: absolute; left: 50%; transform: translateX(-50%); }
   .nav__links a {
     color: var(--text-2); font: 500 13px var(--font);
     padding: 6px 11px; border-radius: 8px;
@@ -208,18 +216,44 @@
   /* converter grid */
   .tools { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
   .tool {
-    position: relative; display: block;
-    border: 1px solid var(--hairline); background: var(--panel);
+    position: relative; display: block; overflow: hidden;
+    border: 1px solid rgba(139,124,255,.09);
+    background:
+      linear-gradient(135deg,
+        rgba(139,124,255,.065) 0%,
+        rgba(111,139,255,.025) 40%,
+        rgba(8,8,16,.55) 100%);
+    backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
     border-radius: var(--r-lg); padding: 24px 20px 22px;
     color: var(--text); text-decoration: none;
-    transition: transform .18s var(--ease), background-color .18s var(--ease), border-color .18s var(--ease);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.05),
+      inset 1px 0 0 rgba(255,255,255,.025),
+      0 4px 24px rgba(0,0,0,.28);
+    transition: transform .18s var(--ease), box-shadow .18s var(--ease), border-color .18s var(--ease);
   }
-  a.tool:hover { transform: translateY(-3px); background: var(--panel-raised); border-color: rgba(139,124,255,.45); }
+  .tool::before {
+    content: ''; position: absolute; inset: 0; pointer-events: none; border-radius: inherit;
+    background: linear-gradient(135deg,
+      rgba(255,255,255,.04) 0%,
+      rgba(139,124,255,.02) 30%,
+      transparent 55%);
+  }
+  a.tool:hover {
+    transform: translateY(-3px);
+    border-color: rgba(139,124,255,.28);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.07),
+      inset 1px 0 0 rgba(255,255,255,.04),
+      0 8px 36px rgba(139,124,255,.1),
+      0 2px 12px rgba(0,0,0,.38);
+  }
   .tool__icon {
     width: 46px; height: 46px; border-radius: 13px;
     display: grid; place-items: center; margin-bottom: 18px;
     background: var(--tb, rgba(255,255,255,.05));
     border: 1px solid var(--tl, var(--hairline));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
   }
   .tool__icon svg { width: 24px; height: 24px; display: block; }
   .tool h3 { margin: 0 0 6px; font-size: 15.5px; font-weight: 640; letter-spacing: -.01em; }
@@ -283,6 +317,36 @@
   @media (max-width: 560px) {
     .tools { grid-template-columns: 1fr; }
   }
+
+  /* -------------------------------------------------------- filter pills */
+  .filter-bar-wrap {
+    display: flex; justify-content: center;
+    margin-bottom: 28px;
+  }
+  .filter-bar {
+    display: flex; align-items: center; gap: 2px;
+    flex-wrap: nowrap; overflow-x: auto;
+    padding: 4px;
+    background: var(--panel-solid);
+    border: 1px solid var(--hairline);
+    border-radius: var(--r-pill);
+    max-width: 100%;
+    scrollbar-width: none;
+  }
+  .filter-bar::-webkit-scrollbar { display: none; }
+  .fpill {
+    display: inline-flex; align-items: center;
+    padding: 6px 16px; border-radius: var(--r-pill);
+    border: none;
+    background: transparent; color: var(--text-2);
+    font: 500 13px var(--font); cursor: pointer;
+    white-space: nowrap; text-decoration: none;
+    transition: background-color .15s var(--ease), color .15s var(--ease);
+  }
+  .fpill:hover { background: rgba(255,255,255,.06); color: var(--text); }
+  .fpill.active { background: rgba(255,255,255,.1); color: var(--text); }
+  .fpill.active:hover { background: rgba(255,255,255,.13); }
+  .tool[hidden] { display: none !important; }
 </style>
 </head>
 <body>
@@ -298,8 +362,8 @@
       </svg>
     </a>
     <div class="nav__links">
-      <a href="#converters">Converters</a>
-      <a href="#why">Documentation tools</a>
+      <a href="#converters">Convert MD</a>
+      <a href="#converters">Generate MD</a>
       <a href="#">Templates</a>
     </div>
     <span class="sp"></span>
@@ -361,7 +425,6 @@
 
 <!-- ------------------------------------------------------------- hero -->
 <header class="hero wrap">
-  <div class="pill"><span class="dot"></span> Powered by Claude</div>
   <h1>Anything to <span class="grad">Markdown.</span></h1>
   <p class="sub">
     Turn natural language, UI components and Figma designs into structured
@@ -373,69 +436,78 @@
 
 <!-- ------------------------------------------------------- converters -->
 <section id="converters" class="wrap" style="padding-top:48px">
-  <div class="tools">
+  <div class="filter-bar-wrap">
+    <div class="filter-bar" id="filter-bar">
+      <button class="fpill active" data-filter="all">All</button>
+      <button class="fpill" data-filter="convert">Convert MD</button>
+      <button class="fpill" data-filter="generate">Generate MD</button>
+      <button class="fpill" data-filter="compare">Compare MD</button>
+      <button class="fpill" data-filter="translate">Translate MD</button>
+    </div>
+  </div>
+  <div class="tools" id="tools-grid">
 
-    <a class="tool" href="/text">
+    <a class="tool" href="/text" data-cat="generate">
       <span class="tool__arrow">&rarr;</span>
       <span class="tool__icon" style="--tb:rgba(139,124,255,.12);--tl:rgba(139,124,255,.3)"><svg viewBox="0 0 24 24" fill="none" stroke="#8b7cff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7z"/><path d="M14 2v5h5"/><path d="M9 12h6M9 16h6M9 8h2"/></svg></span>
       <h3>Text to Markdown</h3>
       <p>Describe what you want in plain English; Claude writes the structured document.</p>
     </a>
-    <a class="tool" href="/ui">
+    <a class="tool" href="/ui" data-cat="generate">
       <span class="tool__arrow">&rarr;</span>
       <span class="tool__icon" style="--tb:rgba(228,77,38,.12);--tl:rgba(228,77,38,.32)"><svg viewBox="0 0 24 24"><path fill="#E44D26" d="M3.5 2h17l-1.55 17.5L12 21.8l-6.95-2.3L3.5 2z"/><path fill="#F16529" d="M12 3.6v16.55l5.62-1.86L18.9 3.6H12z"/><polyline points="10,8.7 7,11.7 10,14.7" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><polyline points="14,8.7 17,11.7 14,14.7" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
       <h3>HTML / CSS to Markdown</h3>
       <p>Import a local component folder and generate structured component documentation.</p>
     </a>
-    <a class="tool" href="/figma">
+    <a class="tool" href="/figma" data-cat="generate">
       <span class="tool__arrow">&rarr;</span>
       <span class="tool__icon"><svg viewBox="0 0 24 24"><path fill="#F24E1E" d="M12 2H8.5a3.5 3.5 0 0 0 0 7H12V2z"/><path fill="#FF7262" d="M12 2h3.5a3.5 3.5 0 0 1 0 7H12V2z"/><path fill="#A259FF" d="M12 9H8.5a3.5 3.5 0 0 0 0 7H12V9z"/><path fill="#0ACF83" d="M8.5 16a3.5 3.5 0 1 0 3.5 3.5V16H8.5z"/><circle fill="#1ABCFE" cx="15.5" cy="12.5" r="3.5"/></svg></span>
       <h3>Figma to Markdown</h3>
       <p>Paste a frame link, retrieve properties and variants, get documentation.</p>
     </a>
-    <a class="tool" href="/convert?type=pdf">
+    <a class="tool" href="/convert?type=pdf" data-cat="convert">
       <span class="tool__arrow">&rarr;</span>
       <span class="tool__icon" style="--tb:rgba(251,113,133,.1);--tl:rgba(251,113,133,.28)"><svg viewBox="0 0 24 24" fill="none" stroke="#fb7185" stroke-width="1.7" stroke-linejoin="round"><path d="M14 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7z"/><path d="M14 2v5h5"/><text x="12" y="17.5" text-anchor="middle" font-family="-apple-system,Segoe UI,sans-serif" font-size="6" font-weight="700" fill="#fb7185" stroke="none">PDF</text></svg></span>
       <h3>PDF to Markdown</h3>
       <p>Convert native PDF files to clean, editable Markdown.</p>
     </a>
-    <a class="tool" href="/convert?type=word">
+    <a class="tool" href="/convert?type=word" data-cat="convert">
       <span class="tool__arrow">&rarr;</span>
       <span class="tool__icon" style="--tb:rgba(79,143,247,.1);--tl:rgba(79,143,247,.28)"><svg viewBox="0 0 24 24" fill="none" stroke="#4f8ff7" stroke-width="1.7" stroke-linejoin="round"><path d="M14 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7z"/><path d="M14 2v5h5"/><text x="12" y="17.5" text-anchor="middle" font-family="-apple-system,Segoe UI,sans-serif" font-size="8" font-weight="700" fill="#4f8ff7" stroke="none">W</text></svg></span>
       <h3>Word to Markdown</h3>
       <p>Convert Word documents to clean Markdown.</p>
     </a>
-    <a class="tool" href="/convert?type=ppt">
+    <a class="tool" href="/convert?type=ppt" data-cat="convert">
       <span class="tool__arrow">&rarr;</span>
       <span class="tool__icon" style="--tb:rgba(237,108,71,.1);--tl:rgba(237,108,71,.28)"><svg viewBox="0 0 24 24" fill="none" stroke="#ed6c47" stroke-width="1.7" stroke-linejoin="round"><path d="M14 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7z"/><path d="M14 2v5h5"/><text x="12" y="17.5" text-anchor="middle" font-family="-apple-system,Segoe UI,sans-serif" font-size="8" font-weight="700" fill="#ed6c47" stroke="none">P</text></svg></span>
       <h3>PowerPoint to Markdown</h3>
       <p>Turn slide decks into structured Markdown outlines.</p>
     </a>
-    <a class="tool" href="/convert?type=excel">
+    <a class="tool" href="/convert?type=excel" data-cat="convert">
       <span class="tool__arrow">&rarr;</span>
       <span class="tool__icon" style="--tb:rgba(33,163,102,.1);--tl:rgba(33,163,102,.28)"><svg viewBox="0 0 24 24" fill="none" stroke="#21A366" stroke-width="1.7" stroke-linejoin="round"><path d="M14 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7z"/><path d="M14 2v5h5"/><text x="12" y="17.5" text-anchor="middle" font-family="-apple-system,Segoe UI,sans-serif" font-size="8" font-weight="700" fill="#21A366" stroke="none">X</text></svg></span>
       <h3>Excel to Markdown</h3>
       <p>Convert workbooks and tables into Markdown tables.</p>
     </a>
-    <a class="tool" href="/ui">
+    <a class="tool" href="/ui" data-cat="generate">
       <span class="tool__arrow">&rarr;</span>
       <span class="tool__icon" style="--tb:rgba(97,218,251,.08);--tl:rgba(97,218,251,.25)"><svg viewBox="0 0 24 24" fill="none" stroke="#61DAFB" stroke-width="1"><circle cx="12" cy="12" r="2" fill="#61DAFB" stroke="none"/><ellipse cx="12" cy="12" rx="10" ry="4.2"/><ellipse cx="12" cy="12" rx="10" ry="4.2" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="10" ry="4.2" transform="rotate(120 12 12)"/></svg></span>
       <h3>React to Markdown</h3>
       <p>Document React components straight from their source.</p>
     </a>
-    <a class="tool" href="/compare">
+    <a class="tool" href="/compare" data-cat="compare">
       <span class="tool__arrow">&rarr;</span>
       <span class="tool__icon" style="--tb:rgba(251,191,36,.08);--tl:rgba(251,191,36,.25)"><svg viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h4"/><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="9" y1="12" x2="15" y2="12"/></svg></span>
       <h3>Compare MD Files</h3>
       <p>Upload or paste two Markdown files and see a side-by-side diff.</p>
     </a>
-    <div class="tool tool--soon">
+    <div class="tool tool--soon" data-cat="convert">
       <span class="tool__soon">Soon</span>
       <span class="tool__icon" style="--tb:rgba(255,255,255,.07);--tl:rgba(255,255,255,.2)"><svg viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="3.5" fill="#fff"/><text x="12" y="17" text-anchor="middle" font-family="Georgia,serif" font-size="13" font-weight="700" fill="#0a0a11">N</text></svg></span>
       <h3>Notion to Markdown</h3>
       <p>Export a Notion page as editable Markdown.</p>
     </div>
-    <div class="tool tool--soon">
+    <div class="tool tool--soon" data-cat="convert">
       <span class="tool__soon">Soon</span>
       <span class="tool__icon" style="--tb:rgba(38,132,255,.1);--tl:rgba(38,132,255,.3)"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round"><path d="M4.5 17.5c2.7-4.4 4.8-5.2 8.8-3.1l6.2 3.1" stroke="#2684FF" stroke-width="3"/><path d="M19.5 6.5c-2.7 4.4-4.8 5.2-8.8 3.1L4.5 6.5" stroke="#5EA4FF" stroke-width="3"/></svg></span>
       <h3>Confluence to Markdown</h3>
@@ -511,5 +583,22 @@
   </div>
 </footer>
 
+<script>
+(function () {
+  var bar = document.getElementById('filter-bar');
+  var grid = document.getElementById('tools-grid');
+  if (!bar || !grid) return;
+  bar.addEventListener('click', function (e) {
+    var btn = e.target.closest('.fpill');
+    if (!btn) return;
+    bar.querySelectorAll('.fpill').forEach(function (p) { p.classList.remove('active'); });
+    btn.classList.add('active');
+    var f = btn.dataset.filter;
+    grid.querySelectorAll('.tool').forEach(function (t) {
+      t.hidden = f !== 'all' && t.dataset.cat !== f;
+    });
+  });
+})();
+</script>
 </body>
 </html>
