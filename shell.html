@@ -547,9 +547,9 @@
     background: rgba(10,10,16,.58);
     backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
   }
-  body.mode-ui .subtop { display: flex; }
-  body.mode-ui .shell { inset: 100px 0 0 0; }
-  body.mode-ui .side { top: 100px; }
+  body.mode-ui.subtop-on .subtop { display: flex; }
+  body.mode-ui.subtop-on .shell { inset: 100px 0 0 0; }
+  body.mode-ui.subtop-on .side { top: 100px; }
   .subtop .folder__path {
     max-width: 180px; white-space: nowrap; overflow: hidden;
     text-overflow: ellipsis; direction: rtl;
@@ -558,8 +558,8 @@
   .subtop-div { width: 1px; height: 18px; background: var(--hairline); flex: none; margin: 0 4px; }
   .subtop .kitsel { padding: 5px 28px 5px 10px; font-size: 12px; }
   @media (max-width: 940px) {
-    body.mode-ui .shell { position: static; }
-    body.mode-ui .subtop { position: sticky; }
+    body.mode-ui.subtop-on .shell { position: static; }
+    body.mode-ui.subtop-on .subtop { position: sticky; }
   }
 </style>
 </head>
@@ -1138,15 +1138,19 @@
     $('shell').dataset.noprev = noprev ? '1' : '';
     $('shell').dataset.nochat = nochat ? '1' : '';
     $('btn-chat').style.display = nochat ? 'none' : '';
-    $('btn-side').style.display = MODE === 'convert' ? 'none' : '';
+    $('btn-side').style.display = (MODE === 'convert' || MODE === 'ui') ? 'none' : '';
     $('viewmode').style.display = noprev ? 'none' : '';
     Array.prototype.forEach.call($('viewmode').querySelectorAll('[data-v]'), function (b) {
       b.setAttribute('aria-pressed', String(b.getAttribute('data-v') === S.view));
     });
+    document.body.classList.toggle('subtop-on', MODE === 'ui' && !!S.md);
     var none = !S.md;
+    var hideActions = none;
     $('btn-copy').disabled = none;
+    $('btn-copy').style.display = hideActions ? 'none' : '';
     $('btn-save').disabled = none || S.busy;
-    $('btn-save').textContent = MODE === 'convert' ? 'Download' : 'Save';
+    $('btn-save').style.display = hideActions ? 'none' : '';
+    $('btn-save').textContent = 'Download';
     var sb = $('btn-send');
     sb.classList.toggle('sendbtn--stop', S.busy);
     sb.title = S.busy ? 'Stop generating' : 'Send';
@@ -1702,7 +1706,7 @@
       S.before = prevDoc; S.pending = true; S.last = { gen: true };
       setDoc(r.markdown, cap(S.curName));
       setStatus('dirty', 'generated, not saved');
-      say('a', '<b>Generated documentation for ' + esc(cap(S.curName)) + '</b> in ' + Math.round(r.ms / 1000) + 's. Review it, tell me what to change, or press Save.');
+      say('a', '<b>Generated documentation for ' + esc(cap(S.curName)) + '</b> in ' + Math.round(r.ms / 1000) + 's. Review it, tell me what to change, or press Download.');
       startQuestions(true);
       paintSidebar();
     } catch (e) {
@@ -1739,7 +1743,7 @@
       S.before = prevDoc; S.pending = true; S.last = { figDemo: true };
       setDoc(r.markdown, (r.suggestedName || 'Figma demo.md'));
       setStatus('dirty', 'generated, not saved');
-      say('a', '<b>Generated documentation</b> from the Figma demo in ' + Math.round(r.ms / 1000) + 's. Review it, tell me what to change, or press Save.');
+      say('a', '<b>Generated documentation</b> from the Figma demo in ' + Math.round(r.ms / 1000) + 's. Review it, tell me what to change, or press Download.');
       startQuestions(true);
     } catch (e) {
       clearInterval(tick);
@@ -1781,7 +1785,7 @@
       S.before = prevDoc; S.pending = true; S.last = { fig: url };
       setDoc(r.markdown, (r.suggestedName || 'Figma component.md'));
       setStatus('dirty', 'generated, not saved');
-      say('a', '<b>Generated documentation</b> from the Figma frame in ' + Math.round(r.ms / 1000) + 's. Review it, tell me what to change, or press Save.');
+      say('a', '<b>Generated documentation</b> from the Figma frame in ' + Math.round(r.ms / 1000) + 's. Review it, tell me what to change, or press Download.');
       startQuestions(true);
       try {
         var st = await api('/api/state');
@@ -1976,59 +1980,12 @@
     a.download = currentName() || 'document.md';
     a.click();
     URL.revokeObjectURL(a.href);
+    S.dirty = false;
+    setStatus('', 'downloaded');
     toast('Downloaded ' + (currentName() || 'document.md'));
   }
-  async function save() {
-    if (!S.md) return;
-    if (MODE === 'convert') return downloadMd();
-    if (MODE === 'text') {
-      var name = currentName();
-      if (!name) {
-        notify('warn', 'Name it first.', 'Type a name in the field at the top, then save.');
-        $('title').focus();
-        return;
-      }
-      try {
-        var renaming = S.docName && S.docName !== name;
-        var r = await api('/api/doc', {
-          method: 'PUT', headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ name: name, markdown: S.md, baseMtime: renaming ? null : S.mtime }),
-        });
-        if (renaming) {
-          try { await api('/api/doc', { method: 'DELETE', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: S.docName }) }); } catch (e) {}
-        }
-        S.docName = r.name; S.mtime = r.mtime; S.dirty = false;
-        setStatus('saved', 'saved ' + new Date().toTimeString().slice(0, 5));
-        toast('Saved ' + r.name);
-        loadDocs();
-      } catch (e) {
-        if (e.payload && e.payload.markdown !== undefined) {
-          setStatus('error', 'changed on disk');
-          notify('warn', 'This file changed on disk since you opened it.', 'Save again to overwrite it deliberately.');
-          S.mtime = e.payload.mtime;
-          return;
-        }
-        setStatus('error', 'not saved');
-        notify('error', 'Save failed.', e.message);
-      }
-      return;
-    }
-    // ui / figma: save into ./documents - component docs get a folder named
-    // after their design system.
-    var fname = currentName() || 'Untitled.md';
-    var sub = '';
-    if (MODE === 'ui') {
-      var kk = S.groups
-        ? { label: (S.importDir || '').split('/').filter(Boolean).pop() || '' }
-        : S.kits.find(function (x) { return x.id === S.kit; });
-      sub = kk ? kk.label : '';
-    }
-    try {
-      var r2 = await post('/api/save-out', { name: fname, markdown: S.md, subdir: sub });
-      S.dirty = false;
-      setStatus('saved', 'saved ' + new Date().toTimeString().slice(0, 5));
-      toast('Saved ' + r2.name + ' to ' + r2.dir);
-    } catch (e) { notify('error', 'Save failed.', e.message); }
+  function save() {
+    downloadMd();
   }
 
   /* ============================================================== events */
