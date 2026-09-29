@@ -1,0 +1,29 @@
+# Local runtime state
+.2md-state.json
+
+# Temporary file uploads (cleared between sessions)
+.uploads/
+
+# User-generated output documents (these are personal, not part of the tool)
+documents/
+
+# Optional API key escape hatch (never commit real keys)
+.anthropic-key
+.env
+
+# Claude Code local session permissions (machine-specific)
+.claude/settings.local.json
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Node
+node_modules/
+npm-debug.log*
+
+# Editor
+.vscode/
+*.swp
+*.swo

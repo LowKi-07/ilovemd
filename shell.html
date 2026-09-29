@@ -1,0 +1,1854 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2md</title>
+<style>
+  /* ------------------------------------------------------------ tokens
+     Identical across every 2md page. */
+  :root {
+    --canvas: #08080c;
+    --panel: rgba(255,255,255,.038);
+    --panel-raised: rgba(255,255,255,.062);
+    --panel-solid: #12121a;
+    --hairline: rgba(255,255,255,.085);
+    --hairline-strong: rgba(255,255,255,.16);
+    --text: #f5f5fa;
+    --text-2: #a3a3b4;
+    --text-3: #6d6d7e;
+    --accent: #8b7cff;
+    --accent-soft: rgba(139,124,255,.16);
+    --accent-2: #3fd0e0;
+    --primary: #4f46e5;
+    --primary-hov: #4338ca;
+    --gradient: linear-gradient(135deg,#8b7cff 0%,#6f8bff 45%,#3fd0e0 100%);
+    --ok: #34d399;
+    --warn: #fbbf24;
+    --danger: #fb7185;
+    --r-sm: 8px; --r-md: 12px; --r-lg: 18px; --r-pill: 999px;
+    --blur: saturate(180%) blur(16px);
+    --ease: cubic-bezier(.2,.8,.3,1);
+    --font: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+    --side: 244px;
+    --chat: 320px;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--canvas); color: var(--text);
+    font: 400 15px/1.6 var(--font);
+    overflow: hidden; -webkit-font-smoothing: antialiased;
+  }
+  body::before {
+    content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background:
+      radial-gradient(52em 34em at 8% -6%, rgba(139,124,255,.17), transparent 62%),
+      radial-gradient(46em 30em at 102% 104%, rgba(63,208,224,.11), transparent 60%);
+  }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,.11); border-radius: var(--r-pill);
+    border: 2px solid transparent; background-clip: padding-box;
+  }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,.2); background-clip: padding-box; }
+  a { color: var(--accent); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* ------------------------------------------------------------ buttons */
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 12px; border-radius: 10px;
+    border: 1px solid transparent; background: transparent;
+    color: var(--text); font: 560 13px var(--font);
+    cursor: pointer; white-space: nowrap; text-decoration: none;
+    transition: transform .16s var(--ease), background-color .16s var(--ease);
+  }
+  .btn:hover:not(:disabled) { transform: translateY(-1px); }
+  .btn:disabled { opacity: .4; cursor: default; }
+  .btn--stroke { border-color: var(--hairline-strong); background: var(--panel); }
+  .btn--stroke:hover:not(:disabled) { background: var(--panel-raised); }
+  .btn--ghost { color: var(--text-2); }
+  .btn--ghost:hover:not(:disabled) { background: var(--panel); color: var(--text); }
+  .btn--primary { background: var(--primary); color: #fff; font-weight: 620; }
+  .btn--primary:hover:not(:disabled) { background: var(--primary-hov); }
+  .btn--sm { padding: 5px 10px; font-size: 12.5px; }
+
+  .mode {
+    display: inline-flex; border: 1px solid var(--hairline);
+    border-radius: var(--r-pill); overflow: hidden; flex: none;
+  }
+  .mode button {
+    border: 0; background: transparent; color: var(--text-3);
+    font: 500 11px var(--font); padding: 4px 11px; cursor: pointer;
+  }
+  .mode button[aria-pressed="true"] { background: var(--accent-soft); color: var(--text); }
+
+  /* -------------------------------------------------------------- topbar */
+  .top {
+    position: fixed; top: 0; left: 0; right: 0; height: 52px; z-index: 10;
+    display: flex; align-items: center; gap: 10px; padding: 0 12px;
+    border-bottom: 1px solid var(--hairline);
+    background: rgba(10,10,16,.62);
+    backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
+  }
+  .burger {
+    width: 32px; height: 32px; border: 0; background: none; color: var(--text-2);
+    border-radius: 8px; cursor: pointer; font-size: 15px; display: grid; place-items: center;
+  }
+  .burger:hover { background: var(--panel); color: var(--text); }
+  .burger[aria-pressed="true"] { background: var(--accent-soft); color: var(--text); }
+  .brandname { font-size: 15px; font-weight: 660; letter-spacing: -.015em; color: var(--text); text-decoration: none; }
+  .modetag {
+    font: 600 10px var(--mono); letter-spacing: .06em; color: var(--accent-2);
+    border: 1px solid rgba(63,208,224,.3); background: rgba(63,208,224,.1);
+    border-radius: var(--r-sm); padding: 2px 7px; white-space: nowrap;
+  }
+  #title {
+    font: 620 14px var(--font); letter-spacing: -.01em;
+    background: transparent; border: 1px solid transparent; border-radius: 8px;
+    color: var(--text); padding: 4px 8px; min-width: 8ch; max-width: 30ch;
+  }
+  #title:hover { border-color: var(--hairline); }
+  #title:focus { border-color: rgba(139,124,255,.6); outline: none; background: var(--panel); }
+  #title[readonly] { border-color: transparent; background: transparent; cursor: default; }
+  #title[readonly]:hover { border-color: transparent; }
+  .status { font: 400 11px var(--mono); color: var(--text-3); white-space: nowrap; }
+  .sp { flex: 1 1 auto; min-width: 0; }
+
+  /* --------------------------------------------------------------- shell */
+  .shell { position: fixed; inset: 52px 0 0 0; z-index: 1; display: flex; }
+  .panel { min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
+  .phead {
+    flex: none; display: flex; align-items: center; gap: 8px;
+    height: 36px; padding: 0 14px;
+    border-bottom: 1px solid var(--hairline);
+    background: rgba(10,10,16,.4);
+  }
+  .phead .lbl {
+    font: 600 10.5px var(--font); letter-spacing: .09em;
+    text-transform: uppercase; color: var(--text-3); white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis;
+  }
+  .pbody { flex: 1; min-height: 0; overflow: auto; }
+
+  /* -------------------------------------------------------------- sidebar
+     A transient overlay: closed by default, opened by the hamburger, closed
+     again by any click outside it. It floats over the panels rather than
+     pushing them around. */
+  .side {
+    position: fixed; top: 52px; left: 0; bottom: 0; z-index: 25;
+    width: var(--side); max-width: 86vw;
+    border-right: 1px solid var(--hairline); background: var(--panel-solid);
+    box-shadow: 18px 0 50px rgba(0,0,0,.45);
+    display: flex; flex-direction: column; overflow: hidden;
+    transform: translateX(-100%);
+    transition: transform .18s var(--ease);
+  }
+  .shell[data-side="open"] .side { transform: translateX(0); }
+  .side .inner { width: var(--side); max-width: 86vw; display: flex; flex-direction: column; height: 100%; }
+  .searchwrap { flex: none; padding: 10px 10px 6px; }
+  input[type=search], .side input[type=text] {
+    width: 100%; font: 400 13px var(--font); color: var(--text);
+    background: var(--panel); border: 1px solid var(--hairline);
+    border-radius: 10px; padding: 7px 10px; appearance: none;
+  }
+  input:focus { border-color: rgba(139,124,255,.6); outline: none; box-shadow: 0 0 0 3px var(--accent-soft); }
+  .list { flex: 1; min-height: 0; overflow: auto; padding: 4px 8px 20px; }
+  .item {
+    display: block; width: 100%; text-align: left; cursor: pointer;
+    background: none; border: 0; color: var(--text);
+    padding: 8px 10px; border-radius: 10px; margin-bottom: 2px; position: relative;
+  }
+  .item:hover { background: var(--panel); }
+  .item[aria-current="true"] { background: var(--accent-soft); }
+  .item[aria-current="true"]::before {
+    content: ''; position: absolute; left: 2px; top: 9px; bottom: 9px;
+    width: 2px; border-radius: 2px; background: var(--accent);
+  }
+  .item__t {
+    font-size: 13.5px; font-weight: 540; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis;
+  }
+  .item__m { font: 400 11px var(--mono); color: var(--text-3); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .item__dot { position: absolute; right: 10px; top: 12px; width: 6px; height: 6px; border-radius: 50%; background: var(--ok); }
+  .item__st {
+    position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+    width: 15px; height: 15px; border-radius: 50%; flex: none;
+    display: grid; place-items: center; font: 700 9px var(--font);
+  }
+  .item__st--ok { background: rgba(52,211,153,.15); color: var(--ok); border: 1px solid rgba(52,211,153,.4); }
+  .item__st--todo { border: 1.5px solid var(--hairline-strong); }
+  .kitwrap { padding: 10px 10px 2px; position: relative; }
+  .kitsel {
+    width: 100%; font: 560 13px var(--font); color: var(--text);
+    background-color: var(--panel);
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%23a3a3b4" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>');
+    background-repeat: no-repeat; background-position: right 12px center; background-size: 16px 16px;
+    border: 1px solid var(--hairline);
+    border-radius: 10px; padding: 9px 36px 9px 12px;
+    appearance: none; -webkit-appearance: none; cursor: pointer;
+  }
+  .kitsel:hover { border-color: var(--hairline-strong); }
+  .kitsel:focus { border-color: rgba(139,124,255,.6); outline: none; box-shadow: 0 0 0 3px var(--accent-soft); }
+  .kitsel option { background: var(--panel-solid); color: var(--text); }
+  .empty { color: var(--text-3); font-size: 12.5px; padding: 12px 14px; line-height: 1.55; }
+  .ghead {
+    font: 600 10px var(--font); letter-spacing: .1em; text-transform: uppercase;
+    color: var(--text-3); padding: 12px 10px 4px;
+  }
+  .sidefoot { flex: none; border-top: 1px solid var(--hairline); padding: 9px 10px; display: flex; gap: 6px; align-items: center; }
+  .importbox {
+    margin: 12px 10px; padding: 22px 14px; text-align: center;
+    border: 1px dashed var(--hairline-strong); border-radius: var(--r-md);
+    background: var(--panel);
+  }
+  .importbox h3 { margin: 0 0 6px; font-size: 13.5px; font-weight: 620; }
+  .importbox p { margin: 0 0 14px; font-size: 12px; color: var(--text-2); line-height: 1.5; }
+  .importbox .hint { margin: 10px 0 0; font: 400 10px var(--mono); color: var(--text-3); }
+  .folder {
+    margin: 10px 10px 2px; padding: 7px 9px;
+    border: 1px solid var(--hairline); border-radius: 10px; background: var(--panel);
+    display: flex; align-items: center; gap: 7px;
+  }
+  .folder__path {
+    flex: 1; min-width: 0; font: 400 10.5px var(--mono); color: var(--text-2);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; direction: rtl; text-align: left;
+  }
+
+  /* ----------------------------------------------------------------- main */
+  .main { flex: 1; min-width: 0; display: flex; }
+  .editor, .preview { flex: 1; border-right: 1px solid var(--hairline); }
+  .preview { background: rgba(255,255,255,.012); }
+  .shell[data-view="edit"] .preview { display: none; }
+  .shell[data-view="preview"] .editor { display: none; }
+  /* Before anything is generated there is nothing to preview and nothing to
+     discuss - the markdown panel is the whole stage. */
+  .shell[data-noprev="1"] .preview { display: none; }
+  .shell[data-noprev="1"] .editor .phead { display: none; }
+  .shell[data-nochat="1"] .chat { display: none !important; }
+
+  #ed {
+    flex: 1; width: 100%; min-height: 0; resize: none; display: block;
+    font: 400 13px/1.75 var(--mono); color: #dcdce6;
+    background: transparent; border: 0; padding: 18px 20px 40px;
+    tab-size: 2; caret-color: var(--accent-2);
+  }
+  #ed:focus { outline: none; }
+  #ed::placeholder { color: var(--text-3); }
+  #ed::selection { background: rgba(139,124,255,.32); }
+
+  .placeholder {
+    height: 100%; flex: 1; display: grid; place-items: center; text-align: center;
+    color: var(--text-3); font-size: 13px; padding: 30px;
+  }
+  .placeholder .big { font-size: 26px; margin-bottom: 10px; opacity: .6; }
+  .dropbox {
+    border: 1px dashed var(--hairline-strong); border-radius: var(--r-lg);
+    background: var(--panel); padding: 34px 30px; max-width: 420px;
+  }
+  .dropbox--bare { border-color: transparent; background: transparent; }
+  .ftile {
+    width: 58px; height: 58px; border-radius: 15px;
+    display: grid; place-items: center;
+    background: var(--tb, rgba(255,255,255,.05));
+    border: 1px solid var(--tl, var(--hairline));
+  }
+  .ftile svg { width: 30px; height: 30px; display: block; }
+  .fpair { display: flex; align-items: center; justify-content: center; gap: 14px; margin-bottom: 18px; }
+  .fpair .arr { color: var(--text-3); font-size: 18px; }
+  .loader {
+    width: 34px; height: 34px; margin: 0 auto 18px; border-radius: 50%;
+    border: 3px solid var(--hairline-strong); border-top-color: var(--accent);
+    animation: spin .8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .dropbox h3 { margin: 0 0 6px; font-size: 15px; font-weight: 620; color: var(--text); }
+  .dropbox p { margin: 0 0 16px; font-size: 12.5px; color: var(--text-2); line-height: 1.55; }
+  .dropbox input {
+    width: 100%; font: 400 12px var(--mono); color: var(--text);
+    background: rgba(0,0,0,.3); border: 1px solid var(--hairline);
+    border-radius: 10px; padding: 9px 11px; margin-bottom: 12px;
+  }
+
+  .code {
+    margin: 0; padding: 18px 20px 40px;
+    font: 400 12.5px/1.7 var(--mono); color: #dcdce6;
+    white-space: pre; overflow: auto; min-height: 100%;
+  }
+  .tabs { display: flex; gap: 4px; min-width: 0; overflow-x: auto; }
+  .tab {
+    border: 1px solid var(--hairline); background: var(--panel);
+    color: var(--text-2); border-radius: var(--r-pill);
+    padding: 2px 10px; font: 500 10.5px var(--mono); cursor: pointer; white-space: nowrap;
+  }
+  .tab[aria-pressed="true"] { background: var(--accent-soft); color: var(--text); border-color: rgba(139,124,255,.55); }
+  .genbar {
+    flex: none; border-top: 1px solid var(--hairline);
+    background: rgba(10,10,16,.66);
+    backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
+    padding: 9px 14px; display: flex; align-items: center; gap: 10px;
+  }
+  .genstatus { flex: 1; min-width: 0; font: 400 11.5px var(--mono); color: var(--text-2); }
+  .genstatus .tick { color: var(--ok); }
+  .genstatus .doing { color: var(--accent); }
+
+  /* markdown preview */
+  .md { padding: 22px 26px 60px; max-width: 78ch; }
+  .md > :first-child { margin-top: 0; }
+  .md h1 { font-size: 24px; margin: 0 0 10px; letter-spacing: -.02em; }
+  .md h2 {
+    font-size: 12px; text-transform: uppercase; letter-spacing: .08em;
+    color: var(--text-3); margin: 28px 0 10px; padding-bottom: 6px;
+    border-bottom: 1px solid var(--hairline); font-weight: 650;
+  }
+  .md h3 { font-size: 15px; margin: 20px 0 6px; }
+  .md p { margin: 0 0 11px; }
+  .md ul, .md ol { margin: 0 0 12px; padding-left: 22px; }
+  .md li { margin: 3px 0; }
+  .md hr { border: 0; border-top: 1px solid var(--hairline); margin: 24px 0; }
+  .md blockquote {
+    margin: 0 0 12px; padding: 9px 13px; border-left: 3px solid var(--hairline-strong);
+    background: var(--panel); border-radius: 0 8px 8px 0; color: var(--text-2);
+  }
+  .md blockquote p:last-child { margin: 0; }
+  .md code {
+    font: 400 12.5px var(--mono); background: rgba(255,255,255,.06);
+    padding: 2px 5px; border-radius: 5px; word-break: break-word;
+  }
+  .md pre {
+    background: rgba(0,0,0,.35); border: 1px solid var(--hairline);
+    border-radius: 10px; padding: 13px 15px; overflow-x: auto; margin: 0 0 13px;
+  }
+  .md pre code { background: none; padding: 0; font-size: 12px; white-space: pre; }
+  .tablewrap { overflow-x: auto; margin: 0 0 14px; border: 1px solid var(--hairline); border-radius: 10px; }
+  .md table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  .md th, .md td { text-align: left; padding: 7px 11px; border-bottom: 1px solid var(--hairline); vertical-align: top; }
+  .md th {
+    background: var(--panel); font: 600 10.5px var(--font);
+    text-transform: uppercase; letter-spacing: .05em; color: var(--text-2); white-space: nowrap;
+  }
+  .md tbody tr:last-child td { border-bottom: 0; }
+  .md img { max-width: 100%; }
+
+  /* ----------------------------------------------------------------- chat */
+  .chat {
+    flex: none; width: var(--chat);
+    border-left: 1px solid var(--hairline); background: rgba(255,255,255,.012);
+    display: flex; flex-direction: column; overflow: hidden;
+    transition: width .18s var(--ease), opacity .18s var(--ease);
+  }
+  .shell[data-chat="closed"] .chat { width: 0; opacity: 0; pointer-events: none; border-left: 0; }
+  .chat .inner { width: var(--chat); display: flex; flex-direction: column; height: 100%; }
+  .msgs { flex: 1; min-height: 0; overflow: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 10px; }
+  .msg { max-width: 92%; border-radius: 12px; padding: 8px 12px; font-size: 13px; line-height: 1.55; }
+  .msg--u { align-self: flex-end; background: var(--accent-soft); border: 1px solid rgba(139,124,255,.3); }
+  .msg--a { align-self: flex-start; background: var(--panel); border: 1px solid var(--hairline); color: var(--text-2); }
+  .msg--a b { color: var(--text); font-weight: 620; }
+  .msg--err { border-color: rgba(251,113,133,.4); background: rgba(251,113,133,.08); }
+  .msg .when { display: block; font: 400 10px var(--mono); color: var(--text-3); margin-top: 4px; }
+  .chatempty { color: var(--text-3); font-size: 12.5px; text-align: center; margin: auto 10px; line-height: 1.6; }
+  .pacts { display: flex; gap: 2px; align-self: flex-start; margin: -4px 0 0 2px; }
+  .ibtn {
+    width: 30px; height: 30px; border: 0; background: none; border-radius: 8px;
+    color: var(--text-3); cursor: pointer; display: grid; place-items: center;
+    transition: background-color .16s var(--ease), color .16s var(--ease);
+  }
+  .ibtn:hover { background: var(--panel-raised); color: var(--text); }
+  .ibtn svg { width: 16px; height: 16px; display: block; }
+
+  /* clarifications card, styled after Claude's own question panel */
+  .qcard__bar { display: flex; align-items: center; gap: 4px; }
+  .qcard__title {
+    font: 600 10.5px var(--font); letter-spacing: .1em; text-transform: uppercase;
+    color: var(--text-3);
+  }
+  .qcard__bar .ibtn { width: 24px; height: 24px; }
+  .qcard__bar .ibtn svg { width: 13px; height: 13px; }
+  .qoverlay {
+    position: fixed; inset: 0; z-index: 80; padding: 24px;
+    background: rgba(5,5,10,.62);
+    backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
+    display: grid; place-items: center;
+  }
+  .qoverlay .qcard { align-self: center; justify-self: center; }
+  .qcard--big {
+    width: min(680px, 94vw); max-height: 86vh; overflow: auto;
+    padding: 20px 22px; gap: 11px;
+    box-shadow: 0 30px 80px rgba(0,0,0,.6);
+  }
+  .qcard--big .qcard__q { font-size: 15.5px; }
+  .qcard--big .qcard__n { font-size: 11px; }
+  .qcard--big .qopt { padding: 12px 14px; font-size: 13.5px; border-radius: 12px; }
+  .qcard--big input { padding: 11px 12px; font-size: 13.5px; }
+  .qcard {
+    align-self: stretch; display: flex; flex-direction: column; gap: 7px;
+    border: 1px solid var(--hairline-strong); background: var(--panel-solid);
+    border-radius: var(--r-md); padding: 11px;
+  }
+  .qcard__head { display: flex; gap: 8px; align-items: flex-start; }
+  .qcard__n {
+    flex: none; font: 600 10px var(--mono); color: var(--warn);
+    border: 1px solid rgba(251,191,36,.35); border-radius: 6px; padding: 2px 6px; margin-top: 1px;
+  }
+  .qcard__q { flex: 1; min-width: 0; font: 600 12.5px var(--font); line-height: 1.5; }
+  .qcard__head .ibtn { width: 22px; height: 22px; margin: -2px -2px 0 0; }
+  .qopt {
+    text-align: left; display: flex; align-items: baseline; gap: 8px;
+    border: 1px solid var(--hairline); background: var(--panel);
+    border-radius: 10px; padding: 8px 10px; cursor: pointer;
+    color: var(--text-2); font: 400 12.5px/1.45 var(--font);
+    transition: border-color .16s var(--ease), background-color .16s var(--ease), color .16s var(--ease);
+  }
+  .qopt:hover { border-color: rgba(139,124,255,.55); background: var(--accent-soft); color: var(--text); }
+  .qopt__k {
+    margin-left: auto; flex: none; font: 600 10px var(--mono); color: var(--text-3);
+    border: 1px solid var(--hairline); border-radius: 5px; padding: 1px 5px;
+  }
+  .qcard input {
+    width: 100%; font: 400 12.5px var(--font); color: var(--text);
+    background: rgba(0,0,0,.3); border: 1px solid var(--hairline);
+    border-radius: 8px; padding: 8px 10px;
+  }
+  .qcard__foot { display: flex; gap: 6px; align-items: center; margin-top: 2px; }
+  .chatfoot {
+    flex: none; border-top: 1px solid var(--hairline);
+    background: rgba(10,10,16,.66);
+    backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
+    padding: 9px 10px 10px; display: flex; flex-direction: column; gap: 7px;
+  }
+  .chips { display: flex; flex-wrap: wrap; gap: 5px; }
+  .chip {
+    border: 1px solid var(--hairline); background: var(--panel);
+    color: var(--text-2); border-radius: var(--r-pill);
+    padding: 3px 10px; font: 500 11px var(--font); cursor: pointer;
+    transition: color .16s var(--ease), border-color .16s var(--ease), background-color .16s var(--ease);
+  }
+  .chip:hover:not(:disabled) { color: var(--text); border-color: rgba(139,124,255,.55); background: var(--accent-soft); }
+  .chip:disabled { opacity: .4; cursor: default; }
+  .prow {
+    display: flex; align-items: center; gap: 8px;
+    border: 1px solid var(--hairline-strong); background: rgba(255,255,255,.05);
+    border-radius: var(--r-md); padding: 7px 7px 7px 12px;
+    transition: border-color .16s var(--ease), box-shadow .16s var(--ease);
+  }
+  .prow:focus-within { border-color: rgba(139,124,255,.6); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .spark { color: var(--accent); font-size: 13px; line-height: 21px; flex: none; }
+  #prompt {
+    flex: 1; min-width: 0; border: 0; outline: none; resize: none;
+    background: transparent; color: var(--text);
+    font: 400 13.5px/1.55 var(--font); padding: 0; max-height: 180px;
+    min-height: 21px;
+  }
+  /* Multi-line typing pins the icons back to the bottom row. */
+  .prow:has(#prompt[data-tall="1"]) { align-items: flex-end; }
+  .prow:has(#prompt[data-tall="1"]) .spark { align-self: flex-start; }
+  .sendbtn {
+    flex: none; width: 32px; height: 32px; border: 0; border-radius: 10px;
+    background: var(--primary); color: #fff; cursor: pointer;
+    display: grid; place-items: center;
+    transition: transform .16s var(--ease), opacity .16s var(--ease);
+  }
+  .sendbtn:hover:not(:disabled) { transform: translateY(-1px); background: var(--primary-hov); }
+  .sendbtn:disabled { opacity: .35; cursor: default; }
+  .sendbtn svg { width: 16px; height: 16px; display: block; }
+  .sendbtn--stop {
+    background: transparent; color: var(--text-2);
+    border: 1px solid var(--hairline-strong);
+  }
+  .sendbtn--stop:hover { color: var(--text); background: var(--panel); }
+  #prompt::placeholder { color: var(--text-3); }
+  .valid { font: 400 10.5px var(--mono); color: var(--text-3); min-height: 14px; }
+  .valid .v-ok { color: var(--ok); }
+  .valid .v-warn { color: var(--warn); }
+
+  /* ---------------------------------------------------------------- misc */
+  .notice { position: fixed; top: 60px; left: 50%; transform: translateX(-50%); z-index: 40; width: min(560px, 92vw); }
+  .note {
+    margin: 0; padding: 10px 12px; border-radius: 10px;
+    border: 1px solid var(--hairline); background: var(--panel-solid);
+    font-size: 12.5px; color: var(--text-2);
+    display: flex; gap: 10px; align-items: flex-start;
+    box-shadow: 0 14px 40px rgba(0,0,0,.5);
+  }
+  .note--warn { border-color: rgba(251,191,36,.4); }
+  .note--error { border-color: rgba(251,113,133,.4); }
+  .note b { color: var(--text); font-weight: 620; }
+  .note__x { margin-left: auto; background: none; border: 0; color: var(--text-3); cursor: pointer; font-size: 15px; }
+
+  .toast {
+    position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%) translateY(70px);
+    background: var(--text); color: #0a0a11; padding: 9px 16px; border-radius: 10px;
+    font: 560 13px var(--font); z-index: 60; opacity: 0;
+    transition: transform .2s var(--ease), opacity .2s var(--ease); pointer-events: none;
+    max-width: 80vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .toast.on { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+  /* Chat becomes a slide-over on narrower screens; sidebar stays a push panel. */
+  @media (max-width: 1200px) {
+    .chat {
+      position: fixed; top: 52px; right: 0; bottom: 0; z-index: 20;
+      box-shadow: -18px 0 50px rgba(0,0,0,.45); background: var(--panel-solid);
+    }
+    .shell[data-chat="closed"] .chat { transform: translateX(100%); width: var(--chat); opacity: 1; border-left: 1px solid var(--hairline); }
+    .shell[data-chat="open"] .chat { transform: translateX(0); }
+  }
+  @media (max-width: 940px) {
+    body { overflow: auto; }
+    .top { position: sticky; }
+    .shell { position: static; flex-direction: column; }
+    .main { flex-direction: column; }
+    .editor, .preview, .source { border-right: 0; border-bottom: 1px solid var(--hairline); }
+    #ed { min-height: 44vh; }
+  }
+</style>
+</head>
+<body>
+
+<!-- -------------------------------------------------------------- topbar -->
+<header class="top">
+  <button class="burger" id="btn-side" title="Show or hide the sidebar" aria-pressed="false">&#9776;</button>
+  <a class="brandname" href="/">2md</a>
+  <span class="modetag" id="modetag"></span>
+  <input id="title" value="" spellcheck="false" aria-label="Document name">
+  <span class="status" id="status"></span>
+  <span class="sp"></span>
+  <span class="mode" id="viewmode" role="group" aria-label="View">
+    <button data-v="edit">Edit</button>
+    <button data-v="split">Split</button>
+    <button data-v="preview">Preview</button>
+  </span>
+  <button class="btn btn--ghost btn--sm" id="btn-copy">Copy</button>
+  <button class="btn btn--primary btn--sm" id="btn-save">Save</button>
+  <button class="burger" id="btn-chat" title="Show or hide the assistant" aria-pressed="true">&#10022;</button>
+</header>
+
+<div class="shell" id="shell" data-side="closed" data-chat="open" data-view="split">
+
+  <!-- ------------------------------------------------------------ sidebar -->
+  <aside class="side"><div class="inner" id="sidebody"></div></aside>
+
+  <!-- --------------------------------------------------------------- main -->
+  <div class="main">
+    <section class="panel editor">
+      <div class="phead"><span class="lbl">Markdown</span></div>
+      <div class="pbody" id="edwrap" style="display:flex;flex-direction:column"></div>
+    </section>
+
+    <section class="panel preview">
+      <div class="phead"><span class="lbl">Preview</span></div>
+      <div class="pbody"><div id="prevbody" style="min-height:100%;display:flex;flex-direction:column"></div></div>
+    </section>
+  </div>
+
+  <!-- --------------------------------------------------------------- chat -->
+  <aside class="chat"><div class="inner">
+    <div class="phead"><span class="lbl">AI Assistant</span><span class="sp"></span><span class="status" id="engine"></span></div>
+    <div class="msgs" id="msgs"></div>
+    <div class="chatfoot">
+      <div class="chips" id="chips"></div>
+      <div class="prow">
+        <span class="spark">&#10022;</span>
+        <textarea id="prompt" rows="1" spellcheck="false"
+          placeholder="Ask or instruct&#8230;  (Enter to send)"></textarea>
+        <button class="sendbtn" id="btn-send" title="Send" aria-label="Send">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12.5 5.5 19 12l-6.5 6.5"/></svg>
+        </button>
+      </div>
+      <div class="valid" id="valid"></div>
+    </div>
+  </div></aside>
+</div>
+
+<div id="qmodal"></div>
+<div class="notice" id="notice"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  'use strict';
+  var $ = function (id) { return document.getElementById(id); };
+
+  var MODE = { '/text': 'text', '/ui': 'ui', '/figma': 'figma', '/convert': 'convert' }[location.pathname] || 'text';
+  var TAGS = { text: 'TEXT → MD', ui: 'UI → MD', figma: 'FIGMA → MD', convert: 'FILE → MD' };
+
+  function docSvg(color, letter, fs) {
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="' + color + '" stroke-width="1.7" stroke-linejoin="round">' +
+      '<path d="M14 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7z"/><path d="M14 2v5h5"/>' +
+      '<text x="12" y="17.5" text-anchor="middle" font-family="-apple-system,Segoe UI,sans-serif" font-size="' + (fs || 8) +
+      '" font-weight="700" fill="' + color + '" stroke="none">' + letter + '</text></svg>';
+  }
+  var CONVERT_ACCEPT = {
+    pdf: '.pdf', word: '.docx,.doc,.rtf', excel: '.xlsx,.csv,.tsv', ppt: '.pptx',
+    file: '.docx,.doc,.rtf,.xlsx,.csv,.tsv,.pptx,.pdf,.html,.htm,.txt,.md',
+  };
+  var CONVERT_TYPES = {
+    pdf: { label: 'PDF', exts: '.pdf', color: '#fb7185', tint: 'rgba(251,113,133,.1)', line: 'rgba(251,113,133,.28)',
+      svg: docSvg('#fb7185', 'PDF', 6),
+      desc: 'Convert a PDF into clean, editable Markdown - running headers, footers and page numbers stripped, paragraphs stitched back together.' },
+    word: { label: 'Word', exts: '.docx · .doc · .rtf', color: '#4f8ff7', tint: 'rgba(79,143,247,.1)', line: 'rgba(79,143,247,.28)',
+      svg: docSvg('#4f8ff7', 'W'),
+      desc: 'Convert a Word document into clean Markdown - real headings, lists and tables, none of the layout junk.' },
+    excel: { label: 'Excel', exts: '.xlsx · .csv · .tsv', color: '#21A366', tint: 'rgba(33,163,102,.1)', line: 'rgba(33,163,102,.28)',
+      svg: docSvg('#21A366', 'X'),
+      desc: 'Turn a workbook into Markdown tables - one section per sheet, empty rows and styling junk dropped.' },
+    ppt: { label: 'PowerPoint', exts: '.pptx', color: '#ed6c47', tint: 'rgba(237,108,71,.1)', line: 'rgba(237,108,71,.28)',
+      svg: docSvg('#ed6c47', 'P'),
+      desc: 'Turn a slide deck into structured Markdown - one section per slide, speaker notes kept as notes.' },
+    file: { label: 'File', exts: 'docx · xlsx · csv · pptx · pdf · html · txt', color: '#8b7cff', tint: 'rgba(139,124,255,.12)', line: 'rgba(139,124,255,.3)',
+      svg: docSvg('#8b7cff', '?', 9),
+      desc: 'Convert a Word, Excel, PowerPoint, PDF, CSV or HTML file into clean, junk-free Markdown.' },
+  };
+  var CT = CONVERT_TYPES[new URLSearchParams(location.search).get('type')] || CONVERT_TYPES.file;
+  if (MODE === 'convert') TAGS.convert = CT.label.toUpperCase() + ' → MD';
+  var MD_SVG = '<svg viewBox="0 0 24 24"><rect x="2.5" y="5" width="19" height="14" rx="2.5" fill="none" stroke="#8b7cff" stroke-width="1.7"/>' +
+    '<path d="M6 15.5v-7l2.6 3 2.6-3v7" fill="none" stroke="#8b7cff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>' +
+    '<path d="M17 8.5v5.5m0 0-2-2m2 2 2-2" fill="none" stroke="#8b7cff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+  var S = {
+    view: 'split', side: false, chat: true,
+    md: '', before: null, pending: false, busy: false, last: null, q: null,
+    // text
+    docs: [], docName: null, mtime: 0, dirty: false, filter: '',
+    // ui
+    importDir: null, components: [], groups: null, current: null, curName: '', curType: null,
+    kits: [], kit: null,
+    uiDocs: {},                                   // component -> generated markdown
+    // figma
+    frames: [], curFrame: null, frameDocs: {},    // url -> markdown
+    log: [],                                      // chat messages
+    qBig: false,                                  // clarifications shown as a fullscreen popup
+    qList: null,                                  // outstanding clarification questions for the open doc
+  };
+
+  /* ================================================================ util */
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+    });
+  }
+  var toastT = null;
+  function toast(msg) {
+    var el = $('toast');
+    el.textContent = msg; el.classList.add('on');
+    clearTimeout(toastT);
+    toastT = setTimeout(function () { el.classList.remove('on'); }, 2400);
+  }
+  function notify(kind, title, msg) {
+    $('notice').innerHTML =
+      '<div class="note note--' + kind + '"><div><b>' + esc(title) + '</b> ' + esc(msg) + '</div>' +
+      '<button class="note__x" aria-label="Dismiss">&times;</button></div>';
+    var x = $('notice').querySelector('.note__x');
+    if (x) x.onclick = function () { $('notice').innerHTML = ''; };
+    clearTimeout(notify._t);
+    notify._t = setTimeout(function () { $('notice').innerHTML = ''; }, 12000);
+  }
+  async function api(path, opts) {
+    var res = await fetch(path, Object.assign({ cache: 'no-store' }, opts || {}));
+    var j = null;
+    try { j = await res.json(); } catch (e) { /* non-JSON */ }
+    if (!res.ok) {
+      var e = new Error((j && j.error) || ('request failed with ' + res.status));
+      e.payload = j || {};
+      throw e;
+    }
+    return j;
+  }
+  function isAbort(e) { return e && (e.name === 'AbortError' || /abort/i.test(String(e.message || ''))); }
+  function post(path, body, abortable) {
+    if (abortable) {
+      S.ctrl = new AbortController();
+      return api(path, {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(body || {}), signal: S.ctrl.signal,
+      });
+    }
+    return postPlain(path, body);
+  }
+  function postPlain(path, body) {
+    return api(path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body || {}) });
+  }
+  function ago(ms) {
+    var s = Math.round((Date.now() - ms) / 1000);
+    if (s < 60) return 'just now';
+    if (s < 3600) return Math.round(s / 60) + 'm ago';
+    if (s < 86400) return Math.round(s / 3600) + 'h ago';
+    return Math.round(s / 86400) + 'd ago';
+  }
+  function cap(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : ''; }
+
+  /* ============================================================ markdown */
+  function inline(s) {
+    return s.split(/(`[^`]+`)/).map(function (part) {
+      if (part.length > 1 && part.charAt(0) === '`' && part.charAt(part.length - 1) === '`') {
+        return '<code>' + part.slice(1, -1) + '</code>';
+      }
+      return part
+        .replace(/\[([^\]]*)\]\(([^)\s]+)\)/g, function (m, t, h) {
+          return /^https?:\/\//.test(h) ? '<a href="' + h + '" target="_blank" rel="noopener">' + t + '</a>' : t;
+        })
+        .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+        .replace(/~~([^~]+)~~/g, '<del>$1</del>');
+    }).join('');
+  }
+  function cells(row) {
+    return row.replace(/^\||\|$/g, '').split(/(?<!\\)\|/).map(function (c) {
+      return c.replace(/\\\|/g, '|').trim();
+    });
+  }
+  function md(src) {
+    var lines = esc(src).split('\n'), out = [], i = 0, list = null;
+    function closeList() { if (list) { out.push('</' + list + '>'); list = null; } }
+    while (i < lines.length) {
+      var line = lines[i];
+      if (/^\s*```/.test(line)) {
+        closeList();
+        var buf = []; i++;
+        while (i < lines.length && !/^\s*```/.test(lines[i])) buf.push(lines[i++]);
+        i++;
+        out.push('<pre><code>' + buf.join('\n') + '</code></pre>');
+        continue;
+      }
+      if (/^\s*$/.test(line)) { closeList(); i++; continue; }
+      if (/^\s*(-{3,}|\*{3,}|_{3,})\s*$/.test(line)) { closeList(); out.push('<hr>'); i++; continue; }
+      var h = line.match(/^(#{1,6})\s+(.*)$/);
+      if (h) { closeList(); out.push('<h' + h[1].length + '>' + inline(h[2]) + '</h' + h[1].length + '>'); i++; continue; }
+      if (/^\s*\|/.test(line) && i + 1 < lines.length && /^\s*\|[\s:|-]+\|?\s*$/.test(lines[i + 1])) {
+        closeList();
+        var head = cells(line.trim()); i += 2;
+        var rows = [];
+        while (i < lines.length && /^\s*\|/.test(lines[i])) rows.push(cells(lines[i++].trim()));
+        out.push('<div class="tablewrap"><table><thead><tr>' +
+          head.map(function (c) { return '<th>' + inline(c) + '</th>'; }).join('') +
+          '</tr></thead><tbody>' +
+          rows.map(function (r) {
+            return '<tr>' + r.map(function (c) { return '<td>' + inline(c) + '</td>'; }).join('') + '</tr>';
+          }).join('') + '</tbody></table></div>');
+        continue;
+      }
+      if (/^\s*&gt;\s?/.test(line)) {
+        closeList();
+        var q = [];
+        while (i < lines.length && /^\s*&gt;\s?/.test(lines[i])) q.push(lines[i++].replace(/^\s*&gt;\s?/, ''));
+        out.push('<blockquote><p>' + inline(q.join(' ')) + '</p></blockquote>');
+        continue;
+      }
+      var ul = line.match(/^\s*[-*+]\s+(.*)$/), ol = line.match(/^\s*\d+[.)]\s+(.*)$/);
+      if (ul || ol) {
+        var want = ul ? 'ul' : 'ol';
+        if (list !== want) { closeList(); out.push('<' + want + '>'); list = want; }
+        out.push('<li>' + inline((ul || ol)[1]) + '</li>');
+        i++;
+        continue;
+      }
+      closeList();
+      var p = [];
+      while (i < lines.length && !/^\s*$/.test(lines[i]) &&
+             !/^(#{1,6}\s|\s*```|\s*\||\s*&gt;|\s*[-*+]\s|\s*\d+[.)]\s)/.test(lines[i]) &&
+             !/^\s*(-{3,}|\*{3,}|_{3,})\s*$/.test(lines[i])) p.push(lines[i++]);
+      if (p.length) out.push('<p>' + inline(p.join(' ')) + '</p>');
+      else i++;
+    }
+    closeList();
+    return out.join('\n');
+  }
+
+  /* =============================================================== chat */
+  function say(who, text, err) {
+    S.log.push({ who: who, text: text, err: !!err, ts: Date.now() });
+    paintChat();
+  }
+  var PACTS =
+    '<div class="pacts">' +
+    '<button class="ibtn" id="btn-keep" title="Good - keep this result" aria-label="Like and keep">' +
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/><path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg></button>' +
+    '<button class="ibtn" id="btn-discard" title="Not good - discard and restore your previous text" aria-label="Dislike and discard">' +
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3H10z"/><path d="M17 2h3a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-3"/></svg></button>' +
+    '<button class="ibtn" id="btn-again" title="Retry" aria-label="Retry">' +
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 3v4.2h-4.2"/></svg></button>' +
+    '</div>';
+
+  function paintChat() {
+    var box = $('msgs');
+    if (!S.log.length && !S.q) {
+      var hint = MODE === 'text'
+        ? 'Describe a document to create it, or open one and tell me how to change it.'
+        : MODE === 'ui'
+          ? 'Pick a component and generate its documentation - then tell me how to improve it, or ask about it.'
+          : 'Paste a Figma frame link and generate - then tell me how to improve the result.';
+      box.innerHTML = '<div class="chatempty">&#10022;<br>' + hint + '</div>';
+      paintQModal();
+    } else {
+      // Keep / discard / regenerate icons sit under the last bubble; an active
+      // clarification question renders below them as a card.
+      box.innerHTML = S.log.map(function (m) {
+        return '<div class="msg msg--' + (m.who === 'u' ? 'u' : 'a') + (m.err ? ' msg--err' : '') + '">' +
+          (m.who === 'u' ? esc(m.text) : m.text) + '</div>';
+      }).join('') + (S.pending ? PACTS : '') + (S.qBig ? '' : qcardHTML(false));
+      if (S.pending) {
+        $('btn-keep').onclick = keep;
+        $('btn-discard').onclick = discard;
+        $('btn-again').onclick = regen;
+      }
+      if (!S.qBig) bindQcard();
+      box.scrollTop = box.scrollHeight;
+    }
+    paintQModal();
+    paintChips();
+  }
+
+  /* ================================================== clarification panel
+     The generated document may end with "## Open questions" (numbered items,
+     optionally with suggested answers as "-" bullets). They become a Claude-
+     style question card: pick an option, type your own, skip, or go back.
+     Collected answers are applied to the document in one edit. */
+  function parseQuestions(text) {
+    var lines = String(text || '').split('\n');
+    var inQ = false, out = [], cur = null;
+    for (var i = 0; i < lines.length; i++) {
+      var l = lines[i];
+      if (/^##\s+open questions\s*$/i.test(l.trim())) { inQ = true; continue; }
+      if (!inQ) continue;
+      if (/^#{1,6}\s/.test(l)) break;
+      var q = l.match(/^\s*\d+[.)]\s+(.+)$/);
+      var o = l.match(/^\s*[-*]\s+(.+)$/);
+      if (q) { cur = { text: q[1].trim(), options: [] }; out.push(cur); }
+      else if (o && cur && cur.options.length < 4) cur.options.push(o[1].trim());
+    }
+    return out;
+  }
+  function startQuestions(auto) {
+    var list = (S.qList && S.qList.length) ? S.qList.slice() : parseQuestions(S.md);
+    if (!list.length) {
+      if (!auto) toast('No open questions for this document');
+      return;
+    }
+    S.q = { list: list, at: 0, answers: new Array(list.length).fill(null) };
+    S.qBig = false;
+    paintChat();
+  }
+  function qcardHTML(big) {
+    if (!S.q) return '';
+    var q = S.q.list[S.q.at];
+    return '<div class="qcard' + (big ? ' qcard--big' : '') + '">' +
+      '<div class="qcard__bar">' +
+      '<span class="qcard__title">Clarifications</span>' +
+      '<span class="sp"></span>' +
+      '<button class="ibtn" id="q-expand" title="' + (big ? 'Collapse into the chat' : 'Expand to full screen') + '">' +
+      (big
+        ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14h6v6M20 10h-6V4M14 10l7-7M10 14l-7 7"/></svg>'
+        : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-8 8M3 21l8-8"/></svg>') +
+      '</button>' +
+      '<button class="ibtn" id="q-close" title="Dismiss - markers stay in the document">' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>' +
+      '</div>' +
+      '<div class="qcard__head">' +
+      '<span class="qcard__n">' + (S.q.at + 1) + '/' + S.q.list.length + '</span>' +
+      '<span class="qcard__q">' + esc(q.text) + '</span>' +
+      '</div>' +
+      q.options.map(function (o, i) {
+        return '<button class="qopt" data-qo="' + i + '"><span>' + esc(o) + '</span><span class="qopt__k">' + (i + 1) + '</span></button>';
+      }).join('') +
+      '<input id="q-other" type="text" spellcheck="false" placeholder="Type your own answer here" autocomplete="off">' +
+      '<div class="qcard__foot">' +
+      (S.q.at > 0 ? '<button class="btn btn--ghost btn--sm" id="q-back">Back</button>' : '') +
+      '<span class="sp"></span>' +
+      '<button class="btn btn--ghost btn--sm" id="q-skip">Skip</button>' +
+      '<button class="btn btn--primary btn--sm" id="q-submit">Submit</button>' +
+      '</div></div>';
+  }
+  function paintQModal() {
+    var host = $('qmodal');
+    if (S.q && S.qBig) {
+      host.innerHTML = '<div class="qoverlay" id="qoverlay">' + qcardHTML(true) + '</div>';
+      bindQcard();
+      $('qoverlay').addEventListener('pointerdown', function (e) {
+        if (e.target === $('qoverlay')) { S.qBig = false; paintChat(); }
+      });
+      var inp = $('q-other');
+      if (inp) inp.focus();
+    } else {
+      host.innerHTML = '';
+    }
+  }
+  function bindQcard() {
+    if (!S.q) return;
+    var q = S.q.list[S.q.at];
+    Array.prototype.forEach.call(document.querySelectorAll('[data-qo]'), function (b) {
+      b.onclick = function () { answerQ(q.options[Number(b.getAttribute('data-qo'))]); };
+    });
+    $('q-expand').onclick = function () {
+      S.qBig = !S.qBig;
+      paintChat();
+    };
+    $('q-close').onclick = function () {
+      S.q = null; S.qBig = false;
+      say('a', 'Questions dismissed - the "Needs review" markers stay in the document. ' +
+        'Use the <b>Answer open questions</b> chip to pick this up again.');
+    };
+    $('q-skip').onclick = function () { answerQ(null); };
+    $('q-submit').onclick = function () {
+      var v = $('q-other').value.trim();
+      if (!v) { $('q-other').focus(); return; }
+      answerQ(v);
+    };
+    var back = $('q-back');
+    if (back) back.onclick = function () { S.q.at--; paintChat(); };
+    $('q-other').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); $('q-submit').click(); }
+    });
+  }
+  function answerQ(value) {
+    S.q.answers[S.q.at] = value;
+    if (S.q.at + 1 < S.q.list.length) {
+      S.q.at++;
+      paintChat();
+      return;
+    }
+    var pairs = [];
+    var remaining = [];
+    for (var i = 0; i < S.q.list.length; i++) {
+      if (S.q.answers[i]) pairs.push({ q: S.q.list[i].text, a: S.q.answers[i] });
+      else remaining.push(S.q.list[i]);
+    }
+    S.qList = remaining;
+    S.q = null; S.qBig = false;
+    paintChat();
+    if (!pairs.length) {
+      say('a', 'All questions skipped - the "Needs review" markers stay in place.');
+      return;
+    }
+    applyAnswers(pairs);
+  }
+  async function applyAnswers(pairs) {
+    if (S.busy) return;
+    S.busy = true;
+    if (!S.pending) S.before = S.md;
+    say('u', 'Answered ' + pairs.length + ' question' + (pairs.length > 1 ? 's' : '') + ' - apply to the document');
+    paintTop(); paintChips();
+
+    var instruction = [
+      'Apply the following answers to the document.',
+      '',
+      pairs.map(function (p) { return 'Q: ' + p.q + '\nA: ' + p.a; }).join('\n\n'),
+      '',
+      'Rules:',
+      '* Fill ONLY the sections each answer belongs to (their bodies may currently be empty).',
+      '* Write no more than the answer says - do not embellish it.',
+      '* Keep every section heading in place, including ones that stay empty.',
+      '* Change nothing else.',
+    ].join('\n');
+
+    var t0 = Date.now();
+    var tick = setInterval(function () {
+      $('valid').innerHTML = '<span style="color:var(--accent)">&#9679;</span> Applying your answers… ' + Math.round((Date.now() - t0) / 1000) + 's';
+    }, 500);
+    try {
+      var r = await post('/api/ai', { instruction: instruction, mode: 'edit', markdown: S.md }, true);
+      clearInterval(tick);
+      if (r.markdown && r.markdown.trim()) {
+        S.md = r.markdown;
+        stash();
+        S.pending = true; S.dirty = true;
+        S.last = null;
+        setStatus('dirty', 'not saved');
+        paintEditor(); paintPreview();
+        say('a', '<b>Applied your answers</b> in ' + Math.round((Date.now() - t0) / 1000) + 's - review the patched sections, then <b>Keep</b> or <b>Discard</b>.');
+      } else {
+        say('a', 'Claude returned nothing. Your text is unchanged.', true);
+      }
+    } catch (e) {
+      clearInterval(tick);
+      if (isAbort(e)) {
+        say('a', 'Stopped. The answers were not applied.');
+      } else {
+        var p = e.payload || {};
+        say('a', '<b>Could not apply the answers.</b> ' + esc(p.explain || e.message), true);
+      }
+    }
+    S.busy = false;
+    validate(); paintTop(); paintChat();
+  }
+  function paintChips() {
+    var defs = [];
+    if (!S.busy) {
+      if (MODE === 'ui' && S.current && !S.md) {
+        defs = [{ label: 'Generate documentation', gen: true }];
+      } else if (!S.md && MODE === 'text') {
+        defs = [
+          { label: 'Meeting notes', text: 'A meeting notes template with attendees, decisions, and action items with owners.' },
+          { label: 'Product brief', text: 'A one-page product brief: problem, who it is for, proposed solution, success measures, risks, open questions.' },
+          { label: 'How-to guide', text: 'A step-by-step how-to guide with prerequisites, numbered steps, and a troubleshooting section.' },
+          { label: 'Decision record', text: 'A decision record: context, options considered with trade-offs, the decision, and its consequences.' },
+        ];
+      } else if (S.md) {
+        defs = [];
+        if (!S.q && ((S.qList && S.qList.length) || parseQuestions(S.md).length)) {
+          defs.push({ label: 'Answer open questions', qflow: true, text: 'Answer the document\'s open questions one by one; answers are patched into their sections.' });
+        }
+        defs = defs.concat([
+          { label: 'Tighten it', text: 'Tighten this document. Remove filler and repetition. Change no facts and drop no sections.' },
+          { label: 'Add a summary', text: 'Add a short summary section at the top, three sentences at most.' },
+          { label: 'Make it a table', text: 'Where the content is a list of things with the same attributes, restructure it as a table.' },
+          { label: 'Fix structure', text: 'Improve the heading structure and ordering so the document reads in a sensible sequence.' },
+          { label: 'List headings', text: 'List the headings of this document as a flat outline.', ask: true },
+          { label: 'Explain this doc', text: 'Explain briefly what this document covers and what is missing.', ask: true },
+        ]);
+      }
+    }
+    $('chips').innerHTML = defs.map(function (c, i) {
+      return '<button class="chip" data-c="' + i + '" title="' + esc(c.text || c.label) + '">' + esc(c.label) + '</button>';
+    }).join('');
+    Array.prototype.forEach.call($('chips').querySelectorAll('[data-c]'), function (b) {
+      b.disabled = S.busy;
+      b.onclick = function () {
+        var c = defs[Number(b.getAttribute('data-c'))];
+        if (c.gen) return generate();
+        if (c.qflow) return startQuestions();
+        $('prompt').value = c.text;
+        send(c.ask);
+      };
+    });
+  }
+
+  /* ============================================================== render */
+  function paintTop() {
+    $('modetag').textContent = TAGS[MODE];
+    var t = $('title');
+    t.readOnly = MODE === 'ui';   // component docs are named by the component itself
+    t.style.width = Math.min(30, Math.max(4, (t.value || '').length + 1)) + 'ch';
+    $('btn-side').setAttribute('aria-pressed', String(S.side));
+    $('btn-chat').setAttribute('aria-pressed', String(S.chat));
+    $('shell').dataset.side = S.side ? 'open' : 'closed';
+    $('shell').dataset.chat = S.chat ? 'open' : 'closed';
+    $('shell').dataset.view = S.view;
+    var noprev = (MODE === 'ui' || MODE === 'convert') && !S.md;
+    var nochat = (MODE === 'ui' && !S.md) || MODE === 'convert';
+    $('shell').dataset.noprev = noprev ? '1' : '';
+    $('shell').dataset.nochat = nochat ? '1' : '';
+    $('btn-chat').style.display = nochat ? 'none' : '';
+    $('btn-side').style.display = MODE === 'convert' ? 'none' : '';
+    $('viewmode').style.display = noprev ? 'none' : '';
+    Array.prototype.forEach.call($('viewmode').querySelectorAll('[data-v]'), function (b) {
+      b.setAttribute('aria-pressed', String(b.getAttribute('data-v') === S.view));
+    });
+    var none = !S.md;
+    $('btn-copy').disabled = none;
+    $('btn-save').disabled = none || S.busy;
+    $('btn-save').textContent = MODE === 'convert' ? 'Download' : 'Save';
+    var sb = $('btn-send');
+    sb.classList.toggle('sendbtn--stop', S.busy);
+    sb.title = S.busy ? 'Stop generating' : 'Send';
+    sb.setAttribute('aria-label', sb.title);
+    sb.innerHTML = S.busy
+      ? '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="7.5" y="7.5" width="9" height="9" rx="1.5"/></svg>'
+      : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 5.5 19.5 12 13 18.5"/></svg>';
+    $('prompt').disabled = S.busy;
+  }
+
+  function paintEditor() {
+    var wrap = $('edwrap');
+    if (!S.md && (MODE === 'ui' || MODE === 'convert') && S.busy && S.curName) {
+      // Generating: spinner above the component name, chrome stripped away.
+      wrap.innerHTML =
+        '<div class="placeholder"><div class="dropbox dropbox--bare">' +
+        '<div class="loader" role="status" aria-label="Generating"></div>' +
+        '<h3>' + esc(cap(S.curName)) + '</h3>' +
+        '<p id="gen-live">Reading the source…</p>' +
+        '<button class="btn btn--stroke" id="btn-cancel">Cancel</button>' +
+        '</div></div>';
+      $('btn-cancel').onclick = function () { if (S.ctrl) S.ctrl.abort(); };
+      return;
+    }
+    if (!S.md && MODE === 'convert' && !S.busy) {
+      wrap.innerHTML =
+        '<div class="placeholder"><div class="dropbox" style="width:min(440px,90%)">' +
+        '<div class="fpair">' +
+        '<span class="ftile" style="--tb:' + CT.tint + ';--tl:' + CT.line + '">' + CT.svg + '</span>' +
+        '<span class="arr">&rarr;</span>' +
+        '<span class="ftile" style="--tb:rgba(139,124,255,.12);--tl:rgba(139,124,255,.3)">' + MD_SVG + '</span>' +
+        '</div>' +
+        '<h3>' + esc(CT.label) + ' &rarr; Markdown</h3>' +
+        '<p>' + esc(CT.desc) + ' Nothing is rewritten or summarized - same content, better structure.</p>' +
+        '<button class="btn btn--primary" id="btn-pickfile">Choose a ' + esc(CT.label === 'File' ? 'File' : CT.label + ' file') + '</button>' +
+        '<div class="hint" style="margin-top:12px;font:400 10px var(--mono);color:var(--text-3)">' + esc(CT.exts) + '</div>' +
+        '</div></div>';
+      $('btn-pickfile').onclick = convertFile;
+      return;
+    }
+    if (!S.md && MODE === 'ui' && !S.busy) {
+      if (S.current) {
+        var what = S.curType === 'page'
+          ? 'this page’s markup and styles and writes page documentation - purpose, anatomy, components used, layout, states'
+          : S.curType === 'template'
+            ? 'this template’s source and documents its regions, layout rules and allowed content'
+            : 'this component’s source and writes structured documentation - anatomy, variants, states, tokens';
+        wrap.innerHTML =
+          '<div class="placeholder"><div class="dropbox">' +
+          '<h3>' + esc(cap(S.curName)) + '</h3>' +
+          '<p>Claude reads ' + what + '. Nothing is sent until you generate.</p>' +
+          '<button class="btn btn--primary" id="btn-gen">Generate Documentation</button>' +
+          '<button class="btn btn--ghost btn--sm" id="btn-back-comp" style="margin-top:8px">&#8592; Change component</button>' +
+          '</div></div>';
+        $('btn-gen').onclick = generate;
+        $('btn-back-comp').onclick = function () {
+          S.current = null; S.curName = ''; S.curType = null;
+          paintSidebar(); paintTop(); paintEditor();
+        };
+        return;
+      }
+      // Landing: the folder and design-system selection live right here.
+      wrap.innerHTML =
+        '<div class="placeholder"><div class="dropbox" style="width:min(400px,90%)">' +
+        '<h3>UI Component &rarr; Markdown</h3>' +
+        (!S.importDir
+          ? '<p>Select the folder on your computer that holds your design system’s components.</p>' +
+            '<button class="btn btn--primary" id="ed-pick">Choose Component Folder</button>' +
+            '<div class="hint" style="margin-top:12px;font:400 10px var(--mono);color:var(--text-3)">Supported: HTML, CSS</div>'
+          : '<p>' + (S.groups ? 'Choose a page, section or component found in this folder.' : 'Pick a design system, then choose a component to document.') + '</p>' +
+            '<div class="folder" style="margin:0 0 10px;text-align:left">' +
+            '<span style="flex:none;color:var(--text-3)">&#128193;</span>' +
+            '<span class="folder__path" title="' + esc(S.importDir) + '">' + esc(S.importDir) + '</span>' +
+            '<button class="btn btn--ghost btn--sm" id="ed-repick">Change</button></div>' +
+            (S.kits.length > 1
+              ? '<div class="kitwrap" style="padding:0;margin:0 0 10px"><select class="kitsel" id="kitsel-ed" aria-label="Design system">' +
+                S.kits.map(function (k) {
+                  return '<option value="' + esc(k.id) + '"' + (k.id === S.kit ? ' selected' : '') + '>' + esc(k.label) + '</option>';
+                }).join('') + '</select></div>'
+              : '') +
+            compSelectHTML()) +
+        '</div></div>';
+      var ep = $('ed-pick') || $('ed-repick');
+      if (ep) ep.onclick = pickImport;
+      var eks = $('kitsel-ed');
+      if (eks) eks.onchange = function () { setKit(eks.value); };
+      var ecs = $('compsel-ed');
+      if (ecs) ecs.onchange = function () {
+        var v = ecs.value;
+        if (!v) return;
+        if (S.groups) {
+          for (var gi = 0; gi < S.groups.length; gi++) {
+            var hit = S.groups[gi].items.find(function (u) { return u.uid === v; });
+            if (hit) return openComp(hit.uid, hit.name, hit.type);
+          }
+        } else {
+          openComp(v, v, null);
+        }
+      };
+      return;
+    }
+    if (!S.md && MODE === 'figma' && !S.busy) {
+      wrap.innerHTML =
+        '<div class="placeholder"><div class="dropbox">' +
+        '<h3>Figma &rarr; Markdown</h3>' +
+        '<p>Paste a link to a Figma frame or component. 2md retrieves what it can through ' +
+        'Claude’s Figma connection and writes the documentation.</p>' +
+        '<input id="figurl" type="text" spellcheck="false" placeholder="https://www.figma.com/design/&hellip;?node-id=&hellip;">'.replace('&hellip;', '…').replace('&hellip;', '…') +
+        '<button class="btn btn--primary" id="btn-fig">Fetch &amp; Generate</button>' +
+        '</div></div>';
+      $('btn-fig').onclick = function () { figGenerate($('figurl').value.trim()); };
+      $('figurl').addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') figGenerate($('figurl').value.trim());
+      });
+      return;
+    }
+    var ta = document.createElement('textarea');
+    ta.id = 'ed'; ta.spellcheck = false;
+    ta.placeholder = MODE === 'text'
+      ? 'Write here, or ask the assistant →'
+      : 'Generated Markdown lands here. Edit freely.';
+    ta.value = S.md;
+    ta.addEventListener('input', function () {
+      S.md = ta.value;
+      stash();
+      S.dirty = true;
+      setStatus('dirty', 'not saved');
+      clearTimeout(ta._t);
+      ta._t = setTimeout(function () { paintPreview(); validate(); }, 150);
+    });
+    ta.addEventListener('keydown', function (e) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') { e.preventDefault(); save(); }
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        ta.setRangeText('  ', ta.selectionStart, ta.selectionEnd, 'end');
+      }
+    });
+    wrap.innerHTML = '';
+    wrap.appendChild(ta);
+  }
+
+  function paintPreview() {
+    $('prevbody').innerHTML = S.md
+      ? '<div class="md">' + md(S.md) + '</div>'
+      : '<div class="placeholder"><div><div class="big">&#10022;</div>Nothing to preview yet.</div></div>';
+  }
+
+  function validate() {
+    var el = $('valid');
+    if (!S.md) { el.innerHTML = ''; return; }
+    var fences = (S.md.match(/^\s*```/gm) || []).length;
+    var ok = /^#\s+.+/m.test(S.md) && fences % 2 === 0 &&
+             !/^(here is|here's|sure|certainly|i cannot|i can't)/i.test(S.md.trim());
+    el.innerHTML = ok
+      ? '<span class="v-ok">&#10003; Markdown · &#10003; structure validated</span>'
+      : '<span class="v-warn">&#9888; Markdown needs review</span>';
+  }
+
+  function setStatus(kind, text) { $('status').dataset.s = kind || ''; $('status').textContent = text; }
+
+  // Where the current markdown belongs when the user switches items.
+  function stash() {
+    if (MODE === 'ui' && S.current) S.uiDocs[S.current] = S.md;
+    if (MODE === 'figma' && S.curFrame) S.frameDocs[S.curFrame] = S.md;
+  }
+
+  function setDoc(text, name) {
+    S.md = text || '';
+    stash();
+    if (name != null) $('title').value = String(name).replace(/\.md$/i, '');
+    paintEditor(); paintPreview(); validate(); paintTop(); paintChat();
+  }
+
+  /* ============================================================= sidebar */
+  function paintSidebar() {
+    var el = $('sidebody'), h = '';
+    if (MODE === 'convert') { el.innerHTML = ''; return; }
+    if (MODE === 'text') {
+      h = '<div class="searchwrap"><input id="q" type="search" placeholder="Filter documents" autocomplete="off" spellcheck="false" value="' + esc(S.filter) + '"></div>' +
+          '<div class="list" id="slist"></div>' +
+          '<div class="sidefoot"><button class="btn btn--stroke btn--sm" id="btn-new">+ New</button><span class="sp"></span>' +
+          '<button class="btn btn--ghost btn--sm" id="btn-reload" title="Re-read the folder">&#8635;</button></div>';
+    } else if (MODE === 'ui') {
+      h = (S.importDir
+            ? '<div class="folder"><span style="flex:none;color:var(--text-3)">&#128193;</span>' +
+              '<span class="folder__path" title="' + esc(S.importDir) + '">' + esc(S.importDir) + '</span>' +
+              '<button class="btn btn--ghost btn--sm" id="btn-repick">Change</button></div>' +
+              (S.kits.length > 1
+                ? '<div class="kitwrap"><select class="kitsel" id="kitsel" aria-label="Design system">' +
+                  S.kits.map(function (k) {
+                    return '<option value="' + esc(k.id) + '"' + (k.id === S.kit ? ' selected' : '') + '>' + esc(k.label) + '</option>';
+                  }).join('') + '</select></div>'
+                : '')
+            : '<div class="importbox"><h3>Import UI Components</h3>' +
+              '<p>Select the folder on your computer that holds your design system’s components.</p>' +
+              '<button class="btn btn--primary btn--sm" id="btn-pick">Choose Component Folder</button>' +
+              '<div class="hint">Supported: HTML, CSS</div></div>') +
+          '<div class="list" id="slist"></div>' +
+          '<div class="sidefoot"><button class="btn btn--ghost btn--sm" id="btn-rescan">&#8635; Rescan</button><span class="sp"></span></div>';
+    } else {
+      h = '<div class="list" id="slist"></div>' +
+          '<div class="sidefoot"><button class="btn btn--stroke btn--sm" id="btn-newframe">+ New frame</button></div>';
+    }
+    el.innerHTML = h;
+
+    var list = $('slist');
+    if (MODE === 'text') {
+      var q = S.filter.toLowerCase().split(/\s+/).filter(Boolean);
+      var hits = S.docs.filter(function (d) {
+        if (!q.length) return true;
+        var hay = (d.name + ' ' + d.title).toLowerCase();
+        return q.every(function (t) { return hay.indexOf(t) !== -1; });
+      });
+      list.innerHTML = hits.length ? hits.map(function (d) {
+        return '<button class="item" data-doc="' + esc(d.name) + '" aria-current="' + (d.name === S.docName) + '">' +
+          '<div class="item__t">' + esc(d.title) + '</div>' +
+          '<div class="item__m">' + esc(d.name) + ' · ' + d.words + 'w · ' + ago(d.mtime) + '</div></button>';
+      }).join('') : '<p class="empty">' + (S.docs.length ? 'No document matches.' : 'No documents yet. Describe one in the assistant.') + '</p>';
+      Array.prototype.forEach.call(list.querySelectorAll('[data-doc]'), function (b) {
+        b.onclick = function () { openDoc(b.getAttribute('data-doc')); };
+      });
+      var qEl = $('q');
+      qEl.addEventListener('input', function () { S.filter = qEl.value; paintSidebar(); });
+      $('btn-new').onclick = newDoc;
+      $('btn-reload').onclick = function () { loadDocs(); toast('Folder re-read'); };
+    } else if (MODE === 'ui') {
+      function row(id, name, type) {
+        var done = !!S.uiDocs[id];
+        return '<button class="item" data-comp="' + esc(id) + '" data-name="' + esc(name) + '"' +
+          (type ? ' data-type="' + esc(type) + '"' : '') +
+          ' aria-current="' + (id === S.current) + '">' +
+          '<div class="item__t" style="padding-right:24px">' + esc(name) + '</div>' +
+          (done
+            ? '<span class="item__st item__st--ok" title="Documentation generated">&#10003;</span>'
+            : '<span class="item__st item__st--todo" title="Not documented yet"></span>') +
+          '</button>';
+      }
+      if (!S.importDir) list.innerHTML = '';
+      else if (S.groups) {
+        // Segregated folder: group headers only when there is more than one group.
+        list.innerHTML = S.groups.length
+          ? S.groups.map(function (g) {
+              return (S.groups.length > 1 ? '<div class="ghead">' + esc(g.label) + ' (' + g.items.length + ')</div>' : '') +
+                g.items.map(function (u) { return row(u.uid, u.name, u.type); }).join('');
+            }).join('')
+          : '<p class="empty">Nothing documentable found here - no HTML pages, no component ' +
+            'markup or styles, no React components.</p>';
+      } else if (!S.components.length) {
+        list.innerHTML = S.kits.length > 1 && S.kit !== 'global'
+          ? '<p class="empty">This design system ships no components of its own yet. ' +
+            'The shared components live under <b>Global Kit</b>.</p>'
+          : '<p class="empty">No HTML or CSS found here. Components can be subfolders ' +
+            '(Button/button.html + button.css) or loose files sharing a name.</p>';
+      } else {
+        list.innerHTML = S.components.map(function (c) { return row(c.name, c.name, null); }).join('');
+      }
+      Array.prototype.forEach.call(list.querySelectorAll('[data-comp]'), function (b) {
+        b.onclick = function () {
+          openComp(b.getAttribute('data-comp'), b.getAttribute('data-name'), b.getAttribute('data-type'));
+        };
+      });
+      var pick = $('btn-pick') || $('btn-repick');
+      if (pick) pick.onclick = pickImport;
+      var ks = $('kitsel');
+      if (ks) ks.onchange = function () { setKit(ks.value); };
+      $('btn-rescan').onclick = function () { loadComponents(); toast('Folder re-read'); };
+    } else {
+      list.innerHTML = S.frames.length ? S.frames.map(function (f) {
+        return '<button class="item" data-frame="' + esc(f.url) + '" aria-current="' + (f.url === S.curFrame) + '">' +
+          (S.frameDocs[f.url] ? '<span class="item__dot" title="Documentation generated"></span>' : '') +
+          '<div class="item__t">' + esc(f.name) + '</div>' +
+          '<div class="item__m">' + esc(f.url.replace(/^https:\/\/(www\.)?figma\.com\//, '')) + '</div></button>';
+      }).join('') : '<p class="empty">No frames yet. Paste a Figma frame link in the main panel to get started.</p>';
+      Array.prototype.forEach.call(list.querySelectorAll('[data-frame]'), function (b) {
+        b.onclick = function () { openFrame(b.getAttribute('data-frame')); };
+      });
+      $('btn-newframe').onclick = function () {
+        stash();
+        S.curFrame = null;
+        setDoc('', '');
+        paintSidebar();
+      };
+    }
+  }
+
+  function compSelectHTML() {
+    var opts = '';
+    if (S.groups) {
+      if (!S.groups.length) return '';
+      opts = S.groups.map(function (g) {
+        return '<optgroup label="' + esc(g.label) + '">' +
+          g.items.map(function (u) {
+            return '<option value="' + esc(u.uid) + '">' + esc(u.name) + '</option>';
+          }).join('') + '</optgroup>';
+      }).join('');
+    } else {
+      if (!S.components.length) return '';
+      opts = S.components.map(function (c) {
+        return '<option value="' + esc(c.name) + '">' + esc(c.name) + '</option>';
+      }).join('');
+    }
+    return '<div class="kitwrap" style="padding:0;margin:0 0 10px">' +
+      '<select class="kitsel" id="compsel-ed" aria-label="Component">' +
+      '<option value="" selected disabled>Choose a component…</option>' + opts +
+      '</select></div>';
+  }
+
+  /* ================================================================ text */
+  async function loadDocs() {
+    try {
+      var r = await api('/api/docs');
+      S.docs = r.docs;
+      paintSidebar();
+    } catch (e) { notify('error', 'Cannot read the documents folder.', e.message); }
+  }
+  async function openDoc(name) {
+    if (S.dirty && S.md && !window.confirm('Discard unsaved changes?')) return;
+    S.q = null; S.qList = null;
+    try {
+      var r = await api('/api/doc?name=' + encodeURIComponent(name));
+      S.docName = r.name; S.mtime = r.mtime; S.dirty = false;
+      S.before = null; S.pending = false;
+      setDoc(r.markdown, r.name);
+      setStatus('', 'saved ' + ago(r.mtime));
+      paintSidebar();
+    } catch (e) { notify('error', 'Could not open that document.', e.message); }
+  }
+  function newDoc() {
+    if (S.dirty && S.md && !window.confirm('Discard unsaved changes?')) return;
+    S.q = null; S.qList = null;
+    S.docName = null; S.mtime = 0; S.dirty = false; S.before = null; S.pending = false;
+    setDoc('', '');
+    setStatus('', 'not saved yet');
+    paintSidebar();
+    $('prompt').focus();
+  }
+  function currentName() {
+    var raw = $('title').value.trim();
+    if (!raw) return null;
+    return /\.md$/i.test(raw) ? raw : raw + '.md';
+  }
+
+  /* ================================================================== ui */
+  async function pickImport() {
+    try {
+      var r = await post('/api/pick-folder', { for: 'import', prompt: 'Choose the folder that contains your components (HTML and CSS)' });
+      if (r.canceled) return;
+      S.importDir = r.path;
+      await loadKits();
+      await loadComponents();
+      toast('Imported ' + S.importDir);
+    } catch (e) { notify('error', 'Could not open the folder picker.', e.message); }
+  }
+  async function loadKits() {
+    if (!S.importDir) { paintSidebar(); return; }
+    try {
+      var r = await api('/api/kits?dir=' + encodeURIComponent(S.importDir));
+      S.importDir = r.root;
+      S.kits = r.kits;
+      var valid = S.kits.some(function (k) { return k.id === (r.kit || S.kit); });
+      S.kit = valid ? (r.kit || S.kit) : (S.kits[0] && S.kits[0].id);
+    } catch (e) { S.kits = []; S.kit = null; }
+  }
+  function setKit(id) {
+    S.kit = id;
+    S.q = null; S.qList = null;
+    S.current = null;
+    S.before = null; S.pending = false;
+    setDoc('', '');
+    setStatus('', '');
+    api('/api/state', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ kit: id }) }).catch(function () {});
+    loadComponents();
+  }
+  async function loadComponents() {
+    if (!S.importDir) { paintSidebar(); return; }
+    try {
+      var r = await api('/api/components?dir=' + encodeURIComponent(S.importDir) + '&kit=' + encodeURIComponent(S.kit || ''));
+      if (r.mode === 'groups') {
+        S.groups = r.groups; S.components = [];
+        var all = [];
+        r.groups.forEach(function (g) { g.items.forEach(function (u) { all.push(u.uid); }); });
+        if (S.current && all.indexOf(S.current) === -1) { S.current = null; S.curName = ''; S.curType = null; }
+      } else {
+        S.groups = null; S.components = r.components;
+        if (S.current && !S.components.some(function (c) { return c.name === S.current; })) {
+          S.current = null; S.curName = ''; S.curType = null;
+        }
+      }
+      paintSidebar(); paintTop(); paintEditor();
+    } catch (e) { notify('error', 'Could not read the component folder.', e.message); }
+  }
+  function openComp(id, name, type) {
+    stash();
+    S.q = null; S.qList = null;
+    S.current = id;
+    S.curName = name || id;
+    S.curType = type || null;
+    S.before = null; S.pending = false;
+    var existing = S.uiDocs[id] || '';
+    setDoc(existing, cap(S.curName));
+    setStatus('', existing ? 'generated, not saved' : '');
+    paintSidebar();
+  }
+  async function generate() {
+    if (S.busy || !S.current) return;
+    S.busy = true;
+    paintTop(); paintChips(); paintEditor();
+    say('u', 'Generate documentation for ' + cap(S.curName));
+
+    var steps = ['Reading HTML', 'Reading CSS', 'Identifying component structure', 'Identifying variants', 'Generating documentation'];
+    var stepAt = 0, t0 = Date.now();
+    var g0 = $('btn-gen');
+    if (g0) g0.disabled = true;
+    var tick = setInterval(function () {
+      if (stepAt < steps.length - 1 && Date.now() - t0 > (stepAt + 1) * 1200) stepAt++;
+      var line = '<span style="color:var(--accent)">&#9679;</span> ' + steps[stepAt] + '… ' + Math.round((Date.now() - t0) / 1000) + 's';
+      $('valid').innerHTML = line;
+      var live = $('gen-live');
+      if (live) live.textContent = steps[stepAt] + '… ' + Math.round((Date.now() - t0) / 1000) + 's';
+      var g = $('btn-gen');
+      if (g) { g.disabled = true; g.textContent = 'Generating…'; }
+    }, 400);
+
+    var prevDoc = S.md;
+    try {
+      var r = await post('/api/component-doc', S.groups
+        ? { dir: S.importDir, uid: S.current }
+        : { dir: S.importDir, kit: S.kit, name: S.current }, true);
+      clearInterval(tick);
+      S.uiDocs[S.current] = r.markdown;
+      S.qList = r.questions || [];
+      S.view = 'split';
+      S.before = prevDoc; S.pending = true; S.last = { gen: true };
+      setDoc(r.markdown, cap(S.curName));
+      setStatus('dirty', 'generated, not saved');
+      say('a', '<b>Generated documentation for ' + esc(cap(S.curName)) + '</b> in ' + Math.round(r.ms / 1000) + 's. Review it, tell me what to change, or press Save.');
+      startQuestions(true);
+      paintSidebar();
+    } catch (e) {
+      clearInterval(tick);
+      if (isAbort(e)) {
+        say('a', 'Stopped generating.');
+      } else {
+        var p = e.payload || {};
+        say('a', '<b>We couldn’t generate your Markdown.</b> ' + esc(p.explain || e.message), true);
+      }
+      $('valid').innerHTML = '';
+    }
+    S.busy = false;
+    paintTop(); paintEditor(); paintChat(); validate();
+  }
+
+  /* =============================================================== figma */
+  async function figGenerate(url) {
+    if (S.busy) return;
+    if (!/^https:\/\/(www\.)?figma\.com\//.test(url || '')) {
+      notify('warn', 'Paste a Figma link first.', 'It should start with https://www.figma.com/');
+      return;
+    }
+    S.busy = true;
+    paintTop(); paintChips();
+    say('u', 'Generate documentation for ' + url);
+    try {
+      var fr = await post('/api/frame', { url: url });
+      S.frames = fr.frames; S.curFrame = url;
+      paintSidebar();
+    } catch (e) { /* recents are cosmetic; generation continues */ }
+
+    var t0 = Date.now();
+    var tick = setInterval(function () {
+      $('valid').innerHTML = '<span style="color:var(--accent)">&#9679;</span> Retrieving from Figma & writing… ' + Math.round((Date.now() - t0) / 1000) + 's';
+    }, 500);
+
+    var prevDoc = S.md;
+    try {
+      var r = await post('/api/figma-doc', { url: url }, true);
+      clearInterval(tick);
+      S.frameDocs[url] = r.markdown;
+      S.qList = r.questions || [];
+      S.before = prevDoc; S.pending = true; S.last = { fig: url };
+      setDoc(r.markdown, (r.suggestedName || 'Figma component.md'));
+      setStatus('dirty', 'generated, not saved');
+      say('a', '<b>Generated documentation</b> from the Figma frame in ' + Math.round(r.ms / 1000) + 's. Review it, tell me what to change, or press Save.');
+      startQuestions(true);
+      try {
+        var st = await api('/api/state');
+        S.frames = st.frames;
+      } catch (e) { /* fine */ }
+      paintSidebar();
+    } catch (e) {
+      clearInterval(tick);
+      if (isAbort(e)) {
+        say('a', 'Stopped.');
+      } else {
+        var p = e.payload || {};
+        say('a', '<b>' + esc(p.error || "We couldn't connect to Figma.") + '</b> ' + esc(p.explain || ''), true);
+      }
+      $('valid').innerHTML = '';
+    }
+    S.busy = false;
+    paintTop(); paintEditor(); paintPreview(); paintChat();
+  }
+  function openFrame(url) {
+    stash();
+    S.q = null; S.qList = null;
+    S.curFrame = url;
+    var f = S.frames.find(function (x) { return x.url === url; });
+    var existing = S.frameDocs[url] || '';
+    S.before = null; S.pending = false;
+    setDoc(existing, f ? f.name : 'Figma component');
+    if (!existing) {
+      say('a', 'No generated Markdown is kept for <b>' + esc(f ? f.name : url) + '</b> in this session. ' +
+        'Ask me to regenerate it, or paste the link again.');
+      // Prefill the drop box for one-click regeneration.
+      paintEditor();
+      var u = $('figurl');
+      if (u) u.value = url;
+    }
+    setStatus('', existing ? 'generated, not saved' : '');
+    paintSidebar();
+  }
+
+  /* ============================================================= convert */
+  function convertFile() {
+    if (S.busy) return;
+    var inp = document.createElement('input');
+    inp.type = 'file';
+    inp.accept = CONVERT_ACCEPT[new URLSearchParams(location.search).get('type')] || CONVERT_ACCEPT.file;
+    inp.onchange = function () {
+      if (inp.files && inp.files[0]) uploadAndConvert(inp.files[0]);
+    };
+    inp.click();
+  }
+  async function uploadAndConvert(f) {
+    if (S.busy) return;
+    S.curName = f.name;
+    S.current = 'upload';
+    S.busy = true;
+    paintTop(); paintEditor();
+    var t0 = Date.now();
+    var tick = setInterval(function () {
+      var live = $('gen-live');
+      if (live) live.textContent = 'Converting… ' + Math.round((Date.now() - t0) / 1000) + 's';
+    }, 500);
+
+    try {
+      var up = await fetch('/api/upload?name=' + encodeURIComponent(f.name), { method: 'POST', body: f });
+      var uj = null;
+      try { uj = await up.json(); } catch (e2) { /* non-JSON */ }
+      if (!up.ok) {
+        var ue = new Error((uj && uj.error) || 'upload failed');
+        ue.payload = uj || {};
+        throw ue;
+      }
+      var r = await post('/api/convert', { path: uj.path }, true);
+      clearInterval(tick);
+      S.view = 'split';
+      S.before = null; S.pending = false;
+      setDoc(r.markdown, (r.suggestedName || S.curName).replace(/\.md$/i, '').replace(/\.[a-z0-9]+$/i, ''));
+      setStatus('', 'converted');
+      toast('Converted ' + S.curName + ' in ' + Math.round(r.ms / 1000) + 's');
+    } catch (e) {
+      clearInterval(tick);
+      S.current = null; S.curName = '';
+      if (isAbort(e)) toast('Conversion stopped');
+      else {
+        var p = e.payload || {};
+        notify('error', 'Could not convert that file.', p.explain || e.message);
+      }
+    }
+    S.busy = false;
+    paintTop(); paintEditor(); validate();
+  }
+
+  /* ============================================================ chat send */
+  async function send(asking) {
+    if (S.busy) return;
+    var instruction = $('prompt').value.trim();
+    if (!instruction) return;
+    $('prompt').value = '';
+    $('prompt').style.height = 'auto';
+
+    // No document yet: in text mode that means "write one"; elsewhere, point at the entry step.
+    if (!S.md && MODE !== 'text') {
+      say('u', instruction);
+      say('a', MODE === 'ui'
+        ? 'Generate documentation first - choose a folder, pick a component, then press <b>Generate Documentation</b>.'
+        : 'Paste a Figma frame link in the main panel and press <b>Fetch &amp; Generate</b> first.');
+      return;
+    }
+
+    S.busy = true; S.last = { instruction: instruction, asking: !!asking };
+    say('u', instruction);
+    if (!S.pending) S.before = S.md;
+    paintTop(); paintChips();
+
+    var t0 = Date.now();
+    var tick = setInterval(function () {
+      $('valid').innerHTML = '<span style="color:var(--accent)">&#9679;</span> Claude is ' +
+        (asking ? 'answering' : 'writing') + '… ' + Math.round((Date.now() - t0) / 1000) + 's';
+    }, 500);
+
+    try {
+      var body = {
+        instruction: instruction,
+        mode: asking ? 'ask' : (S.md ? 'edit' : 'new'),
+        markdown: S.md,
+      };
+      var r = await post('/api/ai', body, true);
+      clearInterval(tick);
+
+      if (asking) {
+        say('a', md(r.answer || '(no answer)'));
+      } else if (!r.markdown || !r.markdown.trim()) {
+        S.md = S.before || '';
+        say('a', 'Claude returned nothing. Your text is unchanged.', true);
+      } else {
+        var wasNew = body.mode === 'new';
+        S.md = r.markdown;
+        stash();
+        S.pending = true; S.dirty = true;
+        if (wasNew && MODE === 'text' && r.suggestedName) {
+          S.docName = null; S.mtime = 0;
+          $('title').value = r.suggestedName.replace(/\.md$/i, '');
+        }
+        if (r.questions && r.questions.length) S.qList = r.questions;
+        setStatus('dirty', 'not saved');
+        paintEditor(); paintPreview();
+        say('a', '<b>' + (wasNew ? 'Wrote the document' : 'Updated the document') + '</b> in ' +
+          Math.round((Date.now() - t0) / 1000) + 's - review the editor, then <b>Keep</b> or <b>Discard</b>.');
+      }
+    } catch (e) {
+      clearInterval(tick);
+      if (S.before != null && !S.pending) { S.md = S.before; paintEditor(); paintPreview(); }
+      if (isAbort(e)) {
+        say('a', 'Stopped. Your text is unchanged.');
+      } else {
+        var p = e.payload || {};
+        say('a', '<b>Claude could not do that.</b> ' + esc(p.explain || e.message), true);
+      }
+      S.pending = false;
+    }
+    S.busy = false;
+    validate(); paintTop(); paintChat();
+  }
+
+  function keep() {
+    S.pending = false; S.before = null;
+    paintChat(); paintTop();
+    save();
+  }
+  function discard() {
+    if (S.before == null) return;
+    S.md = S.before;
+    stash();
+    S.before = null; S.pending = false; S.dirty = true; S.q = null; S.qList = null;
+    setStatus('dirty', 'not saved');
+    paintEditor(); paintPreview(); validate(); paintChat(); paintTop();
+    say('a', 'Discarded. Your previous text is back.');
+  }
+  function regen() {
+    if (!S.last) return;
+    if (S.last.gen) return generate();
+    if (S.last.fig) return figGenerate(S.last.fig);
+    $('prompt').value = S.last.instruction;
+    send(S.last.asking);
+  }
+
+  /* ================================================================ save */
+  function downloadMd() {
+    if (!S.md) return;
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([S.md], { type: 'text/markdown' }));
+    a.download = currentName() || 'document.md';
+    a.click();
+    URL.revokeObjectURL(a.href);
+    toast('Downloaded ' + (currentName() || 'document.md'));
+  }
+  async function save() {
+    if (!S.md) return;
+    if (MODE === 'convert') return downloadMd();
+    if (MODE === 'text') {
+      var name = currentName();
+      if (!name) {
+        notify('warn', 'Name it first.', 'Type a name in the field at the top, then save.');
+        $('title').focus();
+        return;
+      }
+      try {
+        var renaming = S.docName && S.docName !== name;
+        var r = await api('/api/doc', {
+          method: 'PUT', headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ name: name, markdown: S.md, baseMtime: renaming ? null : S.mtime }),
+        });
+        if (renaming) {
+          try { await api('/api/doc', { method: 'DELETE', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: S.docName }) }); } catch (e) {}
+        }
+        S.docName = r.name; S.mtime = r.mtime; S.dirty = false;
+        setStatus('saved', 'saved ' + new Date().toTimeString().slice(0, 5));
+        toast('Saved ' + r.name);
+        loadDocs();
+      } catch (e) {
+        if (e.payload && e.payload.markdown !== undefined) {
+          setStatus('error', 'changed on disk');
+          notify('warn', 'This file changed on disk since you opened it.', 'Save again to overwrite it deliberately.');
+          S.mtime = e.payload.mtime;
+          return;
+        }
+        setStatus('error', 'not saved');
+        notify('error', 'Save failed.', e.message);
+      }
+      return;
+    }
+    // ui / figma: save into ./documents - component docs get a folder named
+    // after their design system.
+    var fname = currentName() || 'Untitled.md';
+    var sub = '';
+    if (MODE === 'ui') {
+      var kk = S.groups
+        ? { label: (S.importDir || '').split('/').filter(Boolean).pop() || '' }
+        : S.kits.find(function (x) { return x.id === S.kit; });
+      sub = kk ? kk.label : '';
+    }
+    try {
+      var r2 = await post('/api/save-out', { name: fname, markdown: S.md, subdir: sub });
+      S.dirty = false;
+      setStatus('saved', 'saved ' + new Date().toTimeString().slice(0, 5));
+      toast('Saved ' + r2.name + ' to ' + r2.dir);
+    } catch (e) { notify('error', 'Save failed.', e.message); }
+  }
+
+  /* ============================================================== events */
+  $('btn-side').onclick = function () { S.side = !S.side; paintTop(); };
+  $('btn-chat').onclick = function () { S.chat = !S.chat; paintTop(); };
+  $('viewmode').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-v]');
+    if (!b || b.hidden) return;
+    S.view = b.getAttribute('data-v');
+    paintTop();
+  });
+  $('btn-save').onclick = save;
+  $('btn-copy').onclick = function () {
+    navigator.clipboard.writeText(S.md).then(
+      function () { toast('Markdown copied'); },
+      function () { toast('Copy failed - copy from the editor'); }
+    );
+  };
+  $('btn-send').onclick = function () {
+    if (S.busy) { if (S.ctrl) S.ctrl.abort(); return; }
+    send(false);
+  };
+  $('prompt').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(false); }
+  });
+  $('prompt').addEventListener('input', function () {
+    var p = $('prompt');
+    p.style.height = 'auto';
+    var h = Math.max(21, Math.min(180, p.scrollHeight));
+    p.style.height = h + 'px';
+    p.dataset.tall = h > 34 ? '1' : '';
+  });
+  $('title').addEventListener('input', function () {
+    S.dirty = true;
+    setStatus('dirty', 'not saved');
+    var t = $('title');
+    t.style.width = Math.min(30, Math.max(4, (t.value || '').length + 1)) + 'ch';
+  });
+  document.addEventListener('keydown', function (e) {
+    var mod = e.metaKey || e.ctrlKey;
+    if (mod && e.key.toLowerCase() === 's') { e.preventDefault(); save(); }
+    if (mod && e.key.toLowerCase() === 'k') { e.preventDefault(); S.chat = true; paintTop(); $('prompt').focus(); }
+    if (e.key === 'Escape' && S.qBig) { S.qBig = false; paintChat(); return; }
+    if (e.key === 'Escape' && S.side) { S.side = false; paintTop(); }
+  });
+  // The sidebar is transient: any click outside it (or its hamburger) closes it.
+  document.addEventListener('pointerdown', function (e) {
+    if (!S.side) return;
+    if (e.target.closest('.side') || e.target.closest('#btn-side')) return;
+    S.side = false;
+    paintTop();
+  });
+  window.addEventListener('beforeunload', function (e) {
+    if (S.dirty && S.md) { e.preventDefault(); e.returnValue = ''; }
+  });
+
+  /* ================================================================ boot */
+  (async function () {
+    document.title = '2md · ' + TAGS[MODE].replace(' → ', ' → ');
+    paintTop(); paintSidebar(); paintEditor(); paintPreview(); paintChat();
+
+    try {
+      var st = await api('/api/state');
+      S.importDir = st.importDir;
+      S.frames = st.frames || [];
+    } catch (e) { /* fine */ }
+
+    if (MODE === 'text') {
+      // Start blank: recent documents live in the sidebar, not in the editor.
+      await loadDocs();
+      setStatus('', 'not saved yet');
+    } else if (MODE === 'ui') {
+      await loadKits();
+      await loadComponents();
+    } else {
+      paintSidebar();
+    }
+    paintTop();
+  })();
+})();
+</script>
+</body>
+</html>

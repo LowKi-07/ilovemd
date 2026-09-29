@@ -1,0 +1,971 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2md</title>
+<style>
+  /* ------------------------------------------------------------ tokens */
+  :root {
+    --canvas: #08080c;
+    --panel: rgba(255,255,255,.038);
+    --panel-raised: rgba(255,255,255,.062);
+    --panel-solid: #12121a;
+    --hairline: rgba(255,255,255,.085);
+    --hairline-strong: rgba(255,255,255,.16);
+    --text: #f5f5fa;
+    --text-2: #a3a3b4;
+    --text-3: #6d6d7e;
+    --accent: #8b7cff;
+    --accent-soft: rgba(139,124,255,.16);
+    --accent-2: #3fd0e0;
+    --gradient: linear-gradient(135deg,#8b7cff 0%,#6f8bff 45%,#3fd0e0 100%);
+    --ok: #34d399;
+    --warn: #fbbf24;
+    --danger: #fb7185;
+    --r-sm: 8px; --r-md: 12px; --r-lg: 18px; --r-pill: 999px;
+    --blur: saturate(180%) blur(16px);
+    --ease: cubic-bezier(.2,.8,.3,1);
+    --font: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+    --rail: 264px;
+    --split: 50%;
+  }
+  * { box-sizing: border-box; }
+  /* A class that sets `display` beats the UA rule for [hidden], so anything
+     hidden by attribute has to be forced. Without this, .pacts { display:flex }
+     leaves Keep/Discard/Regenerate on screen permanently. */
+  [hidden] { display: none !important; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--canvas); color: var(--text);
+    font: 400 15px/1.6 var(--font);
+    overflow: hidden; -webkit-font-smoothing: antialiased;
+  }
+  body::before {
+    content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background:
+      radial-gradient(52em 34em at 8% -6%, rgba(139,124,255,.17), transparent 62%),
+      radial-gradient(46em 30em at 102% 104%, rgba(63,208,224,.11), transparent 60%);
+  }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,.11); border-radius: var(--r-pill);
+    border: 2px solid transparent; background-clip: padding-box;
+  }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,.2); background-clip: padding-box; }
+  a { color: var(--accent); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* ------------------------------------------------------------- shell */
+  .app {
+    position: fixed; inset: 0; z-index: 1;
+    display: grid;
+    grid-template-columns: var(--rail) minmax(260px, var(--split)) minmax(260px, 1fr);
+  }
+  .panel { min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
+  .phead {
+    flex: none; display: flex; align-items: center; gap: 8px;
+    height: 52px; padding: 0 14px;
+    border-bottom: 1px solid var(--hairline);
+    background: rgba(10,10,16,.62);
+    backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
+  }
+  .phead .lbl {
+    font: 600 10.5px var(--font); letter-spacing: .09em;
+    text-transform: uppercase; color: var(--text-3); white-space: nowrap;
+  }
+  .sp { flex: 1 1 auto; min-width: 0; }
+  .pbody { flex: 1; min-height: 0; overflow: auto; }
+
+  /* ------------------------------------------------------------ panel 1 */
+  .rail { border-right: 1px solid var(--hairline); background: rgba(255,255,255,.012); }
+  .mark {
+    width: 26px; height: 26px; border-radius: 8px; flex: none;
+    background: var(--gradient); display: grid; place-items: center;
+    color: #0a0a11; font-size: 14px; font-weight: 700;
+  }
+  .brandname { font-size: 14px; font-weight: 620; letter-spacing: -.01em; }
+  .searchwrap { flex: none; padding: 12px 12px 8px; }
+  input[type=search], input[type=text] {
+    width: 100%; font: 400 13.5px var(--font); color: var(--text);
+    background: var(--panel); border: 1px solid var(--hairline);
+    border-radius: 10px; padding: 8px 11px; appearance: none;
+  }
+  input:focus { border-color: rgba(139,124,255,.6); outline: none; box-shadow: 0 0 0 3px var(--accent-soft); }
+  .doclist { padding: 0 8px 20px; }
+  .doc {
+    display: block; width: 100%; text-align: left; cursor: pointer;
+    background: none; border: 0; color: var(--text);
+    padding: 8px 10px; border-radius: 10px; margin-bottom: 2px;
+    position: relative;
+  }
+  .doc:hover { background: var(--panel); }
+  .doc[aria-current="true"] { background: var(--accent-soft); }
+  .doc[aria-current="true"]::before {
+    content: ''; position: absolute; left: 2px; top: 9px; bottom: 9px;
+    width: 2px; border-radius: 2px; background: var(--gradient);
+  }
+  .doc__t {
+    font-size: 13.5px; font-weight: 540; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis;
+  }
+  .doc__m { font: 400 11px var(--mono); color: var(--text-3); margin-top: 2px; }
+  .railfoot { flex: none; border-top: 1px solid var(--hairline); padding: 10px 12px; display: flex; gap: 6px; }
+  .empty { color: var(--text-3); font-size: 13px; padding: 14px 10px; }
+
+  /* ------------------------------------------------------------ buttons */
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 12px; border-radius: 10px;
+    border: 1px solid transparent; background: transparent;
+    color: var(--text); font: 560 13px var(--font);
+    cursor: pointer; white-space: nowrap;
+    transition: transform .16s var(--ease), background-color .16s var(--ease);
+  }
+  .btn:hover:not(:disabled) { transform: translateY(-1px); }
+  .btn:disabled { opacity: .4; cursor: default; }
+  .btn--stroke { border-color: var(--hairline-strong); background: var(--panel); }
+  .btn--stroke:hover:not(:disabled) { background: var(--panel-raised); }
+  .btn--ghost { color: var(--text-2); }
+  .btn--ghost:hover:not(:disabled) { background: var(--panel); color: var(--text); }
+  .btn--primary { background: var(--gradient); color: #0a0a11; font-weight: 620; }
+  .btn--sm { padding: 5px 10px; font-size: 12.5px; }
+  .btn--danger:hover:not(:disabled) { background: rgba(251,113,133,.16); color: var(--danger); }
+
+  /* ------------------------------------------------------------ panel 2 */
+  .editor { border-right: 1px solid var(--hairline); position: relative; }
+  .editor .pbody { display: flex; flex-direction: column; }
+  #title {
+    font: 620 14px var(--font); letter-spacing: -.01em;
+    background: transparent; border: 1px solid transparent; border-radius: 8px;
+    color: var(--text); padding: 4px 8px; min-width: 8ch; max-width: 34ch;
+  }
+  #title:hover { border-color: var(--hairline); }
+  #title:focus { border-color: rgba(139,124,255,.6); outline: none; background: var(--panel); }
+  .status { font: 400 11px var(--mono); color: var(--text-3); white-space: nowrap; }
+  .status[data-s="dirty"] { color: var(--warn); }
+  .status[data-s="saved"] { color: var(--ok); }
+  .status[data-s="error"] { color: var(--danger); }
+  #ed {
+    flex: 1; width: 100%; min-height: 0; resize: none; display: block;
+    font: 400 13.5px/1.75 var(--mono); color: #dcdce6;
+    background: transparent; border: 0; padding: 20px 22px 30px;
+    tab-size: 2; caret-color: var(--accent-2);
+  }
+  #ed:focus { outline: none; }
+  #ed::placeholder { color: var(--text-3); }
+  #ed::selection { background: rgba(139,124,255,.32); }
+
+  /* --------------------------------------------------------- prompt bar */
+  .promptbar {
+    flex: none; border-top: 1px solid var(--hairline);
+    background: rgba(10,10,16,.66);
+    backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
+    padding: 10px 12px 11px; display: flex; flex-direction: column; gap: 8px;
+  }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    border: 1px solid var(--hairline); background: var(--panel);
+    color: var(--text-2); border-radius: var(--r-pill);
+    padding: 4px 11px; font: 500 11.5px var(--font); cursor: pointer;
+    transition: color .16s var(--ease), border-color .16s var(--ease), background-color .16s var(--ease);
+  }
+  .chip:hover:not(:disabled) { color: var(--text); border-color: rgba(139,124,255,.55); background: var(--accent-soft); }
+  .chip:disabled { opacity: .4; cursor: default; }
+  .prow {
+    display: flex; align-items: flex-end; gap: 8px;
+    border: 1px solid var(--hairline); background: rgba(255,255,255,.045);
+    border-radius: var(--r-md); padding: 7px 8px 7px 12px;
+    transition: border-color .16s var(--ease), box-shadow .16s var(--ease);
+  }
+  .prow:focus-within { border-color: rgba(139,124,255,.6); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .spark { color: var(--accent); font-size: 13px; line-height: 26px; flex: none; }
+  #prompt {
+    flex: 1; min-width: 0; border: 0; outline: none; resize: none;
+    background: transparent; color: var(--text);
+    font: 400 13.5px/1.55 var(--font); padding: 4px 0; max-height: 140px;
+  }
+  #prompt::placeholder { color: var(--text-3); }
+  .pfoot { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 11.5px; min-height: 22px; }
+  .mode {
+    display: inline-flex; border: 1px solid var(--hairline);
+    border-radius: var(--r-pill); overflow: hidden; flex: none;
+  }
+  .mode button {
+    border: 0; background: transparent; color: var(--text-3);
+    font: 500 11px var(--font); padding: 3px 10px; cursor: pointer;
+  }
+  .mode button[aria-pressed="true"] { background: var(--accent-soft); color: var(--text); }
+  .pstatus {
+    color: var(--text-2); flex: 1 1 180px; min-width: 0;
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;
+  }
+  .pacts { display: flex; gap: 6px; flex: none; margin-left: auto; }
+  .engine {
+    font: 400 10.5px var(--mono); color: var(--text-3);
+    border: 1px solid var(--hairline); border-radius: var(--r-sm);
+    padding: 2px 7px; white-space: nowrap;
+  }
+  .engine--off { color: var(--warn); border-color: rgba(251,191,36,.35); cursor: pointer; }
+
+  .grip { position: absolute; top: 0; right: -3px; width: 7px; height: 100%; cursor: col-resize; z-index: 6; }
+  .grip:hover, .grip.on { background: var(--accent); opacity: .25; }
+
+  /* ------------------------------------------------------------ panel 3 */
+  .preview { background: rgba(255,255,255,.012); }
+  .md { padding: 22px 26px 60px; max-width: 78ch; }
+  .md > :first-child { margin-top: 0; }
+  .md h1 { font-size: 24px; margin: 0 0 10px; letter-spacing: -.02em; }
+  .md h2 {
+    font-size: 12px; text-transform: uppercase; letter-spacing: .08em;
+    color: var(--text-3); margin: 28px 0 10px; padding-bottom: 6px;
+    border-bottom: 1px solid var(--hairline); font-weight: 650;
+  }
+  .md h3 { font-size: 15px; margin: 20px 0 6px; }
+  .md p { margin: 0 0 11px; }
+  .md ul, .md ol { margin: 0 0 12px; padding-left: 22px; }
+  .md li { margin: 3px 0; }
+  .md hr { border: 0; border-top: 1px solid var(--hairline); margin: 24px 0; }
+  .md blockquote {
+    margin: 0 0 12px; padding: 9px 13px; border-left: 3px solid var(--hairline-strong);
+    background: var(--panel); border-radius: 0 8px 8px 0; color: var(--text-2);
+  }
+  .md blockquote p:last-child { margin: 0; }
+  .md code {
+    font: 400 12.5px var(--mono); background: rgba(255,255,255,.06);
+    padding: 2px 5px; border-radius: 5px; word-break: break-word;
+  }
+  .md pre {
+    background: rgba(0,0,0,.35); border: 1px solid var(--hairline);
+    border-radius: 10px; padding: 13px 15px; overflow-x: auto; margin: 0 0 13px;
+  }
+  .md pre code { background: none; padding: 0; font-size: 12px; white-space: pre; }
+  .tablewrap { overflow-x: auto; margin: 0 0 14px; border: 1px solid var(--hairline); border-radius: 10px; }
+  .md table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  .md th, .md td { text-align: left; padding: 7px 11px; border-bottom: 1px solid var(--hairline); vertical-align: top; }
+  .md th {
+    background: var(--panel); font: 600 10.5px var(--font);
+    text-transform: uppercase; letter-spacing: .05em; color: var(--text-2); white-space: nowrap;
+  }
+  .md tbody tr:last-child td { border-bottom: 0; }
+  .md img { max-width: 100%; }
+
+  /* ------------------------------------------------------------- notice */
+  .notice { padding: 0 14px; }
+  .note {
+    margin: 10px 0 0; padding: 10px 12px; border-radius: 10px;
+    border: 1px solid var(--hairline); background: var(--panel);
+    font-size: 12.5px; color: var(--text-2);
+    display: flex; gap: 10px; align-items: flex-start;
+  }
+  .note--warn { border-color: rgba(251,191,36,.4); background: rgba(251,191,36,.08); }
+  .note--error { border-color: rgba(251,113,133,.4); background: rgba(251,113,133,.08); }
+  .note--ok { border-color: rgba(52,211,153,.4); background: rgba(52,211,153,.08); }
+  .note b { color: var(--text); font-weight: 620; }
+  .note__x { margin-left: auto; background: none; border: 0; color: var(--text-3); cursor: pointer; font-size: 15px; }
+
+  dialog {
+    border: 1px solid var(--hairline-strong); border-radius: var(--r-lg);
+    background: #14141d; color: var(--text); padding: 0;
+    max-width: min(680px, 92vw); width: 100%;
+    box-shadow: 0 24px 60px rgba(0,0,0,.7);
+  }
+  dialog::backdrop { background: rgba(0,0,0,.55); }
+  .dhead { padding: 14px 16px; border-bottom: 1px solid var(--hairline); font-weight: 620; }
+  .dbody { padding: 14px 16px; font-size: 13.5px; color: var(--text-2); }
+  .dbody pre {
+    background: rgba(0,0,0,.4); border: 1px solid var(--hairline); border-radius: 8px;
+    padding: 10px 12px; overflow: auto; max-height: 40vh; font: 400 11.5px/1.5 var(--mono); color: var(--text-2);
+  }
+  .dfoot { padding: 12px 16px; border-top: 1px solid var(--hairline); display: flex; gap: 8px; justify-content: flex-end; }
+
+  .toast {
+    position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%) translateY(70px);
+    background: var(--text); color: #0a0a11; padding: 9px 16px; border-radius: 10px;
+    font: 560 13px var(--font); z-index: 60; opacity: 0;
+    transition: transform .2s var(--ease), opacity .2s var(--ease); pointer-events: none;
+  }
+  .toast.on { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+  @media (max-width: 940px) {
+    body { overflow: auto; }
+    .app { position: static; grid-template-columns: 1fr; }
+    .rail { border-right: 0; border-bottom: 1px solid var(--hairline); max-height: 40vh; }
+    .editor { border-right: 0; border-bottom: 1px solid var(--hairline); }
+    #ed { min-height: 48vh; }
+    .grip { display: none; }
+    .md { max-width: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- ------------------------------------------------- 1. documents -->
+  <aside class="panel rail">
+    <div class="phead">
+      <a class="brandname" href="/" style="text-decoration:none;color:var(--text)">2md</a>
+      <span class="sp"></span>
+      <button class="btn btn--ghost btn--sm" id="btn-setup" title="Setup and status">&#9881;</button>
+    </div>
+    <div class="searchwrap">
+      <input id="q" type="search" placeholder="Filter documents   /" autocomplete="off" spellcheck="false">
+    </div>
+    <div class="pbody"><div class="doclist" id="list"></div></div>
+    <div class="railfoot">
+      <button class="btn btn--stroke btn--sm" id="btn-new">+ New</button>
+      <span class="sp"></span>
+      <button class="btn btn--ghost btn--sm" id="btn-reload" title="Re-read the folder">&#8635;</button>
+      <button class="btn btn--ghost btn--sm btn--danger" id="btn-del" title="Delete this document">&#9003;</button>
+    </div>
+  </aside>
+
+  <!-- ---------------------------------------------------- 2. editor -->
+  <section class="panel editor">
+    <div class="phead">
+      <input id="title" value="" spellcheck="false" aria-label="Document name">
+      <span class="status" id="status"></span>
+      <span class="sp"></span>
+      <button class="btn btn--ghost btn--sm" id="btn-copy">Copy</button>
+      <button class="btn btn--primary btn--sm" id="btn-save">Save</button>
+    </div>
+    <div class="notice" id="notice"></div>
+    <div class="pbody">
+      <textarea id="ed" spellcheck="false" placeholder="Write here, or use the prompt bar below to have Claude write it."></textarea>
+    </div>
+
+    <!-- the prompt bar, inside the edit panel -->
+    <div class="promptbar" id="promptbar">
+      <div class="chips" id="chips"></div>
+      <div class="prow">
+        <span class="spark">&#10022;</span>
+        <textarea id="prompt" rows="1" spellcheck="false"
+          placeholder="Say what you want in plain English&#8230;   (Enter to send, Shift+Enter for a new line)"></textarea>
+        <button class="btn btn--primary" id="btn-send">Send</button>
+      </div>
+      <div class="pfoot">
+        <span class="mode" id="mode" role="group" aria-label="What the prompt does">
+          <button data-m="new" aria-pressed="true">New document</button>
+          <button data-m="edit" aria-pressed="false">Edit this one</button>
+        </span>
+        <span class="engine" id="engine"></span>
+        <span class="pstatus" id="pstatus"></span>
+        <span class="pacts" id="pacts" hidden>
+          <button class="btn btn--ghost btn--sm" id="btn-discard">Discard</button>
+          <button class="btn btn--ghost btn--sm" id="btn-again">Regenerate</button>
+          <button class="btn btn--primary btn--sm" id="btn-keep">Keep</button>
+        </span>
+      </div>
+    </div>
+    <div class="grip" id="grip" role="separator" aria-orientation="vertical" title="Drag to resize"></div>
+  </section>
+
+  <!-- --------------------------------------------------- 3. preview -->
+  <section class="panel preview">
+    <div class="phead">
+      <span class="lbl">Preview</span>
+      <span class="sp"></span>
+      <span class="status" id="counts"></span>
+    </div>
+    <div class="pbody"><div class="md" id="prev"></div></div>
+  </section>
+</div>
+
+<dialog id="dlg">
+  <div class="dhead" id="dlg-title">Setup</div>
+  <div class="dbody" id="dlg-body"></div>
+  <div class="dfoot">
+    <button class="btn btn--ghost" id="dlg-diag">Run diagnosis</button>
+    <button class="btn btn--stroke" id="dlg-close">Close</button>
+  </div>
+</dialog>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  var $ = function (id) { return document.getElementById(id); };
+  var ed = $('ed'), prev = $('prev'), statusEl = $('status'), pstatus = $('pstatus');
+
+  var S = {
+    docs: [], name: null, mtime: 0, draft: '', dirty: false,
+    q: '', mode: 'new', busy: false,
+    before: null, pending: false, last: '',
+    ai: { available: false, detail: 'checking', explain: '' },
+  };
+
+  /* ================================================================ util */
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+    });
+  }
+
+  var toastT = null;
+  function toast(msg) {
+    var el = $('toast');
+    el.textContent = msg; el.classList.add('on');
+    clearTimeout(toastT);
+    toastT = setTimeout(function () { el.classList.remove('on'); }, 1900);
+  }
+
+  function notify(kind, title, msg) {
+    $('notice').innerHTML =
+      '<div class="note note--' + kind + '"><div><b>' + esc(title) + '</b> ' + esc(msg) + '</div>' +
+      '<button class="note__x" aria-label="Dismiss">&times;</button></div>';
+    var x = $('notice').querySelector('.note__x');
+    if (x) x.onclick = function () { $('notice').innerHTML = ''; };
+  }
+
+  async function api(path, opts) {
+    var res = await fetch(path, Object.assign({ cache: 'no-store' }, opts || {}));
+    var j = null;
+    try { j = await res.json(); } catch (e) { /* non-JSON body */ }
+    if (!res.ok) {
+      var e = new Error((j && j.error) || ('request failed with ' + res.status));
+      e.payload = j || {};
+      throw e;
+    }
+    return j;
+  }
+
+  /* ============================================================ markdown */
+  function inline(s) {
+    return s.split(/(`[^`]+`)/).map(function (part) {
+      if (part.length > 1 && part.charAt(0) === '`' && part.charAt(part.length - 1) === '`') {
+        return '<code>' + part.slice(1, -1) + '</code>';
+      }
+      return part
+        .replace(/\[([^\]]*)\]\(([^)\s]+)\)/g, function (m, t, h) {
+          return /^https?:\/\//.test(h) ? '<a href="' + h + '" target="_blank" rel="noopener">' + t + '</a>' : t;
+        })
+        .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+        .replace(/~~([^~]+)~~/g, '<del>$1</del>');
+    }).join('');
+  }
+
+  function cells(row) {
+    return row.replace(/^\||\|$/g, '').split(/(?<!\\)\|/).map(function (c) {
+      return c.replace(/\\\|/g, '|').trim();
+    });
+  }
+
+  function md(src) {
+    var lines = esc(src).split('\n'), out = [], i = 0, list = null;
+    function closeList() { if (list) { out.push('</' + list + '>'); list = null; } }
+
+    while (i < lines.length) {
+      var line = lines[i];
+
+      if (/^\s*```/.test(line)) {
+        closeList();
+        var buf = []; i++;
+        while (i < lines.length && !/^\s*```/.test(lines[i])) buf.push(lines[i++]);
+        i++;
+        out.push('<pre><code>' + buf.join('\n') + '</code></pre>');
+        continue;
+      }
+      if (/^\s*$/.test(line)) { closeList(); i++; continue; }
+      if (/^\s*(-{3,}|\*{3,}|_{3,})\s*$/.test(line)) { closeList(); out.push('<hr>'); i++; continue; }
+
+      var h = line.match(/^(#{1,6})\s+(.*)$/);
+      if (h) { closeList(); out.push('<h' + h[1].length + '>' + inline(h[2]) + '</h' + h[1].length + '>'); i++; continue; }
+
+      if (/^\s*\|/.test(line) && i + 1 < lines.length && /^\s*\|[\s:|-]+\|?\s*$/.test(lines[i + 1])) {
+        closeList();
+        var head = cells(line.trim()); i += 2;
+        var rows = [];
+        while (i < lines.length && /^\s*\|/.test(lines[i])) rows.push(cells(lines[i++].trim()));
+        out.push('<div class="tablewrap"><table><thead><tr>' +
+          head.map(function (c) { return '<th>' + inline(c) + '</th>'; }).join('') +
+          '</tr></thead><tbody>' +
+          rows.map(function (r) {
+            return '<tr>' + r.map(function (c) { return '<td>' + inline(c) + '</td>'; }).join('') + '</tr>';
+          }).join('') + '</tbody></table></div>');
+        continue;
+      }
+
+      if (/^\s*&gt;\s?/.test(line)) {
+        closeList();
+        var q = [];
+        while (i < lines.length && /^\s*&gt;\s?/.test(lines[i])) q.push(lines[i++].replace(/^\s*&gt;\s?/, ''));
+        out.push('<blockquote><p>' + inline(q.join(' ')) + '</p></blockquote>');
+        continue;
+      }
+
+      var ul = line.match(/^\s*[-*+]\s+(.*)$/), ol = line.match(/^\s*\d+[.)]\s+(.*)$/);
+      if (ul || ol) {
+        var want = ul ? 'ul' : 'ol';
+        if (list !== want) { closeList(); out.push('<' + want + '>'); list = want; }
+        out.push('<li>' + inline((ul || ol)[1]) + '</li>');
+        i++;
+        continue;
+      }
+
+      closeList();
+      var p = [];
+      while (i < lines.length && !/^\s*$/.test(lines[i]) &&
+             !/^(#{1,6}\s|\s*```|\s*\||\s*&gt;|\s*[-*+]\s|\s*\d+[.)]\s)/.test(lines[i]) &&
+             !/^\s*(-{3,}|\*{3,}|_{3,})\s*$/.test(lines[i])) p.push(lines[i++]);
+      if (p.length) out.push('<p>' + inline(p.join(' ')) + '</p>');
+      else i++;
+    }
+    closeList();
+    return out.join('\n');
+  }
+
+  /* ============================================================== render */
+  function paintPreview() { prev.innerHTML = md(ed.value); }
+
+  function paintCounts() {
+    var v = ed.value;
+    $('counts').textContent = v.trim()
+      ? v.trim().split(/\s+/).length + ' words · ' + v.split('\n').length + ' lines'
+      : '';
+  }
+
+  function ago(ms) {
+    var s = Math.round((Date.now() - ms) / 1000);
+    if (s < 60) return 'just now';
+    if (s < 3600) return Math.round(s / 60) + 'm ago';
+    if (s < 86400) return Math.round(s / 3600) + 'h ago';
+    return Math.round(s / 86400) + 'd ago';
+  }
+
+  function paintList() {
+    var q = S.q.toLowerCase().split(/\s+/).filter(Boolean);
+    var hits = S.docs.filter(function (d) {
+      if (!q.length) return true;
+      var hay = (d.name + ' ' + d.title).toLowerCase();
+      return q.every(function (t) { return hay.indexOf(t) !== -1; });
+    });
+    if (!hits.length) {
+      $('list').innerHTML = '<p class="empty">' +
+        (S.docs.length ? 'No document matches.' : 'No documents yet. Describe one in the prompt bar.') + '</p>';
+      return;
+    }
+    $('list').innerHTML = hits.map(function (d) {
+      return '<button class="doc" data-name="' + esc(d.name) + '" aria-current="' + (d.name === S.name) + '">' +
+        '<div class="doc__t">' + esc(d.title) + '</div>' +
+        '<div class="doc__m">' + esc(d.name) + ' · ' + d.words + 'w · ' + ago(d.mtime) + '</div>' +
+        '</button>';
+    }).join('');
+    Array.prototype.forEach.call($('list').querySelectorAll('[data-name]'), function (b) {
+      b.onclick = function () { open(b.getAttribute('data-name')); };
+    });
+  }
+
+  function setStatus(kind, text) { statusEl.dataset.s = kind || ''; statusEl.textContent = text; }
+
+  function paintBar() {
+    var off = !S.ai.available;
+    $('prompt').disabled = S.busy;
+    $('btn-send').disabled = S.busy || off;
+    $('btn-send').textContent = S.busy ? 'Working' : 'Send';
+    $('pacts').hidden = !S.pending;
+    // Name the actual problem. "AI unavailable" told you nothing about whether
+    // the server was down or the CLI was missing, which are opposite fixes.
+    $('engine').textContent = off
+      ? (S.ai.reason === 'noserver' ? 'Server not answering' : 'Claude Code not found')
+      : ('Claude Code · ' + (S.ai.model || 'default'));
+    $('engine').className = 'engine' + (off ? ' engine--off' : '');
+    $('engine').title = off ? (S.ai.explain || S.ai.detail) + '  (click for setup)' : S.ai.detail;
+
+    Array.prototype.forEach.call($('mode').querySelectorAll('[data-m]'), function (b) {
+      b.setAttribute('aria-pressed', String(b.getAttribute('data-m') === S.mode));
+    });
+
+    var isNew = S.mode === 'new';
+    var chips = isNew
+      ? [['Meeting notes', 'A meeting notes template with attendees, decisions, and action items with owners.'],
+         ['Product brief', 'A one-page product brief: problem, who it is for, proposed solution, success measures, risks, open questions.'],
+         ['Checklist', 'A pre-launch checklist grouped into sections, each item a checkbox.'],
+         ['How-to guide', 'A step-by-step how-to guide with prerequisites, numbered steps, and a troubleshooting section.'],
+         ['Decision record', 'A decision record: context, the options considered with trade-offs, the decision, and its consequences.']]
+      : [['Tighten it', 'Tighten this document. Remove filler and repetition. Change no facts and drop no sections.'],
+         ['Add a summary', 'Add a short summary section at the top, three sentences at most.'],
+         ['Make it a table', 'Where the content is a list of things with the same attributes, restructure it as a table.'],
+         ['Expand it', 'Expand the thin sections with more useful detail. Do not invent facts or figures.'],
+         ['Fix structure', 'Improve the heading structure and ordering so the document reads in a sensible sequence.']];
+
+    $('chips').innerHTML = chips.map(function (c, i) {
+      return '<button class="chip" data-c="' + i + '" title="' + esc(c[1]) + '">' + esc(c[0]) + '</button>';
+    }).join('');
+    Array.prototype.forEach.call($('chips').querySelectorAll('[data-c]'), function (b) {
+      b.disabled = S.busy || off;
+      b.onclick = function () {
+        var c = chips[Number(b.getAttribute('data-c'))];
+        $('prompt').value = c[1];
+        send();
+      };
+    });
+  }
+
+  /* ========================================================== documents */
+  async function refresh(keepOpen) {
+    try {
+      var r = await api('/api/docs');
+      S.docs = r.docs;
+      paintList();
+      if (!keepOpen && !S.name && S.docs.length) open(S.docs[0].name);
+    } catch (e) {
+      notify('error', 'Cannot read the documents folder.', e.message);
+    }
+  }
+
+  async function open(name) {
+    if (S.dirty && !window.confirm('Discard unsaved changes to ' + S.name + '?')) return;
+    try {
+      var r = await api('/api/doc?name=' + encodeURIComponent(name));
+      S.name = r.name; S.mtime = r.mtime; S.draft = r.markdown;
+      S.dirty = false; S.before = null; S.pending = false;
+      ed.value = r.markdown;
+      $('title').value = r.name.replace(/\.md$/i, '');
+      setStatus('', 'saved ' + ago(r.mtime));
+      // With a document open, an instruction most likely refers to it.
+      S.mode = 'edit';
+      paintPreview(); paintCounts(); paintList(); paintBar();
+      pstatus.textContent = '';
+    } catch (e) {
+      notify('error', 'Could not open that document.', e.message);
+    }
+  }
+
+  function blank() {
+    S.name = null; S.mtime = 0; S.draft = ''; S.dirty = false;
+    S.before = null; S.pending = false;
+    ed.value = ''; $('title').value = '';
+    setStatus('', 'not saved yet');
+    S.mode = 'new';
+    paintPreview(); paintCounts(); paintList(); paintBar();
+    pstatus.textContent = '';
+    $('prompt').focus();
+  }
+
+  function currentName() {
+    var raw = $('title').value.trim();
+    if (!raw) return null;
+    return /\.md$/i.test(raw) ? raw : raw + '.md';
+  }
+
+  async function save(quiet) {
+    var name = currentName();
+    if (!name) {
+      notify('warn', 'Name it first.', 'Type a name in the field at the top of the editor, then save.');
+      $('title').focus();
+      return false;
+    }
+    try {
+      // A rename is a save under the new name plus a delete of the old one.
+      var renaming = S.name && S.name !== name;
+      var r = await api('/api/doc', {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          name: name, markdown: ed.value,
+          baseMtime: renaming ? null : S.mtime,
+        }),
+      });
+      if (renaming) {
+        try { await api('/api/doc', { method: 'DELETE', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: S.name }) }); }
+        catch (e) { /* leaving the old file is not fatal */ }
+      }
+      S.name = r.name; S.mtime = r.mtime; S.dirty = false;
+      setStatus('saved', 'saved ' + new Date().toTimeString().slice(0, 5));
+      if (!quiet) toast('Saved ' + r.name);
+      await refresh(true);
+      paintList();
+      return true;
+    } catch (e) {
+      if (e.payload && e.payload.markdown !== undefined) {
+        setStatus('error', 'changed on disk');
+        notify('warn', 'This file changed on disk since you opened it.',
+          'Your text is still here. Save again to overwrite what is on disk, or press the reload button to take the newer version.');
+        S.mtime = e.payload.mtime;   // a second save now wins
+        return false;
+      }
+      setStatus('error', 'not saved');
+      notify('error', 'Save failed.', e.message);
+      return false;
+    }
+  }
+
+  async function del() {
+    if (!S.name) { blank(); return; }
+    if (!window.confirm('Delete ' + S.name + '? This removes the file from disk.')) return;
+    try {
+      await api('/api/doc', {
+        method: 'DELETE', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ name: S.name }),
+      });
+      toast('Deleted ' + S.name);
+      S.name = null; S.dirty = false;
+      await refresh();
+      if (S.docs.length) open(S.docs[0].name); else blank();
+    } catch (e) {
+      notify('error', 'Could not delete it.', e.message);
+    }
+  }
+
+  /* ============================================================== prompt */
+  async function send() {
+    if (S.busy) return;
+    var instruction = $('prompt').value.trim();
+    if (!instruction) return;
+    if (!S.ai.available) { openSetup(); return; }
+
+    S.busy = true; S.last = instruction;
+    if (!S.pending) S.before = ed.value;
+    paintBar();
+
+    var t0 = Date.now();
+    var tick = setInterval(function () {
+      pstatus.textContent = 'Claude is writing…  ' + Math.round((Date.now() - t0) / 1000) + 's';
+    }, 1000);
+
+    function done(msg) {
+      clearInterval(tick);
+      S.busy = false;
+      pstatus.textContent = msg;
+      paintBar();
+    }
+
+    pstatus.textContent = 'Claude is writing…';
+    try {
+      var r = await api('/api/ai', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ instruction: instruction, mode: S.mode, markdown: ed.value }),
+      });
+      if (!r.markdown || !r.markdown.trim()) {
+        ed.value = S.before || '';
+        paintPreview();
+        done('Claude returned nothing. Your text is unchanged.');
+        return;
+      }
+      ed.value = r.markdown;
+      S.dirty = true; S.pending = true;
+      // A brand new document arrives with a filename taken from its own heading.
+      if (S.mode === 'new' && r.suggestedName) {
+        S.name = null; S.mtime = 0;
+        $('title').value = r.suggestedName.replace(/\.md$/i, '');
+      }
+      setStatus('dirty', 'not saved');
+      paintPreview(); paintCounts();
+      done('Done in ' + Math.round((Date.now() - t0) / 1000) + 's · review, then Keep or Discard');
+      $('prompt').value = '';
+    } catch (e) {
+      if (S.before != null && !S.pending) { ed.value = S.before; paintPreview(); }
+      var p = e.payload || {};
+      done(p.explain ? 'Failed. See the notice above.' : 'Failed: ' + e.message);
+      notify('error', 'Claude could not write this.',
+        (p.explain ? p.explain + '  ' : '') + (p.tried ? '(tried: ' + p.tried.join('; ') + ')' : e.message));
+      S.pending = false;
+      paintBar();
+    }
+  }
+
+  function keep() {
+    S.pending = false; S.before = null;
+    paintBar();
+    save(false);
+  }
+
+  function discard() {
+    if (S.before == null) return;
+    ed.value = S.before;
+    S.before = null; S.pending = false; S.dirty = true;
+    setStatus('dirty', 'not saved');
+    paintPreview(); paintCounts(); paintBar();
+    pstatus.textContent = 'Discarded. Your previous text is back.';
+  }
+
+  /* =============================================================== setup */
+  async function checkAI() {
+    try {
+      var r = await api('/api/setup');
+      S.ai = {
+        available: !!(r.ai && r.ai.available),
+        detail: (r.ai && r.ai.detail) || '',
+        model: (r.ai && r.ai.model) || '',
+        reason: (r.ai && r.ai.available) ? '' : 'nocli',
+        explain: '',
+      };
+      if (!S.ai.available) S.ai.explain = 'Claude Code was not found or would not run. Click for setup.';
+      $('dlg-title').textContent = 'Setup · build ' + r.build;
+      S.setup = r;
+    } catch (e) {
+      S.ai = {
+        available: false, reason: 'noserver',
+        detail: 'the local server did not answer',
+        explain: 'Open this page through the server at http://127.0.0.1:7777 - opening app.html directly cannot work.',
+      };
+      S.setup = null;
+    }
+    paintBar();
+  }
+
+  function openSetup() {
+    // No server means nothing else can be reported, so say only that.
+    if (!S.setup) {
+      $('dlg-title').textContent = 'Setup';
+      $('dlg-body').innerHTML =
+        '<p><b>The local server is not answering.</b></p>' +
+        '<p>This page has to be opened <i>through</i> the server. Opening <code>app.html</code> ' +
+        'by double-clicking it cannot work: there is nothing to read or save your files.</p>' +
+        '<p>Double-click <b>2md</b> in the <code>~/2md.cc</code> folder, or run:</p>' +
+        '<pre>cd ~/2md.cc\nnode server.mjs</pre>' +
+        '<p>Then open <a href="http://127.0.0.1:7777/">http://127.0.0.1:7777</a>.</p>';
+      $('dlg').showModal();
+      return;
+    }
+
+    var r = S.setup, ai = r.ai || {};
+    var looked = (ai.looked || []).map(function (p) { return '  ' + p; }).join('\n');
+    var searched = (ai.searched || []).map(function (p) { return '  ' + p; }).join('\n');
+
+    $('dlg-body').innerHTML =
+      '<p><b>Documents folder</b><br>' + esc(r.documentsDir || 'unknown') +
+      '  (' + (r.documents || 0) + ' files)</p>' +
+      '<p><b>Editing and saving</b><br>Working. These never depend on Claude.</p>' +
+      '<p><b>Prompt bar</b><br>' +
+      (ai.available
+        ? 'Working. Using <code>' + esc(ai.command || 'claude') + '</code> - ' + esc(ai.detail || '') +
+          ', model ' + esc(ai.model || 'default') + '. No API key involved.'
+        : 'Not working. The <code>claude</code> command could not be run.') +
+      '</p>' +
+      (ai.available ? '' :
+        '<p>Every place that was tried:</p><pre>' + esc(searched || looked || '(none)') + '</pre>' +
+        '<p><b>If Claude Code is not installed</b>, install it and reload this page.</p>' +
+        '<p><b>If it is installed</b>, find out where and tell the server:</p>' +
+        '<pre>which claude          # in Terminal\n\n' +
+        'cd ~/2md.cc\nTWOMD_AI_CMD=/full/path/to/claude node server.mjs</pre>' +
+        '<p><b>If it is found but refuses to run</b>, it usually needs signing in. Run ' +
+        '<code>claude</code> on its own, then type <code>/login</code> INSIDE the session - ' +
+        '<code>claude /login</code> from the shell is refused:</p><pre>cd ~/2md.cc\nclaude\n# then type: /login</pre>' +
+        '<p>Complete any login, folder-trust or first-run prompt, quit it, then reload. ' +
+        '<b>Run diagnosis</b> below shows exactly what the CLI prints.</p>');
+    $('dlg').showModal();
+  }
+
+  async function diagnose() {
+    $('dlg-body').innerHTML = '<p>Testing every way of calling the CLI…</p>';
+    try {
+      var r = await api('/api/ai/diagnose');
+      var rows = r.results.map(function (x) {
+        return (x.ok ? '  OK   ' : '  FAIL ') + x.form.padEnd(11) + ' ' +
+          (x.ok ? String(x.stdout).slice(0, 60) : String(x.error).slice(0, 90)) +
+          (x.stdout && !x.ok ? '\n         stdout: ' + String(x.stdout).slice(0, 120) : '') +
+          (x.stderr && !x.ok ? '\n         stderr: ' + String(x.stderr).slice(0, 120) : '');
+      }).join('\n');
+      $('dlg-body').innerHTML =
+        '<p><b>' + (r.working.length ? 'Working: ' + esc(r.working.join(', ')) : 'Nothing worked') + '</b></p>' +
+        (r.explain ? '<p>' + esc(r.explain) + '</p>' : '') +
+        '<pre>' + esc('command: ' + r.command + '\nversion: ' + r.version + '\n\n' + rows) + '</pre>';
+      if (r.working.length) { await checkAI(); toast('AI is working now'); }
+    } catch (e) {
+      $('dlg-body').innerHTML = '<p>Could not run the diagnosis: ' + esc(e.message) + '</p>';
+    }
+  }
+
+  /* ============================================================== events */
+  ed.addEventListener('input', function () {
+    S.dirty = true;
+    setStatus('dirty', 'not saved');
+    clearTimeout(ed._t);
+    ed._t = setTimeout(function () { paintPreview(); paintCounts(); }, 150);
+  });
+
+  ed.addEventListener('keydown', function (e) {
+    var mod = e.metaKey || e.ctrlKey;
+    if (mod && e.key.toLowerCase() === 's') { e.preventDefault(); save(false); }
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      ed.setRangeText('  ', ed.selectionStart, ed.selectionEnd, 'end');
+    }
+  });
+
+  $('prompt').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+  });
+  $('prompt').addEventListener('input', function () {
+    var p = $('prompt');
+    p.style.height = 'auto';
+    p.style.height = Math.min(140, p.scrollHeight) + 'px';
+  });
+
+  $('mode').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-m]');
+    if (!b) return;
+    S.mode = b.getAttribute('data-m');
+    paintBar();
+  });
+
+  $('btn-send').onclick = send;
+  $('btn-keep').onclick = keep;
+  $('btn-discard').onclick = discard;
+  $('btn-again').onclick = function () { if (S.last) { $('prompt').value = S.last; send(); } };
+  $('btn-save').onclick = function () { save(false); };
+  $('btn-new').onclick = blank;
+  $('btn-del').onclick = del;
+  $('btn-reload').onclick = async function () {
+    await refresh(true);
+    if (S.name && !S.dirty) open(S.name);
+    toast('Folder re-read');
+  };
+  $('btn-copy').onclick = function () {
+    navigator.clipboard.writeText(ed.value).then(
+      function () { toast('Markdown copied'); },
+      function () { ed.select(); toast('Select and copy manually'); }
+    );
+  };
+  $('btn-setup').onclick = openSetup;
+  $('engine').onclick = function () { if (!S.ai.available) openSetup(); };
+  $('dlg-close').onclick = function () { $('dlg').close(); };
+  $('dlg-diag').onclick = diagnose;
+  $('q').addEventListener('input', function (e) { S.q = e.target.value; paintList(); });
+  $('title').addEventListener('input', function () { S.dirty = true; setStatus('dirty', 'not saved'); });
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === '/' && !/^(INPUT|TEXTAREA)$/.test(e.target.tagName)) { e.preventDefault(); $('q').focus(); }
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); $('prompt').focus(); }
+  });
+
+  window.addEventListener('beforeunload', function (e) {
+    if (S.dirty) { e.preventDefault(); e.returnValue = ''; }
+  });
+
+  /* ------------------------------------------------------------- resizer */
+  (function () {
+    var grip = $('grip'), on = false;
+    grip.addEventListener('pointerdown', function (e) {
+      on = true; grip.classList.add('on'); grip.setPointerCapture(e.pointerId);
+    });
+    grip.addEventListener('pointermove', function (e) {
+      if (!on) return;
+      var railW = document.querySelector('.rail').getBoundingClientRect().width;
+      var avail = window.innerWidth - railW;
+      var pct = Math.min(78, Math.max(22, ((e.clientX - railW) / avail) * 100));
+      document.documentElement.style.setProperty('--split', pct + '%');
+    });
+    grip.addEventListener('pointerup', function (e) {
+      on = false; grip.classList.remove('on');
+      try { grip.releasePointerCapture(e.pointerId); } catch (err) {}
+    });
+  })();
+
+  /* ================================================================ boot */
+  (async function () {
+    paintBar();
+    await checkAI();
+    await refresh();
+    if (!S.docs.length) blank();
+    paintBar();
+  })();
+})();
+</script>
+</body>
+</html>
