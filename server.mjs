@@ -813,6 +813,138 @@ function unitPrompt(src) {
   ]).join('\n');
 }
 
+/* ---- local-mode Figma: the desktop app's own MCP server -----
+   The Figma desktop app runs a Dev Mode MCP server on 127.0.0.1:3845, already
+   signed in as whoever is using the app. Talking to it over plain HTTP sidesteps
+   the whole CLI/MCP path: a spawned `claude -p` reconnects to the *cloud* Figma
+   connector every time, which an organization can block pending tool approval,
+   and which a non-admin then cannot unblock. A local HTTP call needs no approval
+   and no personal access token.
+
+   Transport is MCP streamable-HTTP: initialize, then notifications/initialized,
+   then tools/call - with the session id from the initialize response echoed back
+   in a header. Replies come back SSE-framed even for unary calls. */
+const FIGMA_MCP_URL = process.env.ILOVEMD_FIGMA_MCP_URL || 'http://127.0.0.1:3845/mcp';
+
+function figmaMcpSession() {
+  let sid = null;
+
+  async function rpc(method, params, { notify = false, ms = 30000 } = {}) {
+    const headers = {
+      'Content-Type': 'application/json',
+      Accept: 'application/json, text/event-stream',
+    };
+    if (sid) headers['mcp-session-id'] = sid;
+    const payload = { jsonrpc: '2.0', method, ...(params ? { params } : {}) };
+    if (!notify) payload.id = Math.floor(Math.random() * 1e6);
+
+    const r = await fetch(FIGMA_MCP_URL, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(ms),
+    });
+    const got = r.headers.get('mcp-session-id');
+    if (got) sid = got;
+    if (!r.ok) throw new Error(`Figma MCP ${r.status}`);
+    if (notify) return null;
+
+    const text = await r.text();
+    for (const line of text.split('\n')) {
+      if (!line.startsWith('data:')) continue;
+      try {
+        const msg = JSON.parse(line.slice(5).trim());
+        if (msg.error) throw new Error(msg.error.message || 'Figma MCP error');
+        return msg;
+      } catch (e) {
+        if (e.message !== 'Unexpected end of JSON input') throw e;
+      }
+    }
+    return JSON.parse(text);
+  }
+
+  return {
+    async open() {
+      await rpc('initialize', {
+        protocolVersion: '2024-11-05',
+        capabilities: {},
+        clientInfo: { name: 'ilovemd', version: '1' },
+      }, { ms: 8000 });
+      await rpc('notifications/initialized', {}, { notify: true });
+    },
+    async call(name, args, ms) {
+      const res = await rpc('tools/call', { name, arguments: args }, { ms });
+      return (res?.result?.content || [])
+        .filter((c) => c.type === 'text')
+        .map((c) => c.text)
+        .join('\n')
+        .trim();
+    },
+  };
+}
+
+// https://figma.com/design/<key>/<name>?node-id=1-713 -> { key, node: '1:713' }
+function parseFigmaUrl(url) {
+  const key = (url.match(/\/(?:design|file)\/([0-9A-Za-z]{22,128})/) || [])[1] || '';
+  const raw = (url.match(/[?&]node-id=([^&]+)/) || [])[1] || '';
+  const node = decodeURIComponent(raw).replace('-', ':');
+  return { key, node };
+}
+
+/* get_design_context returns full generated code - on a real component tree it
+   is enormous and routinely never finishes. Structure plus resolved variables is
+   both fast (~0.3s each) and closer to what documentation actually needs. */
+async function fetchFigmaViaLocalMcp(url) {
+  const { key, node } = parseFigmaUrl(url);
+  if (!key) throw new Error('Could not find a file key in that Figma link.');
+  if (!node) throw new Error('That link has no node-id - open the frame in Figma and copy the link to it.');
+
+  const s = figmaMcpSession();
+  await s.open();
+  const args = { fileKey: key, nodeId: node, clientLanguages: 'html,css', clientFrameworks: 'unknown' };
+
+  const structure = await s.call('get_metadata', args, 30000);
+  // Tokens are a nice-to-have; a file with no bound variables still documents fine.
+  let tokens = '';
+  try {
+    tokens = await s.call('get_variable_defs', args, 20000);
+  } catch { /* no variables bound, or tool unavailable */ }
+
+  if (!structure) throw new Error('Figma returned nothing for that node.');
+  return { structure, tokens, key, node };
+}
+
+function figmaLocalPrompt({ structure, tokens }, url) {
+  const rulesBlock = DOC_RULES ? [DOC_RULES.rules, '', '---', ''] : [];
+  return [
+    ...rulesBlock,
+    'Write component documentation in Markdown from this REAL Figma data.',
+    'The structure below is the actual node tree retrieved from the user\'s Figma file;',
+    'the variables are the design tokens actually bound to it.',
+    '',
+    'Map it into sections chosen from: Overview, Anatomy (from the node tree),',
+    'Design Tokens (from the variables), Variants, States, Layout, Usage,',
+    'Accessibility - but ONLY where the data below actually supports them.',
+    'Never invent properties, variants, tokens or behavior the data does not show.',
+    'Preserve exact layer, component and variable names.',
+    'Layer names wrapped in ["..."]["..."] brackets are data-binding paths, not',
+    'literal copy - describe them as bound fields rather than quoting them as text.',
+    'Never emit a heading with no content under it: write the section, or leave it out.',
+    'Open with a short Overview that says what this component is and where it is used,',
+    'inferred from its own name and structure.',
+    '',
+    'Source: ' + url,
+    '',
+    '## Node structure',
+    '',
+    structure,
+    '',
+    ...(tokens ? ['## Bound variables (design tokens)', '', tokens, ''] : []),
+    'If you end with an "## Open questions" section, number each question and,',
+    'where you can, offer 1-3 short plausible answers as indented "-" bullets.',
+  ].join('\n');
+}
+
 /* ---- public-mode Figma demo -----
    No MCP, no CLI - a direct call to Figma's REST API for the one file the
    owner configured, summarized down to what's useful for documentation
@@ -1155,16 +1287,27 @@ async function checkAI() {
 function attempt(strategy, prompt, timeoutMs) {
   return new Promise((done, fail) => {
     const full = strategy.flags === 'full';
-    const args = ['-p'];
-    if (full) {
-      args.push('--disallowedTools', 'Bash,Edit,Write,NotebookEdit,WebFetch,WebSearch');
-      args.push('--append-system-prompt', SYSTEM_PROMPT);
-      if (AI.model) args.push('--model', AI.model);
-    }
     // Without --append-system-prompt the rules have to ride inside the prompt.
     const body = full ? prompt : SYSTEM_PROMPT + '\n\n---\n\n' + prompt;
     const viaStdin = strategy.deliver === 'stdin';
+
+    const args = ['-p'];
+    // For argv delivery, the prompt goes immediately after -p, before any
+    // flags: --disallowedTools is variadic and swallows a trailing bare
+    // token as one of its own values if nothing else follows it. Putting the
+    // flags after the prompt sidesteps that regardless of which flags end up
+    // adjacent to it (verified against Claude Code 2.1.153).
     if (!viaStdin) args.push(body);
+    if (full) {
+      args.push('--disallowedTools', 'Bash,Edit,Write,NotebookEdit,WebFetch,WebSearch');
+      // --disallowedTools alone hides MCP tools (e.g. Figma) from the model
+      // entirely, not just the built-ins it names - re-including all MCP
+      // servers explicitly is what actually restores their visibility
+      // (verified against Claude Code 2.1.153).
+      args.push('--allowedTools', 'mcp__*');
+      args.push('--append-system-prompt', SYSTEM_PROMPT);
+      if (AI.model) args.push('--model', AI.model);
+    }
 
     const reject = (msg, extra) => { const e = new Error(msg); Object.assign(e, extra || {}); fail(e); };
 
@@ -1740,7 +1883,48 @@ const server = http.createServer(async (req, res) => {
         }
       }
 
+      /* Preferred path: the Figma desktop app's local MCP server. It needs no
+         org tool approval and no access token, and it hands us the real node
+         tree in well under a second - so we retrieve the data ourselves and
+         leave the model with just the writing to do. */
+      try {
+        const started = Date.now();
+        process.stdout.write(`ai  figma(local): ${rawUrl.slice(0, 50)} ... `);
+        const data = await fetchFigmaViaLocalMcp(rawUrl);
+        const r = await runAI(figmaLocalPrompt(data, rawUrl), req);
+        const ms = Date.now() - started;
+        console.log(`${(ms / 1000).toFixed(1)}s  ${r.text.length} chars`);
+
+        const h1 = r.text.match(/^#\s+(.+)$/m);
+        if (h1) {
+          const s = readState();
+          const frames = (Array.isArray(s.frames) ? s.frames : []).map((f) =>
+            f.url === rawUrl ? { ...f, name: h1[1].trim().slice(0, 80) } : f);
+          writeState({ frames });
+        }
+        const split = extractQuestions(r.text);
+        return sendJson(res, 200, {
+          markdown: split.markdown, questions: split.questions, ms,
+          suggestedName: nameFromMarkdown(split.markdown, 'Figma component').replace(/ \d+\.md$/, '.md'),
+        });
+      } catch (e) {
+        if (e.limited) {
+          console.log('rate limited');
+          return sendJson(res, 429, { error: e.message, explain: e.explain || '' });
+        }
+        // Desktop app closed, Dev Mode server off, or a bad link: fall through
+        // to the CLI's own Figma MCP, which may still be configured.
+        const why = /fetch failed|ECONNREFUSED|timed out|aborted|Figma MCP/i.test(e.message)
+          ? 'local Figma MCP unreachable'
+          : e.message;
+        console.log(`${why} - trying CLI MCP`);
+      }
+
       const prompt = [
+        'MCP servers connect in the background when this session starts, so Figma tools may',
+        'not be registered yet. Before concluding Figma is unavailable, wait about 5 seconds',
+        '(for example by reasoning through the task) and check again - do not give up instantly.',
+        '',
         'If you have Figma access through MCP tools (for example the official Figma MCP server),',
         'retrieve the design at this URL and write component documentation in Markdown from the',
         'REAL retrieved data.',
@@ -1768,15 +1952,30 @@ const server = http.createServer(async (req, res) => {
       const started = Date.now();
       process.stdout.write(`ai  figma: ${rawUrl.slice(0, 60)} ... `);
       try {
-        const r = await runAI(prompt, req);
+        // A freshly-spawned CLI process reconnects to its MCP servers from
+        // scratch every time, and that handshake sometimes hasn't finished
+        // by the time the model would otherwise give up and report the tool
+        // unavailable - retrying a couple of times (fresh process each time)
+        // measurably improves success odds rather than failing on what's
+        // often just a slow-to-connect MCP server, not a real unavailability.
+        let r = await runAI(prompt, req);
+        for (let retry = 0; retry < 3 && /^\s*FIGMA_UNAVAILABLE\s*:/i.test(r.text); retry++) {
+          process.stdout.write('retrying (mcp still connecting?) ... ');
+          await new Promise((done) => setTimeout(done, 2000));
+          r = await runAI(prompt, req);
+        }
         const ms = Date.now() - started;
         if (/^\s*FIGMA_UNAVAILABLE\s*:/i.test(r.text)) {
           console.log('unavailable');
           return sendJson(res, 502, {
-            error: "We couldn't connect to Figma.",
-            explain: 'Claude Code has no working Figma access right now (' +
-              r.text.replace(/^\s*FIGMA_UNAVAILABLE\s*:\s*/i, '').trim().slice(0, 200) +
-              '). Add the Figma MCP server to Claude Code and sign in to it, then try again.',
+            error: "We couldn't reach Figma.",
+            explain: 'Open the Figma desktop app, open the file, and turn on ' +
+              'Preferences → Enable local MCP server. ilovemd talks to that server ' +
+              'directly on 127.0.0.1:3845, which needs no access token and no ' +
+              'admin approval. The fallback through Claude Code\'s own Figma ' +
+              'connection also failed (' +
+              r.text.replace(/^\s*FIGMA_UNAVAILABLE\s*:\s*/i, '').trim().slice(0, 160) +
+              ') - that path can be blocked by an organization tool policy.',
           });
         }
         console.log(`${(ms / 1000).toFixed(1)}s  ${r.text.length} chars`);
