@@ -715,6 +715,7 @@
   var MD_SVG = '<svg viewBox="0 0 24 24"><rect x="2.5" y="5" width="19" height="14" rx="2.5" fill="none" stroke="#8b7cff" stroke-width="1.7"/>' +
     '<path d="M6 15.5v-7l2.6 3 2.6-3v7" fill="none" stroke="#8b7cff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>' +
     '<path d="M17 8.5v5.5m0 0-2-2m2 2 2-2" fill="none" stroke="#8b7cff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  var FIGMA_SVG = '<svg viewBox="0 0 24 24"><path fill="#F24E1E" d="M12 2H8.5a3.5 3.5 0 0 0 0 7H12V2z"/><path fill="#FF7262" d="M12 2h3.5a3.5 3.5 0 0 1 0 7H12V2z"/><path fill="#A259FF" d="M12 9H8.5a3.5 3.5 0 0 0 0 7H12V9z"/><path fill="#0ACF83" d="M8.5 16a3.5 3.5 0 1 0 3.5 3.5V16H8.5z"/><circle fill="#1ABCFE" cx="15.5" cy="12.5" r="3.5"/></svg>';
 
   var S = {
     view: 'split', side: false, chat: true,
@@ -1133,12 +1134,12 @@
     $('shell').dataset.side = S.side ? 'open' : 'closed';
     $('shell').dataset.chat = S.chat ? 'open' : 'closed';
     $('shell').dataset.view = S.view;
-    var noprev = (MODE === 'ui' || MODE === 'convert') && !S.md;
-    var nochat = (MODE === 'ui' && !S.md) || MODE === 'convert';
+    var noprev = !S.md;
+    var nochat = !S.md || MODE === 'convert';
     $('shell').dataset.noprev = noprev ? '1' : '';
     $('shell').dataset.nochat = nochat ? '1' : '';
     $('btn-chat').style.display = nochat ? 'none' : '';
-    $('btn-side').style.display = (MODE === 'convert' || MODE === 'ui') ? 'none' : '';
+    $('btn-side').style.display = (MODE === 'convert' || MODE === 'ui' || !S.md) ? 'none' : '';
     $('viewmode').style.display = noprev ? 'none' : '';
     Array.prototype.forEach.call($('viewmode').querySelectorAll('[data-v]'), function (b) {
       b.setAttribute('aria-pressed', String(b.getAttribute('data-v') === S.view));
@@ -1255,25 +1256,33 @@
     }
     if (!S.md && MODE === 'figma' && !S.busy && S.siteMode === 'public') {
       wrap.innerHTML =
-        '<div class="placeholder"><div class="dropbox">' +
+        '<div class="placeholder"><div class="dropbox" style="width:min(440px,90%)">' +
+        '<div class="fpair">' +
+        '<span class="ftile">' + FIGMA_SVG + '</span>' +
+        '<span class="arr">&rarr;</span>' +
+        '<span class="ftile" style="--tb:rgba(139,124,255,.12);--tl:rgba(139,124,255,.3)">' + MD_SVG + '</span>' +
+        '</div>' +
         '<h3>Figma &rarr; Markdown</h3>' +
-        '<p>This public demo generates documentation from one pre-selected Figma file - ' +
-        'it does not accept arbitrary Figma links, so no one’s design but the demo’s own gets pulled in.</p>' +
+        '<p>This demo documents one pre-configured Figma file — no arbitrary links accepted.</p>' +
         (S.figmaDemo
-          ? '<button class="btn btn--primary" id="btn-fig-demo">View Figma Demo</button>'
-          : '<p class="hint">The Figma demo is not configured on this server.</p>') +
+          ? '<button class="btn btn--primary" id="btn-fig-demo">Generate Documentation</button>'
+          : '<p class="hint" style="margin:0;font:400 11px var(--mono);color:var(--text-3)">The Figma demo is not configured on this server.</p>') +
         '</div></div>';
       if ($('btn-fig-demo')) $('btn-fig-demo').onclick = figGenerateDemo;
       return;
     }
     if (!S.md && MODE === 'figma' && !S.busy) {
       wrap.innerHTML =
-        '<div class="placeholder"><div class="dropbox">' +
+        '<div class="placeholder"><div class="dropbox" style="width:min(440px,90%)">' +
+        '<div class="fpair">' +
+        '<span class="ftile">' + FIGMA_SVG + '</span>' +
+        '<span class="arr">&rarr;</span>' +
+        '<span class="ftile" style="--tb:rgba(139,124,255,.12);--tl:rgba(139,124,255,.3)">' + MD_SVG + '</span>' +
+        '</div>' +
         '<h3>Figma &rarr; Markdown</h3>' +
-        '<p>Paste a link to a Figma frame or component. ilovemd retrieves what it can through ' +
-        'Claude’s Figma connection and writes the documentation.</p>' +
-        '<input id="figurl" type="text" spellcheck="false" placeholder="https://www.figma.com/design/&hellip;?node-id=&hellip;">'.replace('&hellip;', '…').replace('&hellip;', '…') +
-        '<button class="btn btn--primary" id="btn-fig">Fetch &amp; Generate</button>' +
+        '<p>Paste a link to a Figma frame or component. Claude retrieves it through its Figma connection and writes structured documentation.</p>' +
+        '<input id="figurl" type="text" spellcheck="false" placeholder="https://www.figma.com/design/…?node-id=…">' +
+        '<button class="btn btn--primary" id="btn-fig">Generate Documentation</button>' +
         '</div></div>';
       $('btn-fig').onclick = function () { figGenerate($('figurl').value.trim()); };
       $('figurl').addEventListener('keydown', function (e) {
@@ -1798,7 +1807,7 @@
         say('a', 'Stopped.');
       } else {
         var p = e.payload || {};
-        say('a', '<b>' + esc(p.error || "We couldn't connect to Figma.") + '</b> ' + esc(p.explain || ''), true);
+        say('a', '<b>' + esc(p.error || "We couldn’t connect to Figma.") + '</b> ' + esc(p.explain || ''), true);
       }
       $('valid').innerHTML = '';
     }
