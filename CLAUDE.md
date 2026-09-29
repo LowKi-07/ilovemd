@@ -1,10 +1,10 @@
-# 2md.cc — Claude Code context
+# ilovemd — Claude Code context
 
 ## What this product is
 
-**2md.cc** is a local AI-powered Markdown toolchain that runs entirely on `localhost:7777`. It converts design-system component HTML to Markdown documentation, converts uploaded files (DOCX, PDF, PPTX) to Markdown, and lets users compare two Markdown files side by side with an AI chat panel. There is no cloud backend — all AI calls go through the **Claude CLI** (`claude -p`), reusing whatever OAuth session the user already has from `claude` in their terminal.
+**ilovemd** is a local AI-powered Markdown toolchain that runs entirely on `localhost:7777`. It converts design-system component HTML to Markdown documentation, converts uploaded files (DOCX, PDF, PPTX) to Markdown, and lets users compare two Markdown files side by side with an AI chat panel. There is no cloud backend — all AI calls go through the **Claude CLI** (`claude -p`), reusing whatever OAuth session the user already has from `claude` in their terminal.
 
-The product is a single-developer tool, not a SaaS product. It is started by double-clicking `2md.command` on macOS, which opens a Terminal, starts the Node server, and opens the browser.
+The product is a single-developer tool, not a SaaS product. It is started by double-clicking `ilovemd.command` on macOS, which opens a Terminal, starts the Node server, and opens the browser.
 
 ## Architecture
 
@@ -22,10 +22,10 @@ The product is a single-developer tool, not a SaaS product. It is started by dou
 | `home.html` | Homepage — grid of tool cards linking to each feature |
 | `compare.html` | Side-by-side Markdown diff page with AI chat panel |
 | `app.html` | **Legacy** single-page editor, superseded by `shell.html`. Can be deleted. |
-| `2md.command` | macOS double-click launcher — starts the server in a Terminal window |
+| `ilovemd.command` | macOS double-click launcher — starts the server in a Terminal window |
 | `fix-ai.command` | Helper script the user runs if the AI stops working (re-runs `claude /login`) |
 | `.claude/launch.json` | Claude Code dev-server config — tells Claude Code how to start the server for the Browser panel |
-| `.2md-state.json` | Local runtime state: persists which design-system kit/folder the user last had open. **Gitignored.** |
+| `.ilovemd-state.json` | Local runtime state: persists which design-system kit/folder the user last had open. **Gitignored.** |
 | `.uploads/` | Temporary directory for file uploads (PDF, DOCX, etc.). **Gitignored.** |
 | `documents/` | User's saved Markdown output files, organized in subdirectories per kit. **Gitignored.** |
 
@@ -71,7 +71,7 @@ The product is a single-developer tool, not a SaaS product. It is started by dou
 3. **Arg delivery** — `claude -p "prompt"` (direct)
 4. **Full non-interactive flag** — adds `--full` flag variant
 
-If the Claude CLI is not on `PATH` (e.g. GUI launch), `server.mjs` searches several known install locations (`~/.claude/local/claude`, `~/.local/bin/claude`, etc.) and uses `TWOMD_AI_CMD` env var as a fallback override.
+If the Claude CLI is not on `PATH` (e.g. GUI launch), `server.mjs` searches several known install locations (`~/.claude/local/claude`, `~/.local/bin/claude`, etc.) and uses `ILOVEMD_AI_CMD` env var as a fallback override.
 
 **If AI returns 502 or errors**: the Claude CLI session has expired. User must open Terminal, run `claude`, type `/login`, authenticate, then reload. `fix-ai.command` automates this.
 
@@ -117,4 +117,4 @@ node server.mjs
 PORT=7788 node server.mjs
 ```
 
-Or double-click `2md.command` from Finder.
+Or double-click `ilovemd.command` from Finder.

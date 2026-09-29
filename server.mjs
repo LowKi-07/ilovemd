@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /* ======================================================================
-   2md - anything to Markdown. A local converter with Claude in the editor.
+   ilovemd - anything to Markdown. A local converter with Claude in the editor.
 
      node server.mjs        ->  http://127.0.0.1:7777   (homepage)
                                 http://127.0.0.1:7777/app  (the editor)
@@ -43,13 +43,13 @@ function loadDocRules() {
 }
 const DOC_RULES = loadDocRules();
 
-const DOCS = process.env.TWOMD_DOCS
-  ? path.resolve(process.env.TWOMD_DOCS)
+const DOCS = process.env.ILOVEMD_DOCS
+  ? path.resolve(process.env.ILOVEMD_DOCS)
   : path.join(HERE, 'documents');
 
 const PORT = Number(process.env.PORT || 7777);
 const HOST = '127.0.0.1';
-const BUILD = '2md-1';
+const BUILD = 'ilovemd-1';
 
 /* Finding the CLI. `claude` on PATH is the normal case, but a GUI-launched
    process does not always inherit a login shell's PATH, and the installer puts
@@ -84,12 +84,12 @@ function readKeyFile() {
 }
 
 const AI = {
-  command: process.env.TWOMD_AI_CMD || 'claude',
+  command: process.env.ILOVEMD_AI_CMD || 'claude',
   apiKey: process.env.ANTHROPIC_API_KEY || readKeyFile(),
   resolvedFrom: 'PATH',
-  model: process.env.TWOMD_AI_MODEL || '',
-  timeoutMs: Number(process.env.TWOMD_AI_TIMEOUT || 300000),
-  pinned: process.env.TWOMD_AI_STRATEGY || '',
+  model: process.env.ILOVEMD_AI_MODEL || '',
+  timeoutMs: Number(process.env.ILOVEMD_AI_TIMEOUT || 300000),
+  pinned: process.env.ILOVEMD_AI_STRATEGY || '',
   winner: null,
 };
 
@@ -220,7 +220,7 @@ function nameFromMarkdown(md, fallback) {
 /* Remembered folders (component import folder, markdown output folder) live
    in a tiny JSON file next to the server, so "save everything there going
    forward" survives a restart. */
-const STATE_FILE = path.join(HERE, '.2md-state.json');
+const STATE_FILE = path.join(HERE, '.ilovemd-state.json');
 function readState() {
   try { return JSON.parse(fs.readFileSync(STATE_FILE, 'utf8')) || {}; }
   catch (e) { return {}; }
@@ -876,7 +876,7 @@ function tryVersion(cmd) {
 async function checkAI() {
   // The configured name first, then the usual install locations.
   const tries = [{ cmd: AI.command, from: 'PATH' }];
-  if (!process.env.TWOMD_AI_CMD) {
+  if (!process.env.ILOVEMD_AI_CMD) {
     for (const p of CLI_CANDIDATES) {
       if (fs.existsSync(p)) tries.push({ cmd: p, from: p });
     }
@@ -1032,7 +1032,7 @@ function explain(blob) {
     return 'Claude Code is installed but NOT SIGNED IN. Open Terminal and run `claude` on its own, type `/login` inside it, complete the sign-in, quit, then reload this page.';
   }
   if (/trust|do you trust|not a trusted/.test(t)) {
-    return 'Claude Code wants this folder trusted first. Open Terminal, run `cd ~/2md.cc && claude`, accept the trust prompt, then try again.';
+    return 'Claude Code wants this folder trusted first. Open Terminal, run `cd ~/ilovemd && claude`, accept the trust prompt, then try again.';
   }
   if (/onboard|welcome|first run|theme|select a theme/.test(t)) {
     return 'Claude Code has not finished its first-run setup. Open Terminal, run `claude`, complete the setup, then try again.';
@@ -1714,7 +1714,7 @@ aiStatus = await checkAI();
 
 server.listen(PORT, HOST, () => {
   console.log('');
-  console.log('  2md');
+  console.log('  ilovemd');
   console.log('  http://' + HOST + ':' + PORT + '           homepage');
   console.log('  http://' + HOST + ':' + PORT + '/text      workspace');
   console.log('');
@@ -1726,7 +1726,7 @@ server.listen(PORT, HOST, () => {
   if (!aiStatus.available) {
     for (const line of aiStatus.searched || []) console.log('             tried ' + line);
     console.log('             If Claude Code IS installed, run `which claude` and start with:');
-    console.log('               TWOMD_AI_CMD=/full/path/to/claude node server.mjs');
+    console.log('               ILOVEMD_AI_CMD=/full/path/to/claude node server.mjs');
   }
   console.log('');
   console.log('  Editing and saving work regardless of the prompt bar.');

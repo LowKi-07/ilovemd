@@ -16,7 +16,7 @@ line() { printf '%s\n' "--------------------------------------------------------
 say()  { printf '%s\n' "$*"; }
 
 say ""
-say "${BOLD}2md - prompt bar check${OFF}"
+say "${BOLD}ilovemd - prompt bar check${OFF}"
 line
 
 # ---------------------------------------------------------------- find the CLI
@@ -39,7 +39,7 @@ if [ -z "$CLI" ]; then
   say "The prompt bar needs it. Install it, then run this again:"
   say "  ${BOLD}https://docs.claude.com/en/docs/claude-code${OFF}"
   say ""
-  say "Everything else in 2md works without it - writing, editing and"
+  say "Everything else in ilovemd works without it - writing, editing and"
   say "saving never touch Claude."
   say ""
   read -r -p "Press Return to close."
@@ -64,10 +64,10 @@ say ""
 if printf '%s' "$OUT" | grep -q 'OK'; then
   say "${GRN}${BOLD}Working.${OFF} The prompt bar will work."
   say ""
-  read -r -p "Start 2md now? [Y/n] " GO
+  read -r -p "Start ilovemd now? [Y/n] " GO
   case "${GO:-Y}" in
-    [Nn]*) say "Fine - double-click ${BOLD}2md${OFF} whenever you are ready." ;;
-    *) exec ./2md.command ;;
+    [Nn]*) say "Fine - double-click ${BOLD}ilovemd${OFF} whenever you are ready." ;;
+    *) exec ./ilovemd.command ;;
   esac
   exit 0
 fi
@@ -130,17 +130,17 @@ if [ "${NEEDS_LOGIN:-0}" = "1" ]; then
   if printf '%s' "$OUT2" | grep -q 'OK'; then
     say "${GRN}${BOLD}Signed in and working.${OFF}"
     say ""
-    read -r -p "Start 2md now? [Y/n] " GO2
+    read -r -p "Start ilovemd now? [Y/n] " GO2
     case "${GO2:-Y}" in
-      [Nn]*) say "Double-click ${BOLD}2md${OFF} when ready." ;;
-      *) exec ./2md.command ;;
+      [Nn]*) say "Double-click ${BOLD}ilovemd${OFF} when ready." ;;
+      *) exec ./ilovemd.command ;;
     esac
     exit 0
   fi
   say "${RED}Still not working.${OFF}"
   say "The output above is the real reason. If it still mentions revoked or"
   say "unauthorised, your organisation is blocking the CLI sign-in - take that"
-  say "to IT. Meanwhile 2md still works for writing, editing and saving."
+  say "to IT. Meanwhile ilovemd still works for writing, editing and saving."
 fi
 
 say ""

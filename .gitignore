@@ -1,5 +1,5 @@
 # Local runtime state
-.2md-state.json
+.ilovemd-state.json
 
 # Temporary file uploads (cleared between sessions)
 .uploads/

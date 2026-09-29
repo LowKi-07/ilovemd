@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>2md</title>
+<title>ilovemd</title>
 <style>
   /* ------------------------------------------------------------ tokens
-     Identical across every 2md page. */
+     Identical across every ilovemd page. */
   :root {
     --canvas: #08080c;
     --panel: rgba(255,255,255,.038);
@@ -512,7 +512,7 @@
 <!-- -------------------------------------------------------------- topbar -->
 <header class="top">
   <button class="burger" id="btn-side" title="Show or hide the sidebar" aria-pressed="false">&#9776;</button>
-  <a class="brandname" href="/">2md</a>
+  <a class="brandname" href="/">ilovemd</a>
   <span class="modetag" id="modetag"></span>
   <input id="title" value="" spellcheck="false" aria-label="Document name">
   <span class="status" id="status"></span>
@@ -1145,7 +1145,7 @@
       wrap.innerHTML =
         '<div class="placeholder"><div class="dropbox">' +
         '<h3>Figma &rarr; Markdown</h3>' +
-        '<p>Paste a link to a Figma frame or component. 2md retrieves what it can through ' +
+        '<p>Paste a link to a Figma frame or component. ilovemd retrieves what it can through ' +
         'Claude’s Figma connection and writes the documentation.</p>' +
         '<input id="figurl" type="text" spellcheck="false" placeholder="https://www.figma.com/design/&hellip;?node-id=&hellip;">'.replace('&hellip;', '…').replace('&hellip;', '…') +
         '<button class="btn btn--primary" id="btn-fig">Fetch &amp; Generate</button>' +
@@ -1827,7 +1827,7 @@
 
   /* ================================================================ boot */
   (async function () {
-    document.title = '2md · ' + TAGS[MODE].replace(' → ', ' → ');
+    document.title = 'ilovemd · ' + TAGS[MODE].replace(' → ', ' → ');
     paintTop(); paintSidebar(); paintEditor(); paintPreview(); paintChat();
 
     try {

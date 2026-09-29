@@ -1,5 +1,5 @@
 #!/bin/bash
-# Double-click this file to open 2md.
+# Double-click this file to open ilovemd.
 #
 # It stops any copy of this server left running, starts a fresh one on a fixed
 # port, and opens the app. Killing the old one first is deliberate: a stale
@@ -20,7 +20,7 @@ if [ ! -f "server.mjs" ] || [ ! -f "shell.html" ] || [ ! -f "home.html" ]; then
 fi
 
 if ! command -v node >/dev/null 2>&1; then
-  echo "2md needs Node.js, which is not installed."
+  echo "ilovemd needs Node.js, which is not installed."
   echo
   echo "Install it from https://nodejs.org (the LTS build), then run this again."
   echo
@@ -60,7 +60,7 @@ if ! command -v claude >/dev/null 2>&1; then
   echo
 fi
 
-echo "2md   : $HERE"
+echo "ilovemd   : $HERE"
 echo "Open  : $URL"
 echo
 echo "Leave this window open while you use it."

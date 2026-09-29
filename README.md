@@ -1,15 +1,15 @@
-# 2md
+# ilovemd
 
 Anything to Markdown. A local converter and documentation workspace: describe something in plain English, or point it at your UI components' HTML/CSS, and Claude writes structured Markdown you can edit, save and download.
 
 ## Running it
 
-**Double-click `2md.command`** in this folder. It opens `http://127.0.0.1:7777`.
+**Double-click `ilovemd.command`** in this folder. It opens `http://127.0.0.1:7777`.
 
 By hand, if you prefer:
 
 ```bash
-cd ~/2md.cc
+cd ~/ilovemd
 node server.mjs
 ```
 
@@ -30,12 +30,12 @@ All three share one workspace layout: a hamburger-toggled sidebar on the left (r
 
 ## Text → MD (`/text`)
 
-Documents live in `~/2md.cc/documents/`, as ordinary `.md` files. Nothing is hidden in a database or in browser storage - what you see in the app is exactly what is on disk, and you can open the same files in any editor.
+Documents live in `~/ilovemd/documents/`, as ordinary `.md` files. Nothing is hidden in a database or in browser storage - what you see in the app is exactly what is on disk, and you can open the same files in any editor.
 
 To keep them somewhere else:
 
 ```bash
-TWOMD_DOCS=~/Documents/notes node server.mjs
+ILOVEMD_DOCS=~/Documents/notes node server.mjs
 ```
 
 With no document open, an instruction writes a new file (the filename comes from the document's own `# heading`). With one open, it revises the document, keeping everything you did not ask to change. Nothing is written to disk without you: results land in the editor with **Keep**, **Discard** and **Regenerate**. `Cmd+K` focuses the assistant, `Enter` sends, `Cmd+S` saves.
@@ -49,11 +49,11 @@ With no document open, an instruction writes a new file (the filename comes from
 
 ## Figma → MD (`/figma`)
 
-Paste a link to a Figma frame or component and press **Fetch & Generate**. Retrieval goes through whatever Figma access the Claude Code CLI has (for example the official Figma MCP server configured in Claude Code). If the CLI has no working Figma access, 2md says so plainly rather than inventing data. Fetched frames appear in the sidebar as recents.
+Paste a link to a Figma frame or component and press **Fetch & Generate**. Retrieval goes through whatever Figma access the Claude Code CLI has (for example the official Figma MCP server configured in Claude Code). If the CLI has no working Figma access, ilovemd says so plainly rather than inventing data. Fetched frames appear in the sidebar as recents.
 
 ## Where saves go
 
-Everything saves under `~/2md.cc/documents/`:
+Everything saves under `~/ilovemd/documents/`:
 
 | Page | Saved as |
 | --- | --- |
@@ -61,7 +61,7 @@ Everything saves under `~/2md.cc/documents/`:
 | UI Component → MD | `documents/<Design System>/<Component>.md` |
 | Figma → MD | `documents/<Title>.md` |
 
-The chosen component folder, design system and recent frames are remembered across restarts in `.2md-state.json`.
+The chosen component folder, design system and recent frames are remembered across restarts in `.ilovemd-state.json`.
 
 ## No API key
 
@@ -82,13 +82,13 @@ That test matters because `claude --version` succeeds even when signed out. Only
 If the CLI's sign-in is revoked and your organisation will not let you sign in again, a key bypasses OAuth entirely. Put it in a file next to `server.mjs`:
 
 ```bash
-cd ~/2md.cc
+cd ~/ilovemd
 echo 'sk-ant-your-key-here' > .anthropic-key
 ```
 
 Restart the server. The key is read once at startup, passed only to the CLI as an environment variable, and never sent to the browser or included in any API response. Delete the file to go back to the CLI's own sign-in.
 
-Environment overrides: `PORT`, `TWOMD_DOCS`, `TWOMD_AI_CMD`, `TWOMD_AI_MODEL` (e.g. `opus`), `TWOMD_AI_TIMEOUT`, `TWOMD_AI_STRATEGY` (pins one form: `argv`, `bare-argv`, `stdin`, `bare-stdin`).
+Environment overrides: `PORT`, `ILOVEMD_DOCS`, `ILOVEMD_AI_CMD`, `ILOVEMD_AI_MODEL` (e.g. `opus`), `ILOVEMD_AI_TIMEOUT`, `ILOVEMD_AI_STRATEGY` (pins one form: `argv`, `bare-argv`, `stdin`, `bare-stdin`).
 
 ## Safety notes
 
@@ -101,15 +101,15 @@ Environment overrides: `PORT`, `TWOMD_DOCS`, `TWOMD_AI_CMD`, `TWOMD_AI_MODEL` (e
 ## Files
 
 ```
-2md.cc/
-  2md.command       # double-click: starts the server, opens the homepage
+ilovemd/
+  ilovemd.command       # double-click: starts the server, opens the homepage
   fix-ai.command    # double-click: diagnoses and fixes the Claude CLI hookup
   server.mjs        # static files + document API + component scan + the AI routes
   home.html         # the homepage
   shell.html        # the workspace: /text, /ui and /figma share this one page
   README.md
   documents/        # your .md files (Text → MD)
-  .2md-state.json   # remembered folders + recent frames (created on first use)
+  .ilovemd-state.json   # remembered folders + recent frames (created on first use)
 ```
 
 No dependencies, no build step, no `node_modules`. `server.mjs` uses only the Node standard library.

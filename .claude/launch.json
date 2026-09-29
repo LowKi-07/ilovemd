@@ -2,7 +2,7 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "2md",
+      "name": "ilovemd",
       "runtimeExecutable": "node",
       "runtimeArgs": ["server.mjs"],
       "port": 7777
