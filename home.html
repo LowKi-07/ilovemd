@@ -85,22 +85,101 @@
   .btn--primary:hover { background: var(--primary-hov); }
   .btn--lg { padding: 12px 22px; font-size: 14.5px; border-radius: 12px; }
 
-  /* ---------------------------------------------------------------- nav */
+  /* ---------------------------------------------------------------- nav
+     A floating glass capsule rather than a full-width bar, so the page
+     background carries on behind and around it. */
   .nav {
-    position: sticky; top: 0; z-index: 20;
-    border-bottom: 1px solid var(--hairline);
-    background: rgba(10,10,16,.62);
-    backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
+    position: sticky; top: 14px; z-index: 40;
+    margin: 14px auto 0; width: min(1180px, calc(100% - 32px));
+    border: 1px solid rgba(255,255,255,.1);
+    border-radius: var(--r-pill);
+    background: rgba(18,18,28,.55);
+    backdrop-filter: saturate(170%) blur(20px);
+    -webkit-backdrop-filter: saturate(170%) blur(20px);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.07),
+      0 10px 40px rgba(0,0,0,.42);
   }
-  .nav__in { display: flex; align-items: center; gap: 10px; height: 60px; position: relative; }
+  .nav__in {
+    display: flex; align-items: center; gap: 10px; height: 60px;
+    position: relative; padding: 0 10px 0 20px; max-width: none;
+  }
   .brandname { font-size: 16px; font-weight: 660; letter-spacing: -.015em; color: var(--text); }
-  .nav__links { display: flex; align-items: center; gap: 2px; position: absolute; left: 50%; transform: translateX(-50%); }
-  .nav__links a {
-    color: var(--text-2); font: 500 13px var(--font);
-    padding: 6px 11px; border-radius: 8px;
+  .nav__links {
+    display: flex; align-items: center; gap: 2px;
+    position: absolute; left: 50%; transform: translateX(-50%);
   }
-  .nav__links a:hover { color: var(--text); background: var(--panel); }
+  .nav__links > a, .navdrop__btn {
+    display: inline-flex; align-items: center; gap: 5px;
+    color: var(--text-2); font: 500 13.5px var(--font);
+    padding: 7px 13px; border-radius: var(--r-pill);
+    border: 0; background: transparent; cursor: pointer; white-space: nowrap;
+    transition: color .16s var(--ease), background-color .16s var(--ease);
+  }
+  .nav__links > a:hover, .navdrop__btn:hover { color: var(--text); background: rgba(255,255,255,.07); }
+  .navdrop__btn[aria-expanded="true"] { color: var(--text); background: rgba(255,255,255,.09); }
+  .navdrop__btn .chev {
+    width: 13px; height: 13px; display: block;
+    transition: transform .2s var(--ease);
+  }
+  .navdrop__btn[aria-expanded="true"] .chev { transform: rotate(180deg); }
   .sp { flex: 1 1 auto; }
+
+  /* ------------------------------------------------- nav mega-dropdown */
+  .navdrop { position: relative; }
+  .navdrop__panel {
+    position: absolute; top: calc(100% + 14px); left: 50%;
+    z-index: 50; width: max-content; max-width: min(620px, 90vw);
+    padding: 10px;
+    border: 1px solid rgba(255,255,255,.12);
+    border-radius: var(--r-lg);
+    /* Near-opaque on purpose: at .8 the 76px hero headline read straight
+       through the panel, and blur alone does not kill that much contrast. */
+    background: rgba(14,14,22,.97);
+    backdrop-filter: saturate(170%) blur(22px);
+    -webkit-backdrop-filter: saturate(170%) blur(22px);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.06),
+      0 24px 70px rgba(0,0,0,.6);
+    display: grid; grid-template-columns: 1fr 1fr; gap: 3px;
+    opacity: 0; pointer-events: none;
+    transform: translate(-50%, -8px) scale(.97);
+    transition: opacity .18s var(--ease), transform .18s var(--ease);
+  }
+  .navdrop__panel.open {
+    opacity: 1; pointer-events: all;
+    transform: translate(-50%, 0) scale(1);
+  }
+  .navitem {
+    display: flex; align-items: flex-start; gap: 11px;
+    padding: 10px 12px; border-radius: var(--r-md);
+    text-decoration: none; color: var(--text);
+    transition: background-color .14s var(--ease);
+  }
+  .navitem:hover { background: rgba(255,255,255,.07); }
+  .navitem__ic {
+    width: 34px; height: 34px; border-radius: 10px; flex: none;
+    display: grid; place-items: center;
+    background: var(--tb, rgba(255,255,255,.05));
+    border: 1px solid var(--tl, var(--hairline));
+  }
+  .navitem__ic svg { width: 18px; height: 18px; display: block; }
+  .navitem__tx { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .navitem__tx b { font: 600 13px var(--font); letter-spacing: -.01em; }
+  .navitem__tx span { font: 400 11.5px/1.45 var(--font); color: var(--text-3); }
+  .navitem--soon { opacity: .5; pointer-events: none; }
+  .navitem--soon .navitem__tx b::after {
+    content: 'Soon'; margin-left: 7px;
+    font: 600 8.5px var(--font); letter-spacing: .08em; text-transform: uppercase;
+    color: var(--warn); border: 1px solid rgba(251,191,36,.35);
+    border-radius: var(--r-pill); padding: 1px 6px; vertical-align: 1px;
+  }
+  @media (max-width: 860px) {
+    .nav__links { display: none; }
+  }
+  @media (max-width: 620px) {
+    .navdrop__panel { grid-template-columns: 1fr; }
+  }
 
   /* ------------------------------------------ brand logo + header dropdowns */
   .brand-logo { display: flex; align-items: center; flex-shrink: 0; }
@@ -459,8 +538,63 @@
       </svg>
     </a>
     <div class="nav__links">
-      <a href="#converters">Convert MD</a>
-      <a href="#converters">Generate MD</a>
+      <div class="navdrop">
+        <button class="navdrop__btn" id="nd-btn-convert" aria-haspopup="true" aria-expanded="false" aria-controls="nd-convert">
+          Convert MD
+          <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
+        <div class="navdrop__panel" id="nd-convert" role="menu" aria-labelledby="nd-btn-convert">
+          <a class="navitem" role="menuitem" href="/convert?type=pdf">
+            <span class="navitem__ic" style="--tb:rgba(251,113,133,.1);--tl:rgba(251,113,133,.28)"><svg viewBox="0 0 24 24" fill="none" stroke="#fb7185" stroke-width="1.7" stroke-linejoin="round"><path d="M14 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7z"/><path d="M14 2v5h5"/><text x="12" y="17.5" text-anchor="middle" font-family="-apple-system,Segoe UI,sans-serif" font-size="6" font-weight="700" fill="#fb7185" stroke="none">PDF</text></svg></span>
+            <span class="navitem__tx"><b>PDF</b><span>Native PDF files, headers and footers stripped</span></span>
+          </a>
+          <a class="navitem" role="menuitem" href="/convert?type=word">
+            <span class="navitem__ic" style="--tb:rgba(79,143,247,.1);--tl:rgba(79,143,247,.28)"><svg viewBox="0 0 24 24" fill="none" stroke="#4f8ff7" stroke-width="1.7" stroke-linejoin="round"><path d="M14 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7z"/><path d="M14 2v5h5"/><text x="12" y="17.5" text-anchor="middle" font-family="-apple-system,Segoe UI,sans-serif" font-size="8" font-weight="700" fill="#4f8ff7" stroke="none">W</text></svg></span>
+            <span class="navitem__tx"><b>Word</b><span>DOCX documents with structure intact</span></span>
+          </a>
+          <a class="navitem" role="menuitem" href="/convert?type=ppt">
+            <span class="navitem__ic" style="--tb:rgba(237,108,71,.1);--tl:rgba(237,108,71,.28)"><svg viewBox="0 0 24 24" fill="none" stroke="#ed6c47" stroke-width="1.7" stroke-linejoin="round"><path d="M14 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7z"/><path d="M14 2v5h5"/><text x="12" y="17.5" text-anchor="middle" font-family="-apple-system,Segoe UI,sans-serif" font-size="8" font-weight="700" fill="#ed6c47" stroke="none">P</text></svg></span>
+            <span class="navitem__tx"><b>PowerPoint</b><span>Slide decks turned into readable sections</span></span>
+          </a>
+          <a class="navitem" role="menuitem" href="/convert?type=excel">
+            <span class="navitem__ic" style="--tb:rgba(33,163,102,.1);--tl:rgba(33,163,102,.28)"><svg viewBox="0 0 24 24" fill="none" stroke="#21A366" stroke-width="1.7" stroke-linejoin="round"><path d="M14 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7z"/><path d="M14 2v5h5"/><text x="12" y="17.5" text-anchor="middle" font-family="-apple-system,Segoe UI,sans-serif" font-size="8" font-weight="700" fill="#21A366" stroke="none">X</text></svg></span>
+            <span class="navitem__tx"><b>Excel</b><span>Spreadsheets as Markdown tables</span></span>
+          </a>
+          <span class="navitem navitem--soon"><span class="navitem__ic" style="--tb:rgba(255,255,255,.07);--tl:rgba(255,255,255,.2)"><svg viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="3.5" fill="#fff"/><text x="12" y="17" text-anchor="middle" font-family="Georgia,serif" font-size="13" font-weight="700" fill="#0a0a11">N</text></svg></span>
+            <span class="navitem__tx"><b>Notion</b><span>Pages and databases, nesting preserved</span></span>
+          </span>
+          <span class="navitem navitem--soon"><span class="navitem__ic" style="--tb:rgba(38,132,255,.1);--tl:rgba(38,132,255,.3)"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round"><path d="M4.5 17.5c2.7-4.4 4.8-5.2 8.8-3.1l6.2 3.1" stroke="#2684FF" stroke-width="3"/><path d="M19.5 6.5c-2.7 4.4-4.8 5.2-8.8 3.1L4.5 6.5" stroke="#5EA4FF" stroke-width="3"/></svg></span>
+            <span class="navitem__tx"><b>Confluence</b><span>Spaces exported without the wiki markup</span></span>
+          </span>
+        </div>
+      </div>
+
+      <div class="navdrop">
+        <button class="navdrop__btn" id="nd-btn-generate" aria-haspopup="true" aria-expanded="false" aria-controls="nd-generate">
+          Generate MD
+          <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
+        <div class="navdrop__panel" id="nd-generate" role="menu" aria-labelledby="nd-btn-generate">
+          <a class="navitem" role="menuitem" href="/text">
+            <span class="navitem__ic" style="--tb:rgba(139,124,255,.12);--tl:rgba(139,124,255,.3)"><svg viewBox="0 0 24 24" fill="none" stroke="#8b7cff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7z"/><path d="M14 2v5h5"/><path d="M9 12h6M9 16h6M9 8h2"/></svg></span>
+            <span class="navitem__tx"><b>Text</b><span>Describe it in plain English, Claude writes it</span></span>
+          </a>
+          <a class="navitem" role="menuitem" href="/ui">
+            <span class="navitem__ic" style="--tb:rgba(228,77,38,.12);--tl:rgba(228,77,38,.32)"><svg viewBox="0 0 24 24"><path fill="#E44D26" d="M3.5 2h17l-1.55 17.5L12 21.8l-6.95-2.3L3.5 2z"/><path fill="#F16529" d="M12 3.6v16.55l5.62-1.86L18.9 3.6H12z"/><polyline points="10,8.7 7,11.7 10,14.7" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><polyline points="14,8.7 17,11.7 14,14.7" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            <span class="navitem__tx"><b>HTML / CSS</b><span>Document a design system from its source</span></span>
+          </a>
+          <a class="navitem" role="menuitem" href="/figma">
+            <span class="navitem__ic"><svg viewBox="0 0 24 24"><path fill="#F24E1E" d="M12 2H8.5a3.5 3.5 0 0 0 0 7H12V2z"/><path fill="#FF7262" d="M12 2h3.5a3.5 3.5 0 0 1 0 7H12V2z"/><path fill="#A259FF" d="M12 9H8.5a3.5 3.5 0 0 0 0 7H12V9z"/><path fill="#0ACF83" d="M8.5 16a3.5 3.5 0 1 0 3.5 3.5V16H8.5z"/><circle fill="#1ABCFE" cx="15.5" cy="12.5" r="3.5"/></svg></span>
+            <span class="navitem__tx"><b>Figma</b><span>Frame links, with properties and variants</span></span>
+          </a>
+          <a class="navitem" role="menuitem" href="/ui">
+            <span class="navitem__ic" style="--tb:rgba(97,218,251,.08);--tl:rgba(97,218,251,.25)"><svg viewBox="0 0 24 24" fill="none" stroke="#61DAFB" stroke-width="1"><circle cx="12" cy="12" r="2" fill="#61DAFB" stroke="none"/><ellipse cx="12" cy="12" rx="10" ry="4.2"/><ellipse cx="12" cy="12" rx="10" ry="4.2" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="10" ry="4.2" transform="rotate(120 12 12)"/></svg></span>
+            <span class="navitem__tx"><b>React</b><span>Components read straight from the code</span></span>
+          </a>
+        </div>
+      </div>
+
+      <a href="/compare">Compare MD</a>
       <a href="#">Templates</a>
     </div>
     <span class="sp"></span>
@@ -771,6 +905,44 @@
 
   var year = document.getElementById('foot-year');
   if (year) year.textContent = new Date().getFullYear();
+})();
+
+/* Nav mega-dropdowns: one open at a time, dismissed by an outside click or
+   Escape. Click rather than hover, so it is reachable by touch and keyboard. */
+(function () {
+  var PAIRS = [['nd-btn-convert', 'nd-convert'], ['nd-btn-generate', 'nd-generate']];
+  var drops = PAIRS.map(function (p) {
+    return { btn: document.getElementById(p[0]), panel: document.getElementById(p[1]) };
+  }).filter(function (d) { return d.btn && d.panel; });
+  if (!drops.length) return;
+
+  function closeAll(except) {
+    drops.forEach(function (d) {
+      if (d === except) return;
+      d.panel.classList.remove('open');
+      d.btn.setAttribute('aria-expanded', 'false');
+    });
+  }
+
+  drops.forEach(function (d) {
+    d.btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var willOpen = !d.panel.classList.contains('open');
+      closeAll(d);
+      d.panel.classList.toggle('open', willOpen);
+      d.btn.setAttribute('aria-expanded', String(willOpen));
+    });
+    // A click inside the panel that is not on a link should not dismiss it.
+    d.panel.addEventListener('click', function (e) { e.stopPropagation(); });
+  });
+
+  document.addEventListener('click', function () { closeAll(); });
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    var open = drops.filter(function (d) { return d.panel.classList.contains('open'); })[0];
+    closeAll();
+    if (open) open.btn.focus();
+  });
 })();
 </script>
 </body>
