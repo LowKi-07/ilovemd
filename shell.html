@@ -248,6 +248,10 @@
   .shell[data-islands="1"] .preview,
   .shell[data-islands="1"] .chat {
     border: 1px solid var(--hairline);
+    /* All three tops align, so with only a 12px gap between them their top
+       borders read as one rule drawn across the whole width. Transparent
+       rather than removed, to keep the box model and avoid a 1px shift. */
+    border-top-color: transparent;
     border-radius: var(--r-lg);
     background: var(--panel);
     overflow: hidden;
