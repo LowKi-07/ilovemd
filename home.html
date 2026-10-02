@@ -99,9 +99,50 @@
   }
   .hero__badge .spark { flex: none; display: grid; place-items: center; }
   .hero__badge .spark svg { width: 17px; height: 17px; display: block; }
+  /* Flex, so the rolling word can be vertically centred against its
+     neighbours. Centring rather than baseline alignment on purpose: an
+     inline-block that clips its overflow takes its bottom edge as its
+     baseline, which would drop the word below the rest of the line. */
   .hero h1 {
     margin: 0 0 22px; font-size: clamp(40px, 7vw, 76px);
     font-weight: 700; letter-spacing: -.035em; line-height: 1.04;
+    display: flex; flex-wrap: wrap;
+    align-items: center; justify-content: center; gap: 0 .26em;
+  }
+
+  /* ----------------------------------------------- rolling hero word
+     A window one slot tall over a stacked column of words. The column is
+     translated a whole slot at a time, so the outgoing word leaves upward as
+     the next arrives - and the window's own width eases with it, otherwise
+     "to Markdown." would jump sideways on every change. */
+  .roller {
+    display: block; overflow: hidden; flex: none;
+    /* As a flex item its automatic minimum is min-content - the width of the
+       longest word - so a narrower width was being clamped straight back up
+       to it and the window never resized. */
+    min-width: 0;
+    height: 1.3em;
+    /* Same duration and easing as the track, so the window finishes resizing
+       exactly as the word lands - out of step, the trailing space reads as a
+       gap before "to". */
+    transition: width .62s var(--ease);
+  }
+  .roller__track {
+    display: flex; flex-direction: column; align-items: flex-start;
+    transition: transform .62s var(--ease);
+    will-change: transform;
+  }
+  /* max-content so each word keeps its own width while the window animates
+     to it; the window would otherwise stretch them all to its current size.
+     Line-height is set below the slot height and the glyphs centred in the
+     slack, so descenders have room and the box never overflows. */
+  .roller__w {
+    height: 1.3em; line-height: 1.15;
+    width: max-content; white-space: nowrap;
+    display: flex; align-items: center;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .roller, .roller__track { transition: none; }
   }
   .hero h1 .grad {
     background: var(--gradient);
@@ -439,7 +480,22 @@
     </span>
     AI-Powered Markdown
   </span>
-  <h1 class="reveal" style="animation-delay:.16s">From Ideas to <span class="grad">Markdown.</span></h1>
+  <h1 class="reveal" style="animation-delay:.16s">
+    <span>From</span>
+    <span class="roller" id="roller" aria-label="Ideas, Design, Docs or Code">
+      <span class="roller__track" id="roller-track">
+        <span class="roller__w">Ideas</span>
+        <span class="roller__w">Design</span>
+        <span class="roller__w">Docs</span>
+        <span class="roller__w">Code</span>
+        <!-- repeat of the first, so the last step rolls onward instead of
+             snapping backwards through the whole list -->
+        <span class="roller__w" aria-hidden="true">Ideas</span>
+      </span>
+    </span>
+    <span>to</span>
+    <span class="grad">Markdown.</span>
+  </h1>
   <p class="sub reveal" style="animation-delay:.27s">
     Turn your ideas, files, and designs into clean Markdown.<br>
     Convert, create, compare, and start building faster.
@@ -682,6 +738,48 @@
 
   var year = document.getElementById('foot-year');
   if (year) year.textContent = new Date().getFullYear();
+
+  /* ---- rolling hero word ---- */
+  var roller = document.getElementById('roller');
+  var track = document.getElementById('roller-track');
+  if (roller && track) {
+    var words = Array.prototype.slice.call(track.children);
+    var real = words.length - 1;            // last entry repeats the first
+    var i = 0;
+
+    function fit() {
+      roller.style.width = words[i].getBoundingClientRect().width + 'px';
+    }
+
+    // Sizing has to wait for the webfont, or every width is measured against
+    // the fallback and the line jumps once the real face lands.
+    function sizeNow() { fit(); }
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(sizeNow);
+    sizeNow();
+    window.addEventListener('resize', fit);
+
+    if (!reduce) {
+      setInterval(function () {
+        i++;
+        track.style.transition = '';
+        track.style.transform = 'translateY(-' + (i * 100 / words.length) + '%)';
+        roller.style.width = words[i].getBoundingClientRect().width + 'px';
+
+        if (i === real) {
+          // Landed on the repeat, which is the first word again - rewind to it
+          // without animating, so the next step carries on upward.
+          setTimeout(function () {
+            track.style.transition = 'none';
+            i = 0;
+            track.style.transform = 'translateY(0)';
+            // Flush the untransitioned frame before transitions come back.
+            void track.offsetHeight;
+            track.style.transition = '';
+          }, 680);
+        }
+      }, 2200);
+    }
+  }
 })();
 
 </script>
