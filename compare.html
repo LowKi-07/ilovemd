@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ilovemd · Compare</title>
+<link rel="stylesheet" href="/nav.css">
 <style>
   :root {
     --canvas: #0a0a10; --panel: #13131c; --panel-solid: #13131c;
@@ -30,11 +31,10 @@
   .hdr {
     display: flex; align-items: center; gap: 10px; padding: 0 12px;
     height: 52px; border-bottom: 1px solid var(--hairline); flex: none;
+    margin-top: var(--navh);
     background: rgba(10,10,16,.62);
     backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
   }
-  .brand-logo { display: flex; align-items: center; flex-shrink: 0; }
-  .brand-logo svg { height: 26px; width: auto; display: block; }
   .modetag {
     font: 600 10px var(--mono); letter-spacing: .06em; color: var(--accent-2);
     border: 1px solid rgba(63,208,224,.3); background: rgba(63,208,224,.1);
@@ -56,35 +56,6 @@
   }
   .burger:hover { background: var(--panel); color: var(--text); }
   .burger[aria-pressed="true"] { background: var(--accent-soft); color: var(--text); }
-  .hdrop { position: relative; flex-shrink: 0; }
-  .hdrop__btn {
-    width: 32px; height: 32px; border: 0;
-    background: transparent; border-radius: 8px;
-    color: var(--text-2); cursor: pointer;
-    display: grid; place-items: center;
-    transition: background-color .16s var(--ease), color .16s var(--ease);
-  }
-  .hdrop__btn:hover { background: var(--panel); color: var(--text); }
-  .hdrop__btn svg { display: block; }
-  .hdrop__menu {
-    position: absolute; top: calc(100% + 8px); right: 0; z-index: 100;
-    min-width: 172px;
-    background: var(--panel-solid); border: 1px solid var(--hairline-strong);
-    border-radius: var(--r-md); overflow: hidden;
-    box-shadow: 0 16px 48px rgba(0,0,0,.55);
-    opacity: 0; transform: translateY(-6px) scale(.98);
-    pointer-events: none;
-    transition: opacity .16s var(--ease), transform .16s var(--ease);
-  }
-  .hdrop__menu.open { opacity: 1; transform: none; pointer-events: all; }
-  .hdrop__item {
-    display: flex; align-items: center;
-    padding: 10px 14px; color: var(--text-2); font: 400 13.5px var(--font);
-    text-decoration: none; white-space: nowrap;
-    transition: background-color .12s var(--ease), color .12s var(--ease);
-  }
-  .hdrop__item:hover { background: var(--panel); color: var(--text); }
-  .hdrop__sep { border: 0; border-top: 1px solid var(--hairline); margin: 3px 0; }
 
   /* ---- rendered markdown preview ---- */
   .prevwrap { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
@@ -183,7 +154,7 @@
      mechanics stay, because this page is a single scrolling column rather
      than shell.html's fixed flex row. */
   .chat {
-    position: fixed; top: 52px; right: 0; bottom: 0; width: var(--chat-w);
+    position: fixed; top: calc(var(--navh) + 52px); right: 0; bottom: 0; width: var(--chat-w);
     border-left: 1px solid var(--hairline); background: var(--canvas);
     display: flex; flex-direction: column; overflow: hidden;
     transform: translateX(100%); transition: transform .22s var(--ease); z-index: 10;
@@ -275,20 +246,15 @@
     .panels { grid-template-columns: 1fr; }
     .sdiff { grid-template-columns: 1fr; }
     .sdiff__col:first-child { border-right: none; border-bottom: 1px solid var(--hairline); }
-    .chat { position: fixed; top: 52px; right: 0; bottom: 0; z-index: 100; }
+    .chat { position: fixed; top: calc(var(--navh) + 52px); right: 0; bottom: 0; z-index: 100; }
   }
 </style>
 </head>
 <body>
 
+<div id="site-nav"></div>
+
 <header class="hdr">
-  <a href="/" class="brand-logo" aria-label="ilovemd home">
-    <svg width="65" height="28" viewBox="0 0 121 60" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <path d="M9.32 15.92V44H2.48V15.92H9.32Z" fill="white"/>
-      <path fill-rule="evenodd" clip-rule="evenodd" d="M41.4423 15C41.0385 15 40.5 15 39.9615 15.1364C37.2692 15.5455 34.8462 17.0455 33.5 19.2273C32.0192 17.0455 29.7308 15.5455 27.0385 15.1364C26.5 15 25.9615 15 25.5577 15C20.3077 15 16 19.2273 16 24.4091C16 24.8182 16 25.2273 16.1346 25.7727C16.4038 27.8182 17.3462 29.5909 18.8269 31.0909L33.5 45L48.1731 31.0909C49.6538 29.7273 50.5962 27.8182 50.8654 25.7727C51 25.2273 51 24.8182 51 24.4091C51 19.2273 46.6923 15 41.4423 15Z" fill="#D64022"/>
-      <path d="M89.28 15.92V44H82.44V27.16L76.16 44H70.64L64.32 27.12V44H57.48V15.92H65.56L73.44 35.36L81.24 15.92H89.28ZM104.719 15.92C107.679 15.92 110.265 16.5067 112.479 17.68C114.692 18.8533 116.399 20.5067 117.599 22.64C118.825 24.7467 119.439 27.1867 119.439 29.96C119.439 32.7067 118.825 35.1467 117.599 37.28C116.399 39.4133 114.679 41.0667 112.439 42.24C110.225 43.4133 107.652 44 104.719 44H94.1988V15.92H104.279ZM104.279 38.08C106.865 38.08 108.879 37.3733 110.319 35.96C111.759 34.5467 112.479 32.5467 112.479 29.96C112.479 27.3733 111.759 25.36 110.319 23.92C108.879 22.48 106.865 21.76 104.279 21.76H101.039V38.08H104.279Z" fill="white"/>
-    </svg>
-  </a>
   <span class="modetag">COMPARE MD</span>
   <span class="hdr__spacer"></span>
   <span class="mode" id="viewmode" role="group" aria-label="View" style="display:none">
@@ -297,31 +263,6 @@
   </span>
   <button class="burger" id="btn-chat" title="Show or hide the assistant" aria-pressed="false">&#10022;</button>
   <button class="btn btn--ghost btn--sm" id="btn-signout" style="display:none" title="Sign out of this demo">Sign out</button>
-  <!-- Profile dropdown -->
-  <div class="hdrop">
-    <button class="hdrop__btn" id="btn-profile" aria-label="My profile" aria-haspopup="true" aria-expanded="false">
-      <svg width="18" height="18" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#cp-cmp1)"><path d="M0.997559 16C0.997559 13.9375 1.39339 11.9896 2.18506 10.1562C2.95589 8.34375 4.01839 6.76042 5.37256 5.40625C6.74756 4.03125 8.34131 2.95833 10.1538 2.1875C11.9871 1.39583 13.9351 1 15.9976 1C18.0809 1 20.0288 1.39583 21.8413 2.1875C23.6538 2.95833 25.2371 4.03125 26.5913 5.40625C27.9663 6.76042 29.0496 8.34375 29.8413 10.1562C30.6121 11.9896 30.9976 13.9375 30.9976 16C30.9976 18.0833 30.6121 20.0312 29.8413 21.8438C29.0496 23.6562 27.9663 25.25 26.5913 26.625C25.2371 27.9792 23.6538 29.0521 21.8413 29.8438C20.0288 30.6146 18.0809 31 15.9976 31C13.9351 31 11.9871 30.6146 10.1538 29.8438C8.34131 29.0521 6.74756 27.9792 5.37256 26.625C4.01839 25.25 2.95589 23.6562 2.18506 21.8438C1.39339 20.0312 0.997559 18.0833 0.997559 16ZM15.9976 3C12.3726 3 9.24756 4.46875 7.02881 6.8125C5.61214 7.97917 4.69548 9.35417 4.02881 10.9375C3.34131 12.5208 2.99756 14.2083 2.99756 16C2.99756 17.7917 3.34131 19.4792 4.02881 21.0625C4.69548 22.6458 5.61214 24.0312 6.77881 25.2188C7.96631 26.3854 9.35173 27.3125 10.9351 28C12.5184 28.6667 14.2059 29 15.9976 29C17.7892 29 19.4767 28.6667 21.0601 28C22.6434 27.3125 24.0184 26.3854 25.1851 25.2188C26.3726 24.0312 27.3101 22.6458 27.9976 21.0625C28.6642 19.4792 28.9976 17.7917 28.9976 16C28.9976 14.2083 28.6642 12.5208 27.9976 10.9375C27.3101 9.35417 26.3726 7.97917 25.1851 6.8125C24.0184 5.625 22.6434 4.69792 21.0601 4.03125C19.4767 3.34375 17.7892 3 15.9976 3ZM16 10C17.3807 10 18.5 11.1193 18.5 12.5C18.5 13.8807 17.3807 15 16 15C14.6193 15 13.5 13.8807 13.5 12.5C13.5 11.1193 14.6193 10 16 10ZM10.34 19.28C10.34 17.34 12.93 16 16 16C19.07 16 21.66 17.34 21.66 19.28V21.5C21.66 21.78 21.44 22 21.16 22H10.84C10.56 22 10.34 21.78 10.34 21.5V19.28Z" fill="currentColor"/></g><defs><clipPath id="cp-cmp1"><rect width="32" height="32" fill="white"/></clipPath></defs></svg>
-    </button>
-    <div class="hdrop__menu" id="menu-profile" role="menu">
-      <a href="#" class="hdrop__item" role="menuitem">My Profile</a>
-      <hr class="hdrop__sep">
-      <a href="#" class="hdrop__item" id="menu-logout" role="menuitem">Log Out</a>
-    </div>
-  </div>
-  <!-- Menu dropdown -->
-  <div class="hdrop">
-    <button class="hdrop__btn" id="btn-hamb" aria-label="Main menu" aria-haspopup="true" aria-expanded="false">
-      <svg width="18" height="18" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7.6 4.8C7.6 6.3464 6.3464 7.6 4.8 7.6C3.2536 7.6 2 6.3464 2 4.8C2 3.2536 3.2536 2 4.8 2C6.3464 2 7.6 3.2536 7.6 4.8Z" fill="currentColor"/><path d="M18.8 4.8C18.8 6.3464 17.5464 7.6 16 7.6C14.4536 7.6 13.2 6.3464 13.2 4.8C13.2 3.2536 14.4536 2 16 2C17.5464 2 18.8 3.2536 18.8 4.8Z" fill="currentColor"/><path d="M30 4.8C30 6.3464 28.7464 7.6 27.2 7.6C25.6536 7.6 24.4 6.3464 24.4 4.8C24.4 3.2536 25.6536 2 27.2 2C28.7464 2 30 3.2536 30 4.8Z" fill="currentColor"/><path d="M7.6 16C7.6 17.5464 6.3464 18.8 4.8 18.8C3.2536 18.8 2 17.5464 2 16C2 14.4536 3.2536 13.2 4.8 13.2C6.3464 13.2 7.6 14.4536 7.6 16Z" fill="currentColor"/><path d="M18.8 16C18.8 17.5464 17.5464 18.8 16 18.8C14.4536 18.8 13.2 17.5464 13.2 16C13.2 14.4536 14.4536 13.2 16 13.2C17.5464 13.2 18.8 14.4536 18.8 16Z" fill="currentColor"/><path d="M30 16C30 17.5464 28.7464 18.8 27.2 18.8C25.6536 18.8 24.4 17.5464 24.4 16C24.4 14.4536 25.6536 13.2 27.2 13.2C28.7464 13.2 30 14.4536 30 16Z" fill="currentColor"/><path d="M7.6 27.2C7.6 28.7464 6.3464 30 4.8 30C3.2536 30 2 28.7464 2 27.2C2 25.6536 3.2536 24.4 4.8 24.4C6.3464 24.4 7.6 25.6536 7.6 27.2Z" fill="currentColor"/><path d="M18.8 27.2C18.8 28.7464 17.5464 30 16 30C14.4536 30 13.2 28.7464 13.2 27.2C13.2 25.6536 14.4536 24.4 16 24.4C17.5464 24.4 18.8 25.6536 18.8 27.2Z" fill="currentColor"/><path d="M30 27.2C30 28.7464 28.7464 30 27.2 30C25.6536 30 24.4 28.7464 24.4 27.2C24.4 25.6536 25.6536 24.4 27.2 24.4C28.7464 24.4 30 25.6536 30 27.2Z" fill="currentColor"/></svg>
-    </button>
-    <div class="hdrop__menu" id="menu-main" role="menu">
-      <a href="#" class="hdrop__item" role="menuitem">About Us</a>
-      <a href="#" class="hdrop__item" role="menuitem">Pricing</a>
-      <a href="#" class="hdrop__item" role="menuitem">Contact Us</a>
-      <a href="#" class="hdrop__item" role="menuitem">Help &amp; Support</a>
-      <hr class="hdrop__sep">
-      <a href="#" class="hdrop__item" role="menuitem">Language</a>
-    </div>
-  </div>
 </header>
 <script>
   fetch('/api/setup', { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (s) {
@@ -724,22 +665,6 @@ Array.prototype.forEach.call(
   document.getElementById('viewmode').querySelectorAll('[data-v]'),
   function (b) { b.onclick = function () { setEditorView(b.getAttribute('data-v')); }; });
 
-// Header dropdowns: one open at a time, dismissed by an outside click or Escape.
-[['btn-profile', 'menu-profile'], ['btn-hamb', 'menu-main']].forEach(function (pair) {
-  var btn = document.getElementById(pair[0]), menu = document.getElementById(pair[1]);
-  btn.onclick = function (e) {
-    e.stopPropagation();
-    var open = menu.classList.contains('open');
-    closeMenus();
-    if (!open) { menu.classList.add('open'); btn.setAttribute('aria-expanded', 'true'); }
-  };
-});
-function closeMenus() {
-  ['menu-profile', 'menu-main'].forEach(function (id) { document.getElementById(id).classList.remove('open'); });
-  ['btn-profile', 'btn-hamb'].forEach(function (id) { document.getElementById(id).setAttribute('aria-expanded', 'false'); });
-}
-document.addEventListener('click', closeMenus);
-document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeMenus(); });
 
 document.getElementById('chat-inp').addEventListener('input', growPrompt);
 
@@ -888,5 +813,6 @@ paintChatEmpty();
 paintChatChips();
 growPrompt();
 </script>
+<script src="/nav.js"></script>
 </body>
 </html>

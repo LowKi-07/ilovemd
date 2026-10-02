@@ -198,6 +198,7 @@
 
   window.siteNav = {
     autoHide: function (on) {
+      var was = autoHide;
       autoHide = !!on;
       document.body.classList.toggle('nav-autohide', autoHide);
       if (!autoHide) { holdUntil = 0; hidden(false); return; }
@@ -210,7 +211,11 @@
         peek.addEventListener('mouseenter', function () { reveal(900); });
         document.body.appendChild(peek);
       }
-      hidden(true);
+      // Callers re-assert this on every repaint (a keystroke, say). Only the
+      // first call should snap it shut; later ones must not yank the bar away
+      // while it is deliberately being held open.
+      if (!was) hidden(true);
+      else settle();
     },
     reveal: reveal,
   };
