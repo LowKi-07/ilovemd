@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ilovemd — From Ideas to Markdown</title>
+<title>ilovemd — Ideas to Markdown</title>
 <meta name="description" content="Turn your ideas, files, and designs into clean Markdown. Convert, create, compare, and start building faster.">
 <link rel="stylesheet" href="/nav.css">
 <style>
@@ -115,27 +115,27 @@
      translated a whole slot at a time, so the outgoing word leaves upward as
      the next arrives - and the window's own width eases with it, otherwise
      "to Markdown." would jump sideways on every change. */
+  /* Width is fixed to the longest word and set from JS, not animated. Easing
+     it per word clipped whichever word was arriving, because the window is
+     still narrow while a longer word rolls in and the overflow needed for the
+     vertical roll cuts it off. Holding one width also keeps "to Markdown."
+     perfectly still instead of sliding on every change. */
   .roller {
     display: block; overflow: hidden; flex: none;
-    /* As a flex item its automatic minimum is min-content - the width of the
-       longest word - so a narrower width was being clamped straight back up
-       to it and the window never resized. */
+    /* As a flex item its automatic minimum is min-content - the longest word -
+       so any narrower width would be clamped straight back up to it. */
     min-width: 0;
     height: 1.3em;
-    /* Same duration and easing as the track, so the window finishes resizing
-       exactly as the word lands - out of step, the trailing space reads as a
-       gap before "to". */
-    transition: width .62s var(--ease);
   }
   .roller__track {
-    display: flex; flex-direction: column; align-items: flex-start;
+    display: flex; flex-direction: column; align-items: center;
     transition: transform .62s var(--ease);
     will-change: transform;
   }
-  /* max-content so each word keeps its own width while the window animates
-     to it; the window would otherwise stretch them all to its current size.
-     Line-height is set below the slot height and the glyphs centred in the
-     slack, so descenders have room and the box never overflows. */
+  /* max-content so a slot keeps its own width and centres in the window,
+     rather than stretching to it. Line-height sits below the slot height with
+     the glyphs centred in the slack, so descenders have room and the box
+     never overflows. */
   .roller__w {
     height: 1.3em; line-height: 1.15;
     width: max-content; white-space: nowrap;
@@ -481,7 +481,6 @@
     AI-Powered Markdown
   </span>
   <h1 class="reveal" style="animation-delay:.16s">
-    <span>From</span>
     <span class="roller" id="roller" aria-label="Ideas, Design, Docs or Code">
       <span class="roller__track" id="roller-track">
         <span class="roller__w">Ideas</span>
@@ -747,15 +746,21 @@
     var real = words.length - 1;            // last entry repeats the first
     var i = 0;
 
+    // One width for every word - the longest - so nothing is ever clipped on
+    // its way in and the rest of the line never moves.
     function fit() {
-      roller.style.width = words[i].getBoundingClientRect().width + 'px';
+      roller.style.width = '';   // release it, or we measure our own clamp
+      var widest = 0;
+      words.forEach(function (w) {
+        widest = Math.max(widest, w.getBoundingClientRect().width);
+      });
+      roller.style.width = Math.ceil(widest) + 'px';
     }
 
-    // Sizing has to wait for the webfont, or every width is measured against
-    // the fallback and the line jumps once the real face lands.
-    function sizeNow() { fit(); }
-    if (document.fonts && document.fonts.ready) document.fonts.ready.then(sizeNow);
-    sizeNow();
+    // Measure after the webfont lands, or every width is taken against the
+    // fallback face and the line jumps when the real one arrives.
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
+    fit();
     window.addEventListener('resize', fit);
 
     if (!reduce) {
@@ -763,7 +768,6 @@
         i++;
         track.style.transition = '';
         track.style.transform = 'translateY(-' + (i * 100 / words.length) + '%)';
-        roller.style.width = words[i].getBoundingClientRect().width + 'px';
 
         if (i === real) {
           // Landed on the repeat, which is the first word again - rewind to it
