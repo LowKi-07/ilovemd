@@ -566,7 +566,12 @@
     font: 400 11px var(--mono); color: var(--text-2);
   }
   .subtop-div { width: 1px; height: 18px; background: var(--hairline); flex: none; margin: 0 4px; }
-  .subtop .kitsel { padding: 5px 28px 5px 10px; font-size: 12px; }
+  /* .kitsel is width:100% because it fills the landing card. In this row that
+     stretched both selects end to end, so size them to their content here. */
+  .subtop .kitsel {
+    padding: 5px 28px 5px 10px; font-size: 12px;
+    flex: none; width: auto; min-width: 128px; max-width: 220px;
+  }
   @media (max-width: 940px) {
     body.mode-ui.subtop-on .shell { position: static; }
     body.mode-ui.subtop-on .subtop { position: sticky; }
