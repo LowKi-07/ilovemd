@@ -26,14 +26,22 @@
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: var(--canvas); color: var(--text); font-family: var(--font); min-height: 100vh; display: flex; flex-direction: column; }
+  body::before {
+    content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background:
+      radial-gradient(46em 30em at -8% 112%, rgba(139,124,255,.13), transparent 60%),
+      radial-gradient(42em 28em at 106% 96%, rgba(63,208,224,.09), transparent 58%);
+  }
+  .hdr, .page { position: relative; z-index: 1; }
 
   /* ---- header (mirrors shell.html's .top) ---- */
+  /* No fill: content starts below it, so a tinted bar here only produced a
+     band behind the site bar. */
   .hdr {
     display: flex; align-items: center; gap: 10px; padding: 0 12px;
-    height: 52px; border-bottom: 1px solid var(--hairline); flex: none;
+    height: 52px; flex: none;
     margin-top: var(--navh);
-    background: rgba(10,10,16,.62);
-    backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
+    background: transparent;
   }
   .modetag {
     font: 600 10px var(--mono); letter-spacing: .06em; color: var(--accent-2);

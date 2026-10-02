@@ -1,156 +1,191 @@
 /* ============================================================== site nav
    Shared by home.html, shell.html and compare.html. Edit here, not per page.
-   Expects the page to define the design tokens (--canvas, --text, --ease, ...)
-   and to contain <div id="site-nav"></div>, which nav.js fills in.
 
-   Height is published as --navh so a page can offset its own chrome by it;
-   .nav-hidden collapses it to 0 and slides the bar out of view. */
-:root { --navh: 88px; }
+   A page opts in with:
+     <link rel="stylesheet" href="/nav.css">
+     <div id="site-nav"></div>
+     <script src="/nav.js"></script>
 
-/* How far the page's own chrome sits below the bar. Driven by a class on
-   <body> rather than a media query so JS can reveal and hide it. */
+   Self-contained on purpose. It used to read the host page's design tokens,
+   but those differ between pages - compare.html's --panel is opaque where
+   home.html's is a 4% white wash - so the same bar rendered differently on
+   each. Everything it needs is declared here under --nv-*; the only values
+   taken from outside are --tb/--tl, the per-item icon tints set inline.
+
+   --navh is the vertical space the bar wants. Pages offset their own chrome
+   by it, so .nav-hidden collapsing it to 0 reclaims the room. */
+:root {
+  --navh: 80px;
+
+  --nv-ease: cubic-bezier(.2,.8,.3,1);
+  --nv-font: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --nv-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+
+  --nv-text: #f5f5fa;
+  --nv-text-2: #a3a3b4;
+  --nv-text-3: #6d6d7e;
+  --nv-warn: #fbbf24;
+
+  --nv-bar: rgba(18,18,28,.55);
+  --nv-edge: rgba(255,255,255,.1);
+  --nv-hover: rgba(255,255,255,.07);
+  --nv-active: rgba(255,255,255,.09);
+
+  /* Near-opaque: at .8 a large headline behind the menu read straight
+     through it, and backdrop blur does not cut that much contrast. */
+  --nv-panel: rgba(14,14,22,.97);
+  --nv-panel-edge: rgba(255,255,255,.12);
+  --nv-accent-soft: rgba(139,124,255,.16);
+
+  --nv-pill: 999px;
+  --nv-r-md: 11px;
+  --nv-r-lg: 16px;
+}
+
 body.nav-hidden { --navh: 0px; }
-.nav {
-  transition: transform .26s var(--ease, ease), opacity .26s var(--ease, ease);
-}
-body.nav-hidden .nav {
-  transform: translateY(calc(-100% - 20px)); opacity: 0; pointer-events: none;
-}
-/* The strip that wakes the bar back up when the pointer reaches the top. */
-.nav-peek {
-  position: fixed; top: 0; left: 0; right: 0; height: 72px;
-  z-index: 39; pointer-events: none;
-}
-body.nav-autohide .nav-peek { pointer-events: all; }
 
-/* ---------------------------------------------------------------- nav
-   A floating glass capsule rather than a full-width bar, so the page
-   background carries on behind and around it. */
+/* ------------------------------------------------------------------ bar
+   Fixed, not sticky: shell.html is a fixed full-viewport layout with no
+   document scroll, where sticky would never engage. */
 .nav {
-  /* Fixed, not sticky: shell.html is a fixed full-viewport layout with no
-     document scroll, where sticky would never engage. Pages reserve their own
-     top offset with --navh. */
-  position: fixed; top: 14px; left: 0; right: 0; z-index: 40;
-  margin: 0 auto; width: min(1180px, calc(100% - 32px));
-  border: 1px solid rgba(255,255,255,.1);
-  border-radius: var(--r-pill);
-  background: rgba(18,18,28,.55);
+  position: fixed; top: 13px; left: 0; right: 0; z-index: 40;
+  margin: 0 auto; width: min(1060px, calc(100% - 30px));
+  border: 1px solid var(--nv-edge);
+  border-radius: var(--nv-pill);
+  background: var(--nv-bar);
   backdrop-filter: saturate(170%) blur(20px);
   -webkit-backdrop-filter: saturate(170%) blur(20px);
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,.07),
-    0 10px 40px rgba(0,0,0,.42);
+    0 10px 36px rgba(0,0,0,.42);
+  transition: transform .26s var(--nv-ease), opacity .26s var(--nv-ease);
 }
+body.nav-hidden .nav {
+  transform: translateY(calc(-100% - 20px)); opacity: 0; pointer-events: none;
+}
+
+/* Hit-strip across the top, so the pointer can summon the bar back while it
+   is fully out of view. */
+.nav-peek {
+  position: fixed; top: 0; left: 0; right: 0; height: 66px;
+  z-index: 39; pointer-events: none;
+}
+body.nav-autohide .nav-peek { pointer-events: all; }
+
 .nav__in {
-  display: flex; align-items: center; gap: 10px; height: 60px;
-  position: relative; padding: 0 10px 0 20px; max-width: none;
+  display: flex; align-items: center; gap: 9px; height: 54px;
+  position: relative; padding: 0 9px 0 18px; max-width: none; margin: 0;
 }
-.brandname { font-size: 16px; font-weight: 660; letter-spacing: -.015em; color: var(--text); }
+.nav .sp { flex: 1 1 auto; min-width: 0; }
+.brand-logo { display: flex; align-items: center; flex-shrink: 0; }
+.brand-logo svg { height: 29px; width: auto; display: block; }
+.brandname {
+  font: 660 14.5px var(--nv-font); letter-spacing: -.015em;
+  color: var(--nv-text); text-decoration: none;
+}
+
+/* --------------------------------------------------------------- links */
 .nav__links {
   display: flex; align-items: center; gap: 2px;
   position: absolute; left: 50%; transform: translateX(-50%);
 }
 .nav__links > a, .navdrop__btn {
   display: inline-flex; align-items: center; gap: 5px;
-  color: var(--text-2); font: 500 13.5px var(--font);
-  padding: 7px 13px; border-radius: var(--r-pill);
-  border: 0; background: transparent; cursor: pointer; white-space: nowrap;
-  transition: color .16s var(--ease), background-color .16s var(--ease);
+  color: var(--nv-text-2); font: 500 12.5px var(--nv-font);
+  padding: 6px 12px; border-radius: var(--nv-pill);
+  border: 0; background: transparent; cursor: pointer;
+  white-space: nowrap; text-decoration: none;
+  transition: color .16s var(--nv-ease), background-color .16s var(--nv-ease);
 }
-.nav__links > a:hover, .navdrop__btn:hover { color: var(--text); background: rgba(255,255,255,.07); }
-.navdrop__btn[aria-expanded="true"] { color: var(--text); background: rgba(255,255,255,.09); }
+.nav__links > a:hover, .navdrop__btn:hover { color: var(--nv-text); background: var(--nv-hover); }
+.navdrop__btn[aria-expanded="true"] { color: var(--nv-text); background: var(--nv-active); }
 .navdrop__btn .chev {
-  width: 13px; height: 13px; display: block;
-  transition: transform .2s var(--ease);
+  width: 12px; height: 12px; display: block;
+  transition: transform .2s var(--nv-ease);
 }
 .navdrop__btn[aria-expanded="true"] .chev { transform: rotate(180deg); }
-.sp { flex: 1 1 auto; }
 
-/* ------------------------------------------------- nav mega-dropdown */
+/* ------------------------------------------------------ mega-dropdown */
 .navdrop { position: relative; }
 .navdrop__panel {
-  position: absolute; top: calc(100% + 14px); left: 50%;
-  z-index: 50; width: max-content; max-width: min(620px, 90vw);
-  padding: 10px;
-  border: 1px solid rgba(255,255,255,.12);
-  border-radius: var(--r-lg);
-  /* Near-opaque on purpose: at .8 the 76px hero headline read straight
-     through the panel, and blur alone does not kill that much contrast. */
-  background: rgba(14,14,22,.97);
+  position: absolute; top: calc(100% + 13px); left: 50%;
+  z-index: 50; width: max-content; max-width: min(560px, 90vw);
+  padding: 9px;
+  border: 1px solid var(--nv-panel-edge);
+  border-radius: var(--nv-r-lg);
+  background: var(--nv-panel);
   backdrop-filter: saturate(170%) blur(22px);
   -webkit-backdrop-filter: saturate(170%) blur(22px);
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,.06),
-    0 24px 70px rgba(0,0,0,.6);
-  display: grid; grid-template-columns: 1fr 1fr; gap: 3px;
+    0 22px 62px rgba(0,0,0,.6);
+  display: grid; grid-template-columns: 1fr 1fr; gap: 2px;
   opacity: 0; pointer-events: none;
   transform: translate(-50%, -8px) scale(.97);
-  transition: opacity .18s var(--ease), transform .18s var(--ease);
+  transition: opacity .18s var(--nv-ease), transform .18s var(--nv-ease);
 }
 .navdrop__panel.open {
   opacity: 1; pointer-events: all;
   transform: translate(-50%, 0) scale(1);
 }
 .navitem {
-  display: flex; align-items: flex-start; gap: 11px;
-  padding: 10px 12px; border-radius: var(--r-md);
-  text-decoration: none; color: var(--text);
-  transition: background-color .14s var(--ease);
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 9px 11px; border-radius: var(--nv-r-md);
+  text-decoration: none; color: var(--nv-text);
+  transition: background-color .14s var(--nv-ease);
 }
-.navitem:hover { background: rgba(255,255,255,.07); }
+.navitem:hover { background: var(--nv-hover); }
 .navitem__ic {
-  width: 34px; height: 34px; border-radius: 10px; flex: none;
+  width: 31px; height: 31px; border-radius: 9px; flex: none;
   display: grid; place-items: center;
   background: var(--tb, rgba(255,255,255,.05));
-  border: 1px solid var(--tl, var(--hairline));
+  border: 1px solid var(--tl, var(--nv-edge));
 }
-.navitem__ic svg { width: 18px; height: 18px; display: block; }
+.navitem__ic svg { width: 16px; height: 16px; display: block; }
 .navitem__tx { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.navitem__tx b { font: 600 13px var(--font); letter-spacing: -.01em; }
-.navitem__tx span { font: 400 11.5px/1.45 var(--font); color: var(--text-3); }
+.navitem__tx b { font: 600 12px var(--nv-font); letter-spacing: -.01em; }
+.navitem__tx span { font: 400 10.5px/1.45 var(--nv-font); color: var(--nv-text-3); }
 .navitem--soon { opacity: .5; pointer-events: none; }
 .navitem--soon .navitem__tx b::after {
-  content: 'Soon'; margin-left: 7px;
-  font: 600 8.5px var(--font); letter-spacing: .08em; text-transform: uppercase;
-  color: var(--warn); border: 1px solid rgba(251,191,36,.35);
-  border-radius: var(--r-pill); padding: 1px 6px; vertical-align: 1px;
-}
-@media (max-width: 860px) {
-  .nav__links { display: none; }
-}
-@media (max-width: 620px) {
-  .navdrop__panel { grid-template-columns: 1fr; }
+  content: 'Soon'; margin-left: 6px;
+  font: 600 8px var(--nv-font); letter-spacing: .08em; text-transform: uppercase;
+  color: var(--nv-warn); border: 1px solid rgba(251,191,36,.35);
+  border-radius: var(--nv-pill); padding: 1px 5px; vertical-align: 1px;
 }
 
-/* ------------------------------------------ brand logo + header dropdowns */
-.brand-logo { display: flex; align-items: center; flex-shrink: 0; }
-.brand-logo svg { height: 32px; width: auto; display: block; }
+/* ------------------------------------------------- profile / main menu */
 .hdrop { position: relative; flex-shrink: 0; }
 .hdrop__btn {
-  width: 34px; height: 34px; border: 0;
+  width: 31px; height: 31px; border: 0;
   background: transparent; border-radius: 8px;
-  color: var(--text-2); cursor: pointer;
+  color: var(--nv-text-2); cursor: pointer;
   display: grid; place-items: center;
-  transition: background-color .16s var(--ease), color .16s var(--ease);
+  transition: background-color .16s var(--nv-ease), color .16s var(--nv-ease);
 }
-.hdrop__btn:hover { background: var(--panel); color: var(--text); }
+.hdrop__btn:hover { background: var(--nv-hover); color: var(--nv-text); }
 .hdrop__btn svg { display: block; }
 .hdrop__menu {
   position: absolute; top: calc(100% + 8px); right: 0; z-index: 100;
-  min-width: 172px;
-  background: var(--panel-solid); border: 1px solid var(--hairline-strong);
-  border-radius: var(--r-md); overflow: hidden;
-  box-shadow: 0 16px 48px rgba(0,0,0,.55);
+  min-width: 158px;
+  background: var(--nv-panel); border: 1px solid var(--nv-panel-edge);
+  border-radius: var(--nv-r-md); overflow: hidden;
+  box-shadow: 0 16px 44px rgba(0,0,0,.55);
   opacity: 0; transform: translateY(-6px) scale(.98);
   pointer-events: none;
-  transition: opacity .16s var(--ease), transform .16s var(--ease);
+  transition: opacity .16s var(--nv-ease), transform .16s var(--nv-ease);
 }
 .hdrop__menu.open { opacity: 1; transform: none; pointer-events: all; }
 .hdrop__item {
   display: flex; align-items: center;
-  padding: 10px 14px; color: var(--text-2); font: 400 13.5px var(--font);
+  padding: 9px 13px; color: var(--nv-text-2); font: 400 12.5px var(--nv-font);
   text-decoration: none; white-space: nowrap;
-  transition: background-color .12s var(--ease), color .12s var(--ease);
+  transition: background-color .12s var(--nv-ease), color .12s var(--nv-ease);
 }
-.hdrop__item:hover { background: var(--panel); color: var(--text); }
-.hdrop__sep { border: 0; border-top: 1px solid var(--hairline); margin: 3px 0; }
+.hdrop__item:hover { background: var(--nv-hover); color: var(--nv-text); }
+.hdrop__sep { border: 0; border-top: 1px solid var(--nv-edge); margin: 3px 0; }
+
+@media (max-width: 860px) { .nav__links { display: none; } }
+@media (max-width: 620px) { .navdrop__panel { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion: reduce) {
+  .nav, .navdrop__panel, .hdrop__menu { transition: none; }
+}

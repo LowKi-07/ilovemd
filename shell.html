@@ -45,9 +45,12 @@
   }
   body::before {
     content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    /* Both glows sit well clear of the top: anchored up there, the purple one
+       put a lighter wash directly behind the site bar and the band where it
+       stopped read as a seam across the page. */
     background:
-      radial-gradient(52em 34em at 8% -6%, rgba(139,124,255,.17), transparent 62%),
-      radial-gradient(46em 30em at 102% 104%, rgba(63,208,224,.11), transparent 60%);
+      radial-gradient(46em 30em at -8% 112%, rgba(139,124,255,.13), transparent 60%),
+      radial-gradient(42em 28em at 106% 96%, rgba(63,208,224,.09), transparent 58%);
   }
   ::-webkit-scrollbar { width: 10px; height: 10px; }
   ::-webkit-scrollbar-track { background: transparent; }
@@ -89,12 +92,12 @@
   .mode button[aria-pressed="true"] { background: var(--accent-soft); color: var(--text); }
 
   /* -------------------------------------------------------------- topbar */
+  /* No fill of its own: the panels start below it, so nothing ever passes
+     underneath, and a tinted bar here only made a band behind the site bar. */
   .top {
     position: fixed; top: var(--navh); left: 0; right: 0; height: 52px; z-index: 10;
     display: flex; align-items: center; gap: 10px; padding: 0 12px;
-    border-bottom: 1px solid var(--hairline);
-    background: rgba(10,10,16,.62);
-    backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
+    background: transparent;
   }
   .burger {
     width: 32px; height: 32px; border: 0; background: none; color: var(--text-2);
