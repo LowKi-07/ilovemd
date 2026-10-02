@@ -115,11 +115,9 @@
      translated a whole slot at a time, so the outgoing word leaves upward as
      the next arrives - and the window's own width eases with it, otherwise
      "to Markdown." would jump sideways on every change. */
-  /* Width is fixed to the longest word and set from JS, not animated. Easing
-     it per word clipped whichever word was arriving, because the window is
-     still narrow while a longer word rolls in and the overflow needed for the
-     vertical roll cuts it off. Holding one width also keeps "to Markdown."
-     perfectly still instead of sliding on every change. */
+  /* Width is driven from JS, per word, in two steps around each roll - see
+     the script. The transition is set there too, since the two steps use
+     different durations. */
   .roller {
     display: block; overflow: hidden; flex: none;
     /* As a flex item its automatic minimum is min-content - the longest word -
@@ -746,41 +744,64 @@
     var real = words.length - 1;            // last entry repeats the first
     var i = 0;
 
-    // One width for every word - the longest - so nothing is ever clipped on
-    // its way in and the rest of the line never moves.
-    function fit() {
-      roller.style.width = '';   // release it, or we measure our own clamp
-      var widest = 0;
-      words.forEach(function (w) {
-        widest = Math.max(widest, w.getBoundingClientRect().width);
-      });
-      roller.style.width = Math.ceil(widest) + 'px';
+    var widths = [];
+
+    /* Each word gets its own width, so none of them carries slack before
+       "to". The window cannot simply ease from one to the next though: while
+       it is still narrow, a longer word rolling in gets cut off by the
+       overflow the roll depends on. So it widens to fit both words before the
+       incoming one is visible, and only settles onto the new width once the
+       outgoing one has left. Whichever of the two steps is a no-op for a given
+       pair costs nothing, so each change shows a single movement. */
+    function measure() {
+      var prev = roller.style.width;
+      roller.style.width = '';          // release it, or we measure our own clamp
+      widths = words.map(function (w) { return Math.ceil(w.getBoundingClientRect().width); });
+      roller.style.width = prev || widths[i] + 'px';
+    }
+    function setWidth(px, ms) {
+      roller.style.transition = 'width ' + ms + 'ms var(--ease)';
+      roller.style.width = px + 'px';
     }
 
     // Measure after the webfont lands, or every width is taken against the
     // fallback face and the line jumps when the real one arrives.
-    if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
-    fit();
-    window.addEventListener('resize', fit);
+    function remeasure() { measure(); setWidth(widths[i], 0); }
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(remeasure);
+    remeasure();
+    window.addEventListener('resize', remeasure);
+
+    /* Narrowing onto the arriving word is the nicer half of the effect, so it
+       waits for the roll to actually finish rather than for a timer matched to
+       its duration. It is only cosmetic though: a step always leaves the
+       window at least as wide as the word in it, so if this never runs - a
+       background tab does not run transitions at all - the result is a little
+       slack, never a clipped word. */
+    track.addEventListener('transitionend', function (e) {
+      if (e.propertyName === 'transform') setWidth(widths[i], 300);
+    });
 
     if (!reduce) {
       setInterval(function () {
-        i++;
-        track.style.transition = '';
-        track.style.transform = 'translateY(-' + (i * 100 / words.length) + '%)';
-
-        if (i === real) {
-          // Landed on the repeat, which is the first word again - rewind to it
-          // without animating, so the next step carries on upward.
-          setTimeout(function () {
-            track.style.transition = 'none';
-            i = 0;
-            track.style.transform = 'translateY(0)';
-            // Flush the untransitioned frame before transitions come back.
-            void track.offsetHeight;
-            track.style.transition = '';
-          }, 680);
+        /* Sitting on the trailing duplicate: rewind to the identical first
+           entry un-animated, so this step rolls on upward instead of flying
+           back down the whole column. Done here, at the head of the step,
+           rather than after the previous roll - hung off the roll it would
+           never happen in a background tab, and the column would walk off the
+           end of the list. */
+        if (i >= real) {
+          track.style.transition = 'none';
+          i = 0;
+          track.style.transform = 'translateY(0)';
+          void track.offsetHeight;      // flush before transitions return
+          track.style.transition = '';
         }
+        var from = i;
+        i++;
+        // Wide enough for both, quickly, while the new word is still below the
+        // window - it must never arrive into a window narrower than itself.
+        setWidth(Math.max(widths[from], widths[i]), 170);
+        track.style.transform = 'translateY(-' + (i * 100 / words.length) + '%)';
       }, 2200);
     }
   }
