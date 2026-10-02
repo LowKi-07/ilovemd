@@ -156,20 +156,12 @@
     -webkit-text-fill-color: transparent; color: transparent;
   }
   .hero .sub {
-    margin: 0 auto 38px; max-width: 52ch;
+    margin: 0 auto; max-width: 52ch;
     color: var(--text-2); font-size: 17px; line-height: 1.6;
   }
   .hero__ctas { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
   .hero__hint { margin-top: 16px; font: 400 11.5px var(--mono); color: var(--text-3); }
 
-  /* ------------------------------------------ hero converter icon pair */
-  .convpair { display: flex; align-items: center; justify-content: center; gap: 20px; }
-  .convicon {
-    width: 56px; height: 56px; flex: none;
-    display: grid; place-items: center;
-  }
-  .convicon svg { width: 52px; height: 52px; display: block; }
-  .convpair .arr { color: var(--text-3); font-size: 22px; flex: none; }
 
   /* --------------------------------------------------- load-in reveals */
   @keyframes riseIn {
@@ -541,15 +533,6 @@
     Turn your ideas, files, and designs into clean Markdown.<br>
     Convert, create, compare, and start building faster.
   </p>
-  <div class="convpair reveal" style="animation-delay:.38s">
-    <span class="convicon" title="PDF">
-      <svg viewBox="0 0 24 24" fill="none" stroke="#fb7185" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7z"/><path d="M14 2v5h5"/><text x="12" y="17.5" text-anchor="middle" font-family="-apple-system,Segoe UI,sans-serif" font-size="6" font-weight="700" fill="#fb7185" stroke="none">PDF</text></svg>
-    </span>
-    <span class="arr">&rarr;</span>
-    <span class="convicon" title="Markdown">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="5" width="19" height="14" rx="2.5" fill="none" stroke="#8d8d9c" stroke-width="1.7"/><path d="M6 15.5v-7l2.6 3 2.6-3v7" fill="none" stroke="#8d8d9c" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 8.5v5.5m0 0-2-2m2 2 2-2" fill="none" stroke="#8d8d9c" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-    </span>
-  </div>
 </header>
 
 <!-- ------------------------------------------------------- converters -->
@@ -766,13 +749,25 @@
     });
   }
 
+  function clearReveal(el) {
+    el.classList.remove('reveal');
+    el.style.animationDelay = '';
+  }
+
   // `both` fill keeps the animation's final transform, which would otherwise
   // win over the hover lift - so drop the class once each reveal has played.
   document.addEventListener('animationend', function (e) {
     if (e.animationName !== 'riseIn') return;
-    e.target.classList.remove('reveal');
-    e.target.style.animationDelay = '';
+    clearReveal(e.target);
   });
+
+  // .reveal starts at opacity 0, so anything whose animation never ran would
+  // stay invisible for good - which happens in a background tab, where the
+  // page is the whole grid. Sweep up whatever is left well after the last
+  // reveal is due.
+  setTimeout(function () {
+    Array.prototype.forEach.call(document.querySelectorAll('.reveal'), clearReveal);
+  }, 3000);
 
   var year = document.getElementById('foot-year');
   if (year) year.textContent = new Date().getFullYear();
