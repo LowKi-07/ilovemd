@@ -263,7 +263,7 @@
 <div id="site-nav"></div>
 
 <header class="hdr">
-  <span class="modetag">COMPARE MD</span>
+  <span class="modetag" id="modetag" style="display:none">COMPARE MD</span>
   <span class="hdr__spacer"></span>
   <span class="mode" id="viewmode" role="group" aria-label="View" style="display:none">
     <button data-v="edit" aria-pressed="true">Edit</button>
@@ -548,6 +548,8 @@ function hasContent() {
 function syncViewToggle() {
   var show = hasContent();
   document.getElementById('viewmode').style.display = show ? 'inline-flex' : 'none';
+  // Same rule as the converters: the tag appears only once there is content.
+  document.getElementById('modetag').style.display = show ? '' : 'none';
   if (!show && editorView !== 'edit') setEditorView('edit');
 }
 

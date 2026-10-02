@@ -1093,7 +1093,10 @@
 
   /* ============================================================== render */
   function paintTop() {
+    // The landing card already says which converter this is; the tag only
+    // earns its place once that card is gone and a document is on screen.
     $('modetag').textContent = TAGS[MODE];
+    $('modetag').style.display = S.md ? '' : 'none';
     var t = $('title');
     t.readOnly = MODE === 'ui';   // component docs are named by the component itself
     t.style.width = Math.min(30, Math.max(4, (t.value || '').length + 1)) + 'ch';
