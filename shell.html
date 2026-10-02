@@ -277,12 +277,15 @@
     backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: none;
   }
   .dropbox--bare::before { display: none; }
-  /* Back on the left, the primary action on the right. The preceding <p>
-     already carries a 16px bottom margin, so only a little is needed here. */
+  /* The primary action sits right; back is centred in whatever room is left,
+     so the gap either side of it matches. The preceding <p> already carries a
+     16px bottom margin, so only a little is needed here. */
   .dropbox__actions {
-    display: flex; align-items: center; justify-content: space-between;
-    gap: 10px; margin-top: 2px;
+    display: flex; align-items: center; margin-top: 2px;
   }
+  /* No gap on the row: the cell has to reach the primary button for centring
+     inside it to leave matching space on both sides of back. */
+  .dropbox__back { flex: 1 1 auto; display: flex; justify-content: center; }
   .ftile {
     width: 58px; height: 58px; border-radius: 15px;
     display: grid; place-items: center;
@@ -1238,7 +1241,9 @@
           '<h3>' + esc(cap(S.curName)) + '</h3>' +
           '<p>Claude reads ' + what + '. Nothing is sent until you generate.</p>' +
           '<div class="dropbox__actions">' +
+          '<span class="dropbox__back">' +
           '<button class="btn btn--ghost btn--sm" id="btn-back-comp">&#8592; Back</button>' +
+          '</span>' +
           '<button class="btn btn--primary" id="btn-gen">Generate Documentation</button>' +
           '</div>' +
           '</div></div>';
