@@ -550,6 +550,11 @@ function syncViewToggle() {
   document.getElementById('viewmode').style.display = show ? 'inline-flex' : 'none';
   // Same rule as the converters: the tag appears only once there is content.
   document.getElementById('modetag').style.display = show ? '' : 'none';
+  // There is nothing to ask about until a file is in, so the assistant waits
+  // for one - and gets folded away again if both panes are emptied, rather
+  // than being left open with no button to close it from.
+  document.getElementById('btn-chat').style.display = show ? '' : 'none';
+  if (!show && chatOpen) toggleChat();
   if (!show && editorView !== 'edit') setEditorView('edit');
 }
 
@@ -822,6 +827,9 @@ function applyUpdate(which, key) {
 paintChatEmpty();
 paintChatChips();
 growPrompt();
+// Settles the content-gated chrome (tag, view toggle, assistant button) for
+// whatever the panes start out holding.
+syncViewToggle();
 </script>
 <script src="/nav.js"></script>
 </body>
