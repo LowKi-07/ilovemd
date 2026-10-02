@@ -12,8 +12,8 @@
    each. Everything it needs is declared here under --nv-*; the only values
    taken from outside are --tb/--tl, the per-item icon tints set inline.
 
-   --navh is the vertical space the bar wants. Pages offset their own chrome
-   by it, so .nav-hidden collapsing it to 0 reclaims the room. */
+   The bar is fixed and visible in every state. --navh is the vertical space
+   it occupies, so pages can offset their own chrome by it. */
 :root {
   --navh: 80px;
 
@@ -42,7 +42,6 @@
   --nv-r-lg: 16px;
 }
 
-body.nav-hidden { --navh: 0px; }
 
 /* ------------------------------------------------------------------ bar
    Fixed, not sticky: shell.html is a fixed full-viewport layout with no
@@ -58,20 +57,7 @@ body.nav-hidden { --navh: 0px; }
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,.07),
     0 10px 36px rgba(0,0,0,.42);
-  transition: transform .26s var(--nv-ease), opacity .26s var(--nv-ease);
 }
-body.nav-hidden .nav {
-  transform: translateY(calc(-100% - 20px)); opacity: 0; pointer-events: none;
-}
-
-/* Hit-strip across the top, so the pointer can summon the bar back while it
-   is fully out of view. */
-.nav-peek {
-  position: fixed; top: 0; left: 0; right: 0; height: 66px;
-  z-index: 39; pointer-events: none;
-}
-body.nav-autohide .nav-peek { pointer-events: all; }
-
 .nav__in {
   display: flex; align-items: center; gap: 9px; height: 54px;
   position: relative; padding: 0 9px 0 18px; max-width: none; margin: 0;
@@ -187,5 +173,5 @@ body.nav-autohide .nav-peek { pointer-events: all; }
 @media (max-width: 860px) { .nav__links { display: none; } }
 @media (max-width: 620px) { .navdrop__panel { grid-template-columns: 1fr; } }
 @media (prefers-reduced-motion: reduce) {
-  .nav, .navdrop__panel, .hdrop__menu { transition: none; }
+  .navdrop__panel, .hdrop__menu { transition: none; }
 }

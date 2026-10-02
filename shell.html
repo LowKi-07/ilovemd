@@ -1100,6 +1100,9 @@
     var t = $('title');
     t.readOnly = MODE === 'ui';   // component docs are named by the component itself
     t.style.width = Math.min(30, Math.max(4, (t.value || '').length + 1)) + 'ch';
+    // It names a document, so it waits for one. While generating, the spinner
+    // card is already saying which component is being read.
+    t.style.display = S.md ? '' : 'none';
     $('btn-side').setAttribute('aria-pressed', String(S.side));
     $('btn-chat').setAttribute('aria-pressed', String(S.chat));
     $('shell').dataset.side = S.side ? 'open' : 'closed';
@@ -1116,13 +1119,6 @@
       b.setAttribute('aria-pressed', String(b.getAttribute('data-v') === S.view));
     });
     document.body.classList.toggle('subtop-on', MODE === 'ui' && !!S.md);
-    /* Once there is a document to read, the site bar gets out of the way and
-       this toolbar becomes the only chrome. It comes back on a scroll up or
-       when the pointer reaches the top. Convert has no post-generation
-       workflow of its own, so it keeps the bar. */
-    if (window.siteNav) {
-      window.siteNav.autoHide(MODE !== 'convert' && !!S.md);
-    }
     var none = !S.md;
     var hideActions = none && MODE !== 'text';
     $('btn-copy').disabled = none;

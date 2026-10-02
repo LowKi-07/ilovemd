@@ -5,10 +5,7 @@
      <div id="site-nav"></div>
      <script src="/nav.js"></script>
 
-   Auto-hide (shell.html): call window.siteNav.autoHide(true) once a document
-   exists. The bar then stays out of the way and comes back when the pointer
-   reaches the top of the window or the user scrolls up, so the page's own
-   toolbar is the only chrome while reading.                               */
+   The bar is fixed in every state; pages offset their own chrome by --navh. */
 (function () {
   var MARKUP = `<nav class="nav">
   <div class="wrap nav__in">
@@ -170,65 +167,4 @@
     if (open) open.btn.focus();
   });
 
-  /* ---- auto-hide ---- */
-  var autoHide = false;
-  var holdUntil = 0;
-  var peek = null;
-
-  function hidden(v) { document.body.classList.toggle('nav-hidden', v); }
-
-  // Anything open is a reason to stay put; hiding mid-interaction is hostile.
-  function anyOpen() {
-    return drops.some(function (d) { return d.panel.classList.contains('open'); }) ||
-           menus.some(function (m) { return m.menu.classList.contains('open'); });
-  }
-
-  function settle() {
-    if (!autoHide) return;
-    if (anyOpen() || Date.now() < holdUntil) return;
-    hidden(true);
-  }
-
-  function reveal(ms) {
-    if (!autoHide) return;
-    holdUntil = Date.now() + (ms || 1400);
-    hidden(false);
-    setTimeout(settle, (ms || 1400) + 60);
-  }
-
-  window.siteNav = {
-    autoHide: function (on) {
-      var was = autoHide;
-      autoHide = !!on;
-      document.body.classList.toggle('nav-autohide', autoHide);
-      if (!autoHide) { holdUntil = 0; hidden(false); return; }
-
-      if (!peek) {
-        // A hit-strip across the top, so the pointer can summon the bar back
-        // even while it is fully out of view.
-        peek = document.createElement('div');
-        peek.className = 'nav-peek';
-        peek.addEventListener('mouseenter', function () { reveal(900); });
-        document.body.appendChild(peek);
-      }
-      // Callers re-assert this on every repaint (a keystroke, say). Only the
-      // first call should snap it shut; later ones must not yank the bar away
-      // while it is deliberately being held open.
-      if (!was) hidden(true);
-      else settle();
-    },
-    reveal: reveal,
-  };
-
-  // Keep it up while the pointer is actually on the bar.
-  mount.addEventListener('mouseenter', function () { reveal(600); });
-  mount.addEventListener('mouseleave', function () { holdUntil = 0; settle(); });
-
-  // Wheel rather than scroll: shell.html scrolls inner panes, not the document,
-  // so a scroll listener on window would never fire there.
-  window.addEventListener('wheel', function (e) {
-    if (!autoHide) return;
-    if (e.deltaY < -4) reveal();          // scrolling up asks for the bar
-    else if (e.deltaY > 4) { holdUntil = 0; settle(); }
-  }, { passive: true });
 })();
