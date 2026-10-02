@@ -1136,7 +1136,11 @@
     var nochat = ((MODE === 'ui' || MODE === 'figma') && !S.md) || MODE === 'convert';
     $('shell').dataset.noprev = noprev ? '1' : '';
     $('shell').dataset.nochat = nochat ? '1' : '';
-    $('shell').dataset.islands = S.md ? '1' : '';
+    /* Text mode shows its panes from the first paint and has no landing card
+       to double-frame, so it gets the island treatment straight away. The
+       others wait for a document, since until then their single pane is
+       holding a card already. */
+    $('shell').dataset.islands = (S.md || MODE === 'text') ? '1' : '';
     $('btn-chat').style.display = nochat ? 'none' : '';
     $('btn-side').style.display = (MODE === 'convert' || MODE === 'ui' || (MODE === 'figma' && !S.md)) ? 'none' : '';
     $('viewmode').style.display = noprev ? 'none' : '';
