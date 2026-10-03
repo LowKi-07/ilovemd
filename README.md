@@ -1,6 +1,6 @@
 # ilovemd
 
-Anything to Markdown. A local converter and documentation workspace: describe something in plain English, or point it at your UI components' HTML/CSS, and Claude writes structured Markdown you can edit, save and download.
+Anything to Markdown. A local converter and documentation workspace: describe something in plain English, or point it at your UI components' HTML/CSS, and Claude writes structured Markdown you can edit and download.
 
 ## Running it
 
@@ -26,7 +26,7 @@ Leave the Terminal window open while you use the app. Closing it stops the serve
 | `/ui` | UI Component → MD |
 | `/figma` | Figma → MD |
 
-All three share one workspace layout: a hamburger-toggled sidebar on the left (recent documents / component list / recent Figma frames), a Markdown editor and live preview in the middle (Edit / Split / Preview toggle, plus a Source tab on the UI page), and an AI assistant chat on the right. The assistant edits the document - its changes land in the editor with **Keep / Discard / Regenerate** - and can also answer questions about it. Below ~1200px wide the chat becomes a slide-over.
+All three share one workspace layout: a Markdown editor and live preview (Edit / Split / Preview toggle, plus a Source tab on the UI page) and an AI assistant panel on the right, each as its own card. Nothing is written to the server - finished Markdown is downloaded through the browser. The assistant edits the document - its changes land in the editor with **Keep / Discard / Regenerate** - and can also answer questions about it. Below ~1200px wide the chat becomes a slide-over.
 
 ## Text → MD (`/text`)
 
@@ -43,13 +43,13 @@ With no document open, an instruction writes a new file (the filename comes from
 ## UI Component → MD (`/ui`)
 
 1. **Choose Component Folder** opens a real macOS folder picker (the server runs locally, so no browser file-permission dance). Point it at a folder holding your components.
-2. Components appear in the sidebar. A component is either a subfolder (`Button/button.html` + `button.css`) or loose files sharing a basename (`button.html` + `button.css`).
+2. Pick a component from the toolbar's dropdown. A component is either a subfolder (`Button/button.html` + `button.css`) or loose files sharing a basename (`button.html` + `button.css`).
 3. Pick one to inspect its source (the **Source** view, with HTML/CSS tabs), then **Generate Documentation**. Claude analyzes the actual source - anatomy, variants, states, tokens - and never invents what the files can't support.
-4. Review in Preview, refine through the assistant or in Edit, then **Save**. Component docs land in `documents/<Design System>/<Component>.md` - e.g. `documents/Greenfield/BasicForm.md`. **Download** grabs the file through the browser instead.
+4. Review in Preview, refine through the assistant or in Edit, then **Download**. The file is saved by your browser; nothing is written server-side.
 
 ## Figma → MD (`/figma`)
 
-Paste a link to a Figma frame or component and press **Fetch & Generate**. Retrieval goes through whatever Figma access the Claude Code CLI has (for example the official Figma MCP server configured in Claude Code). If the CLI has no working Figma access, ilovemd says so plainly rather than inventing data. Fetched frames appear in the sidebar as recents.
+Paste a link to a Figma frame or component and press **Generate Documentation**. Retrieval goes through the Figma desktop app's own local MCP server, so **keep Figma open** - no access token or admin approval is needed, because the app is already signed in. If it cannot be reached, ilovemd says so plainly rather than inventing data.
 
 ## Where saves go
 

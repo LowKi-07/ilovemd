@@ -22,12 +22,14 @@ It runs in one of two modes from the same codebase, controlled by `ILOVEMD_MODE`
 |---|---|
 | `server.mjs` | Entire backend — HTTP server, all API routes, AI shell-out, file I/O |
 | `shell.html` | Main workspace UI — HTML→MD converter for design-system components (the `/text`, `/ui`, `/figma` route) |
-| `home.html` | Homepage — grid of tool cards linking to each feature |
+| `home.html` | Homepage — hero, filter pills and the grid of tool cards |
+| `nav.css`, `nav.js` | The site nav bar, shared by `home.html`, `shell.html` and `compare.html`. Injected into `<div id="site-nav"></div>` by `nav.js`; self-contained (its own `--nv-*` tokens) because the pages' own design tokens differ. Edit here, not per page |
 | `compare.html` | Side-by-side Markdown diff page with AI chat panel |
 | `app.html` | **Legacy** single-page editor, superseded by `shell.html`. Can be deleted. |
 | `ilovemd.command` | macOS double-click launcher — starts the server in a Terminal window |
 | `fix-ai.command` | Helper script the user runs if the AI stops working (re-runs `claude /login`) |
 | `.claude/launch.json` | Claude Code dev-server config — tells Claude Code how to start the server for the Browser panel |
+| `.claude/settings.json` | Project-level Claude Code permissions (grants the Figma MCP tools). Committed |
 | `login.html` | Public-mode-only password gate page (`/login`) |
 | `package.json` | Declares `mammoth`/`pdf-parse` (public-mode doc conversion only) and the `build`/`start` scripts GoDaddy Node.js Hosting requires |
 | `.ilovemd-state.json` | Local runtime state: persists which design-system kit/folder the user last had open. **Gitignored.** |
@@ -54,13 +56,13 @@ It runs in one of two modes from the same codebase, controlled by `ILOVEMD_MODE`
 | `/api/components` | GET | List components for a given kit |
 | `/api/component` | GET | Get a single component's source details |
 | `/api/component-doc` | POST | **AI call** — generate Markdown doc for a component |
-| `/api/figma-doc` | POST | **AI call** — local mode: generate Markdown from a Figma URL via the CLI's own Figma MCP integration. Public mode: ignores any URL and always documents one fixed, server-configured Figma file via Figma's REST API (`FIGMA_TOKEN` + `ILOVEMD_DEMO_FIGMA_KEY`) — never a visitor-supplied design |
+| `/api/figma-doc` | POST | **AI call** — local mode: retrieves the frame from the **Figma desktop app's own MCP server** on `127.0.0.1:3845` (see **Figma retrieval** below), then has the model write the doc. Falls back to the CLI's Figma MCP if that server is unreachable. Public mode: ignores any URL and always documents one fixed, server-configured Figma file via Figma's REST API (`FIGMA_TOKEN` + `ILOVEMD_DEMO_FIGMA_KEY`) — never a visitor-supplied design |
 | `/api/frame` | POST | Save a Figma URL into the "recent frames" list (`.ilovemd-state.json`). Local mode only — despite the name, this does not extract anything via `osascript` |
 | `/api/pick-folder` | POST | Open a native macOS folder picker (via `osascript`). Local mode only — `404` in public mode |
 | `/api/kit-upload` | POST | Public-mode-only. Receives one file at a time (from a `webkitdirectory` picker) with `?kit=&relpath=`, reconstructing the folder tree under `workspace/<kit>/` — the public-mode replacement for `/api/pick-folder` |
 | `/api/upload` | POST | Accept a file upload, save to `.uploads/`, extract text |
 | `/api/convert` | POST | **AI call** — convert an uploaded file to Markdown. Local mode: DOCX/DOC/RTF/ODT via `textutil`, PDF handed to the CLI's own Read tool. Public mode: DOCX via `mammoth`, PDF via `pdf-parse` (both dynamically imported so local mode never needs them installed); DOC/RTF/RTFD/ODT are not supported in public mode. XLSX/PPTX extraction is a hand-rolled pure-JS ZIP+XML reader in both modes (no `unzip` shell-out) |
-| `/api/save-out` | POST | Save a generated Markdown file to `documents/` |
+| `/api/save-out` | POST | Save a generated Markdown file to `documents/`. **No longer called by the frontend** — the UI downloads through the browser instead. Route kept, and `/api/docs` still reads whatever is already in `documents/` |
 | `/api/docs` | GET | List saved documents |
 | `/api/doc` | GET/PUT/DELETE | Read, update, or delete a saved document |
 | `/api/rename` | POST | Rename a saved document |
@@ -85,6 +87,27 @@ It runs in one of two modes from the same codebase, controlled by `ILOVEMD_MODE`
 If the Claude CLI is not on `PATH` (e.g. GUI launch), `server.mjs` searches several known install locations (`~/.claude/local/claude`, `~/.local/bin/claude`, etc.) and uses `ILOVEMD_AI_CMD` env var as a fallback override.
 
 **If AI returns 502 or errors**: the Claude CLI session has expired. User must open Terminal, run `claude`, type `/login`, authenticate, then reload. `fix-ai.command` automates this.
+
+## Figma retrieval (local mode)
+
+`/api/figma-doc` talks to the **Figma desktop app's Dev Mode MCP server** over plain
+HTTP on `127.0.0.1:3845` (override with `ILOVEMD_FIGMA_MCP_URL`). `fetchFigmaViaLocalMcp()`
+in `server.mjs` speaks MCP streamable-HTTP directly: `initialize` →
+`notifications/initialized` → `tools/call`, with the session id echoed back in an
+`mcp-session-id` header and replies parsed out of SSE framing.
+
+Why not the CLI's Figma MCP: a spawned `claude -p` reconnects to the *cloud* Figma
+connector on every call, and an organization can block those tools pending admin
+approval — which a non-admin cannot then unblock. The local server needs no approval
+and no personal access token, because the desktop app is already signed in.
+
+It calls `get_metadata` (structure) and `get_variable_defs` (bound tokens), **not**
+`get_design_context` — that one returns full generated code and did not finish on a
+real component tree.
+
+**Requires the Figma desktop app to be running** with its local MCP server enabled.
+When it is not, the route falls back to the CLI path and the error message says to
+open Figma.
 
 ## Design-system component workflow (`shell.html`)
 
@@ -116,6 +139,7 @@ Set `ILOVEMD_MODE=public` to run the password-gated public deployment instead of
 
 **Optional env vars**:
 - `HOST=0.0.0.0` — public hosting must set this explicitly; the default stays `127.0.0.1`
+- `ILOVEMD_FIGMA_MCP_URL` — override the local Figma MCP endpoint (default `http://127.0.0.1:3845/mcp`)
 - `ILOVEMD_DATA_DIR` — root for `documents/`, `.uploads/`, `workspace/`, `.ilovemd-state.json`, `.anthropic-key` when they shouldn't live next to `server.mjs` (e.g. GoDaddy requires persistent writes under `/public/assets/`)
 - `ILOVEMD_RATE_LIMIT_PER_HOUR` (default 20) and `ILOVEMD_MAX_CALLS_PER_DAY` (default 200) — in-memory, per-process courtesy limits on AI calls, checked inside `runAI()` before every call regardless of which route triggered it. These are **not** a substitute for a spending limit set on the Anthropic API key itself in the Anthropic console — a leaked password could still burn calls fast within the caps
 - `FIGMA_TOKEN` + `ILOVEMD_DEMO_FIGMA_KEY` — enables the fixed Figma demo (see the `/api/figma-doc` row above)
