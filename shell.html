@@ -608,7 +608,6 @@
 <div id="site-nav"></div>
 
 <header class="top">
-  <button class="burger" id="btn-side" title="Show or hide the sidebar" aria-pressed="false">&#9776;</button>
   <span class="modetag" id="modetag"></span>
   <input id="title" value="" spellcheck="false" aria-label="Document name">
   <span class="status" id="status"></span>
@@ -1055,7 +1054,7 @@
         stash();
         S.pending = true; S.dirty = true;
         S.last = null;
-        setStatus('dirty', 'not saved');
+        setStatus('dirty', '');
         paintEditor(); paintPreview();
         say('a', '<b>Applied your answers</b> in ' + Math.round((Date.now() - t0) / 1000) + 's - review the patched sections, then <b>Keep</b> or <b>Discard</b>.');
       } else {
@@ -1127,7 +1126,6 @@
     // It names a document, so it waits for one. While generating, the spinner
     // card is already saying which component is being read.
     t.style.display = S.md ? '' : 'none';
-    $('btn-side').setAttribute('aria-pressed', String(S.side));
     $('btn-chat').setAttribute('aria-pressed', String(S.chat));
     $('shell').dataset.side = S.side ? 'open' : 'closed';
     $('shell').dataset.chat = S.chat ? 'open' : 'closed';
@@ -1142,7 +1140,6 @@
        holding a card already. */
     $('shell').dataset.islands = (S.md || MODE === 'text') ? '1' : '';
     $('btn-chat').style.display = nochat ? 'none' : '';
-    $('btn-side').style.display = (MODE === 'convert' || MODE === 'ui' || (MODE === 'figma' && !S.md)) ? 'none' : '';
     $('viewmode').style.display = noprev ? 'none' : '';
     Array.prototype.forEach.call($('viewmode').querySelectorAll('[data-v]'), function (b) {
       b.setAttribute('aria-pressed', String(b.getAttribute('data-v') === S.view));
@@ -1308,7 +1305,7 @@
       S.md = ta.value;
       stash();
       S.dirty = true;
-      setStatus('dirty', 'not saved');
+      setStatus('dirty', '');
       clearTimeout(ta._t);
       // paintTop too: going from empty to non-empty is what tells the site bar
       // to get out of the way, and typing is how that happens in text mode.
@@ -1583,7 +1580,7 @@
     S.q = null; S.qList = null;
     S.docName = null; S.mtime = 0; S.dirty = false; S.before = null; S.pending = false;
     setDoc('', '');
-    setStatus('', 'not saved yet');
+    setStatus('', '');
     paintSidebar();
     $('prompt').focus();
   }
@@ -1690,7 +1687,7 @@
     S.before = null; S.pending = false;
     var existing = S.uiDocs[id] || '';
     setDoc(existing, cap(S.curName));
-    setStatus('', existing ? 'generated, not saved' : '');
+    setStatus('', '');
     paintSidebar();
   }
   async function generate() {
@@ -1724,7 +1721,7 @@
       S.view = 'split';
       S.before = prevDoc; S.pending = true; S.last = { gen: true };
       setDoc(r.markdown, cap(S.curName));
-      setStatus('dirty', 'generated, not saved');
+      setStatus('dirty', '');
       say('a', '<b>Generated documentation for ' + esc(cap(S.curName)) + '</b> in ' + Math.round(r.ms / 1000) + 's. Review it, tell me what to change, or press Download.');
       startQuestions(true);
       paintSidebar();
@@ -1761,7 +1758,7 @@
       S.qList = r.questions || [];
       S.before = prevDoc; S.pending = true; S.last = { figDemo: true };
       setDoc(r.markdown, (r.suggestedName || 'Figma demo.md'));
-      setStatus('dirty', 'generated, not saved');
+      setStatus('dirty', '');
       say('a', '<b>Generated documentation</b> from the Figma demo in ' + Math.round(r.ms / 1000) + 's. Review it, tell me what to change, or press Download.');
       startQuestions(true);
     } catch (e) {
@@ -1808,7 +1805,7 @@
       S.qList = r.questions || [];
       S.before = prevDoc; S.pending = true; S.last = { fig: url };
       setDoc(r.markdown, (r.suggestedName || 'Figma component.md'));
-      setStatus('dirty', 'generated, not saved');
+      setStatus('dirty', '');
       say('a', '<b>Generated documentation</b> from the Figma frame in ' + Math.round(r.ms / 1000) + 's. Review it, tell me what to change, or press Download.');
       startQuestions(true);
       try {
@@ -1845,7 +1842,7 @@
       var u = $('figurl');
       if (u) u.value = url;
     }
-    setStatus('', existing ? 'generated, not saved' : '');
+    setStatus('', '');
     paintSidebar();
   }
 
@@ -1886,7 +1883,7 @@
       S.view = 'split';
       S.before = null; S.pending = false;
       setDoc(r.markdown, (r.suggestedName || S.curName).replace(/\.md$/i, '').replace(/\.[a-z0-9]+$/i, ''));
-      setStatus('', 'converted');
+      setStatus('', '');
       toast('Converted ' + S.curName + ' in ' + Math.round(r.ms / 1000) + 's');
     } catch (e) {
       clearInterval(tick);
@@ -1953,7 +1950,7 @@
           $('title').value = r.suggestedName.replace(/\.md$/i, '');
         }
         if (r.questions && r.questions.length) S.qList = r.questions;
-        setStatus('dirty', 'not saved');
+        setStatus('dirty', '');
         paintEditor(); paintPreview();
         say('a', '<b>' + (wasNew ? 'Wrote the document' : 'Updated the document') + '</b> in ' +
           Math.round((Date.now() - t0) / 1000) + 's - review the editor, then <b>Keep</b> or <b>Discard</b>.');
@@ -1983,7 +1980,7 @@
     S.md = S.before;
     stash();
     S.before = null; S.pending = false; S.dirty = true; S.q = null; S.qList = null;
-    setStatus('dirty', 'not saved');
+    setStatus('dirty', '');
     paintEditor(); paintPreview(); validate(); paintChat(); paintTop();
     say('a', 'Discarded. Your previous text is back.');
   }
@@ -2013,7 +2010,6 @@
   }
 
   /* ============================================================== events */
-  $('btn-side').onclick = function () { S.side = !S.side; paintTop(); };
   $('btn-chat').onclick = function () { S.chat = !S.chat; paintTop(); };
   $('viewmode').addEventListener('click', function (e) {
     var b = e.target.closest('[data-v]');
@@ -2044,7 +2040,7 @@
   });
   $('title').addEventListener('input', function () {
     S.dirty = true;
-    setStatus('dirty', 'not saved');
+    setStatus('dirty', '');
     var t = $('title');
     t.style.width = Math.min(30, Math.max(4, (t.value || '').length + 1)) + 'ch';
   });
@@ -2058,7 +2054,7 @@
   // The sidebar is transient: any click outside it (or its hamburger) closes it.
   document.addEventListener('pointerdown', function (e) {
     if (!S.side) return;
-    if (e.target.closest('.side') || e.target.closest('#btn-side')) return;
+    if (e.target.closest('.side')) return;
     S.side = false;
     paintTop();
   });
@@ -2093,7 +2089,7 @@
     if (MODE === 'text') {
       // Start blank: recent documents live in the sidebar, not in the editor.
       await loadDocs();
-      setStatus('', 'not saved yet');
+      setStatus('', '');
     } else if (MODE === 'ui') {
       await loadKits();
       await loadComponents();
