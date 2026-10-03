@@ -1123,9 +1123,11 @@
     var t = $('title');
     t.readOnly = MODE === 'ui';   // component docs are named by the component itself
     t.style.width = Math.min(30, Math.max(4, (t.value || '').length + 1)) + 'ch';
-    // It names a document, so it waits for one. While generating, the spinner
-    // card is already saying which component is being read.
-    t.style.display = S.md ? '' : 'none';
+    /* Text mode names its own download, so the field is there from the
+       start. Elsewhere the name comes from the component or file being read,
+       so it waits for one - and while generating, the spinner card is already
+       saying which that is. */
+    t.style.display = (S.md || MODE === 'text') ? '' : 'none';
     $('btn-chat').setAttribute('aria-pressed', String(S.chat));
     $('shell').dataset.side = S.side ? 'open' : 'closed';
     $('shell').dataset.chat = S.chat ? 'open' : 'closed';
@@ -1350,7 +1352,7 @@
   function setDoc(text, name) {
     S.md = text || '';
     stash();
-    if (name != null) $('title').value = String(name).replace(/\.md$/i, '');
+    if (name != null) $('title').value = String(name);
     paintEditor(); paintPreview(); validate(); paintTop(); paintChat();
   }
 
@@ -1579,7 +1581,7 @@
     if (S.dirty && S.md && !window.confirm('Discard unsaved changes?')) return;
     S.q = null; S.qList = null;
     S.docName = null; S.mtime = 0; S.dirty = false; S.before = null; S.pending = false;
-    setDoc('', '');
+    setDoc('', MODE === 'text' ? 'untitled.md' : '');
     setStatus('', '');
     paintSidebar();
     $('prompt').focus();
@@ -1947,7 +1949,7 @@
         S.pending = true; S.dirty = true;
         if (wasNew && MODE === 'text' && r.suggestedName) {
           S.docName = null; S.mtime = 0;
-          $('title').value = r.suggestedName.replace(/\.md$/i, '');
+          $('title').value = r.suggestedName;
         }
         if (r.questions && r.questions.length) S.qList = r.questions;
         setStatus('dirty', '');
@@ -2090,6 +2092,10 @@
       // Start blank: recent documents live in the sidebar, not in the editor.
       await loadDocs();
       setStatus('', '');
+      // Nothing names the file in this mode, so seed it - it is what the
+      // download is called, and it is editable in place.
+      if (!$('title').value.trim()) $('title').value = 'untitled.md';
+      paintTop();
     } else if (MODE === 'ui') {
       await loadKits();
       await loadComponents();
