@@ -20,7 +20,7 @@
     --hairline-strong: rgba(255,255,255,.16);
     --accent-soft: rgba(139,124,255,.16);
     --accent-2: #3fd0e0;
-    --r-sm: 8px; --r-md: 12px; --r-pill: 999px;
+    --r-sm: 8px; --r-md: 12px; --r-lg: 18px; --r-pill: 999px;
     --blur: saturate(180%) blur(16px);
     --ease: cubic-bezier(.2,.8,.3,1);
   }
@@ -92,7 +92,7 @@
   /* ---- page body: main + chat ---- */
   .page { position: relative; flex: 1; }
   .main { padding: 28px 24px 64px; transition: margin-right .22s ease; }
-  .main.chat-open { margin-right: var(--chat-w); }
+  .main.chat-open { margin-right: calc(var(--chat-w) + 26px); }
 
   /* ---- two input panels ---- */
   .panels { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
@@ -161,11 +161,20 @@
      Styled to match shell.html's assistant panel. The sliding-overlay
      mechanics stay, because this page is a single scrolling column rather
      than shell.html's fixed flex row. */
+  /* An inset card, matching the assistant pane in the converters: same fill,
+     radius and border, held off the window edges rather than running
+     edge-to-edge with a single divider. Note the fill is a white wash, not
+     this page's --panel, which is an opaque colour unlike shell.html's. */
   .chat {
-    position: fixed; top: calc(var(--navh) + 52px); right: 0; bottom: 0; width: var(--chat-w);
-    border-left: 1px solid var(--hairline); background: var(--canvas);
+    position: fixed; z-index: 10;
+    top: calc(var(--navh) + 52px); right: 14px; bottom: 14px;
+    width: var(--chat-w);
+    border: 1px solid var(--hairline);
+    border-radius: var(--r-lg);
+    background: rgba(255,255,255,.04);
     display: flex; flex-direction: column; overflow: hidden;
-    transform: translateX(100%); transition: transform .22s var(--ease); z-index: 10;
+    transform: translateX(calc(100% + 14px));
+    transition: transform .22s var(--ease);
   }
   .chat.open { transform: translateX(0); }
   /* No rule or tint under the label: inside a card it read as a seam across
@@ -336,9 +345,6 @@
     <div class="phead">
       <span class="lbl">AI Assistant</span>
       <span class="sp"></span>
-      <button class="ibtn" onclick="toggleChat()" title="Hide the assistant" aria-label="Hide the assistant">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
     </div>
     <div class="msgs" id="chat-msgs"></div>
     <div class="chatfoot">
