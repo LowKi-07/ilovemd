@@ -708,6 +708,9 @@
     '<path d="M17 8.5v5.5m0 0-2-2m2 2 2-2" fill="none" stroke="#8b7cff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   var FIGMA_SVG = '<svg viewBox="0 0 24 24"><path fill="#F24E1E" d="M12 2H8.5a3.5 3.5 0 0 0 0 7H12V2z"/><path fill="#FF7262" d="M12 2h3.5a3.5 3.5 0 0 1 0 7H12V2z"/><path fill="#A259FF" d="M12 9H8.5a3.5 3.5 0 0 0 0 7H12V9z"/><path fill="#0ACF83" d="M8.5 16a3.5 3.5 0 1 0 3.5 3.5V16H8.5z"/><circle fill="#1ABCFE" cx="15.5" cy="12.5" r="3.5"/></svg>';
 
+  // The active AI provider's name, from /api/setup.
+  function aiName() { return S.aiLabel || 'AI'; }
+
   var S = {
     view: 'split', side: false, chat: true,
     md: '', before: null, pending: false, busy: false, last: null, q: null,
@@ -1058,7 +1061,7 @@
         paintEditor(); paintPreview();
         say('a', '<b>Applied your answers</b> in ' + Math.round((Date.now() - t0) / 1000) + 's - review the patched sections, then <b>Keep</b> or <b>Discard</b>.');
       } else {
-        say('a', 'Claude returned nothing. Your text is unchanged.', true);
+        say('a', aiName() + ' returned nothing. Your text is unchanged.', true);
       }
     } catch (e) {
       clearInterval(tick);
@@ -1206,7 +1209,7 @@
         wrap.innerHTML =
           '<div class="placeholder"><div class="dropbox">' +
           '<h3>' + esc(cap(S.curName)) + '</h3>' +
-          '<p>Claude reads ' + what + '. Nothing is sent until you generate.</p>' +
+          '<p>' + aiName() + ' reads ' + what + '. Nothing is sent until you generate.</p>' +
           '<div class="dropbox__actions">' +
           '<span class="dropbox__back">' +
           '<button class="btn btn--ghost btn--sm" id="btn-back-comp">&#8592; Back</button>' +
@@ -1287,7 +1290,7 @@
         '<span class="ftile" style="--tb:rgba(139,124,255,.12);--tl:rgba(139,124,255,.3)">' + MD_SVG + '</span>' +
         '</div>' +
         '<h3>Figma &rarr; Markdown</h3>' +
-        '<p>Paste a link to a Figma frame or component. Claude retrieves it through its Figma connection and writes structured documentation.</p>' +
+        '<p>Paste a link to a Figma frame or component. ilovemd retrieves it from the Figma desktop app and ' + aiName() + ' writes structured documentation.</p>' +
         '<input id="figurl" type="text" spellcheck="false" placeholder="https://www.figma.com/design/…?node-id=…">' +
         '<button class="btn btn--primary" id="btn-fig">Generate Documentation</button>' +
         '</div></div>';
@@ -1924,7 +1927,7 @@
 
     var t0 = Date.now();
     var tick = setInterval(function () {
-      $('valid').innerHTML = '<span style="color:var(--accent)">&#9679;</span> Claude is ' +
+      $('valid').innerHTML = '<span style="color:var(--accent)">&#9679;</span> ' + aiName() + ' is ' +
         (asking ? 'answering' : 'writing') + '… ' + Math.round((Date.now() - t0) / 1000) + 's';
     }, 500);
 
@@ -1941,7 +1944,7 @@
         say('a', md(r.answer || '(no answer)'));
       } else if (!r.markdown || !r.markdown.trim()) {
         S.md = S.before || '';
-        say('a', 'Claude returned nothing. Your text is unchanged.', true);
+        say('a', aiName() + ' returned nothing. Your text is unchanged.', true);
       } else {
         var wasNew = body.mode === 'new';
         S.md = r.markdown;
@@ -1964,7 +1967,7 @@
         say('a', 'Stopped. Your text is unchanged.');
       } else {
         var p = e.payload || {};
-        say('a', '<b>Claude could not do that.</b> ' + esc(p.explain || e.message), true);
+        say('a', '<b>' + aiName() + ' could not do that.</b> ' + esc(p.explain || e.message), true);
       }
       S.pending = false;
     }
@@ -2073,6 +2076,7 @@
       var setup = await api('/api/setup');
       S.siteMode = setup.mode;
       S.figmaDemo = setup.figmaDemo;
+      S.aiLabel = setup.ai && setup.ai.label;
     } catch (e) { S.siteMode = 'local'; }
     if (S.siteMode === 'public') {
       var lo = $('menu-logout');

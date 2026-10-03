@@ -56,7 +56,7 @@
         <div class="navdrop__panel" id="nd-generate" role="menu" aria-labelledby="nd-btn-generate">
           <a class="navitem" role="menuitem" href="/text">
             <span class="navitem__ic" style="--tb:rgba(139,124,255,.12);--tl:rgba(139,124,255,.3)"><svg viewBox="0 0 24 24" fill="none" stroke="#8b7cff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7z"/><path d="M14 2v5h5"/><path d="M9 12h6M9 16h6M9 8h2"/></svg></span>
-            <span class="navitem__tx"><b>Text</b><span>Describe it in plain English, Claude writes it</span></span>
+            <span class="navitem__tx"><b>Text</b><span>Describe it in plain English, AI writes it</span></span>
           </a>
           <a class="navitem" role="menuitem" href="/ui">
             <span class="navitem__ic" style="--tb:rgba(228,77,38,.12);--tl:rgba(228,77,38,.32)"><svg viewBox="0 0 24 24"><path fill="#E44D26" d="M3.5 2h17l-1.55 17.5L12 21.8l-6.95-2.3L3.5 2z"/><path fill="#F16529" d="M12 3.6v16.55l5.62-1.86L18.9 3.6H12z"/><polyline points="10,8.7 7,11.7 10,14.7" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><polyline points="14,8.7 17,11.7 14,14.7" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>

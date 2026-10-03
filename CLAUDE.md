@@ -7,20 +7,24 @@
 It runs in one of two modes from the same codebase, controlled by `ILOVEMD_MODE`:
 
 - **`local`** (default) — the original single-developer tool. Runs on `localhost:7777` only, no login wall, no cloud backend: all AI calls shell out to the **Claude CLI** (`claude -p`), reusing whatever OAuth session the user already has from `claude` in their terminal. Started by double-clicking `ilovemd.command` on macOS.
-- **`public`** — a password-gated demo instance meant to be reachable from the internet (e.g. GoDaddy Node.js Hosting behind a custom domain). No CLI dependency: AI calls go straight to the Anthropic Messages API over HTTPS with a server-side `ANTHROPIC_API_KEY`. See **Public mode** below for the full picture — env vars, guardrails, what's different.
+- **`public`** — a password-gated demo instance meant to be reachable from the internet (Render or GoDaddy cPanel hosting behind a custom domain — see `DEPLOY.md`). No CLI dependency: AI calls go straight to a vendor HTTPS API (Gemini by default) with a server-side key. See **Public mode** below for the full picture — env vars, guardrails, what's different.
 
 ## Architecture
 
 - **Runtime**: Node.js. Local mode is zero-dependency stdlib (`http`, `fs`, `child_process`, `path`, `crypto`, `zlib`). Public mode additionally uses two small npm packages (`mammoth`, `pdf-parse`) — see **Public mode**.
 - **Server**: `server.mjs` — single file, ~2 000 lines. `PORT` and `HOST` are configurable via env vars; `HOST` defaults to `127.0.0.1` (loopback only) and only changes if explicitly set (e.g. by public hosting).
-- **AI layer**: `runAI(prompt, req)` in `server.mjs` dispatches by `ILOVEMD_MODE`. In local mode it shells out to `claude -p "<prompt>"` (or via stdin for large prompts), trying multiple invocation strategies automatically — no Anthropic API key needed, since it piggybacks on the Claude Code OAuth session (an `ANTHROPIC_API_KEY` env var or `.anthropic-key` file can override this to redirect the *CLI's own* auth). In public mode it calls `runAIViaAPI()`, a direct HTTPS call to the Anthropic Messages API using `ANTHROPIC_API_KEY` — no CLI involved at all.
+- **AI layer**: all vendor-specific code lives in `ai/` behind one provider interface (`check`, `generate`, `explain`, `diagnose`, `describe`, `capabilities`) — documented at the top of `ai/index.mjs`. `server.mjs` only calls `createAIService()` once and then `ai.*`; `runAI(prompt, req)` applies public-mode rate limits and calls `ai.generate()`. `ILOVEMD_AI_PROVIDER` picks the backend: `claude-cli` (local-mode default — shells out to `claude -p`, piggybacking on the Claude Code OAuth session), `gemini`, `grok`, `openai`, `anthropic`. Unset in public mode, the first API key present wins (Gemini, Grok, OpenAI, Anthropic). `capabilities.readsLocalFiles` / `mcpTools` are true only for `claude-cli`: other providers get PDFs via `pdf-parse` and skip the CLI-MCP Figma fallback. **Add a vendor by adding a provider file, never by branching on vendor in `server.mjs`.**
 - **Frontend**: plain HTML/CSS/JS files served statically by `server.mjs`. No build step, no bundler.
 
 ## Key files
 
 | File | Purpose |
 |---|---|
-| `server.mjs` | Entire backend — HTTP server, all API routes, AI shell-out, file I/O |
+| `server.mjs` | Entire backend — HTTP server, all API routes, file I/O. Gets AI only through `ai/` |
+| `ai/index.mjs` | `createAIService()` — provider interface docs and provider selection |
+| `ai/providers/*.mjs` | One file per backend: `claude-cli`, `anthropic`, `gemini`, `openai-compatible` (Grok + OpenAI). `ai/shared.mjs` has the HTTP/error helpers |
+| `app.cjs` | CommonJS startup shim for require()-based hosts (cPanel / Passenger) — just `import('./server.mjs')` |
+| `DEPLOY.md`, `render.yaml`, `.env.example` | Public deployment guide (Render + GoDaddy DNS, or GoDaddy cPanel), Render blueprint, and every env var |
 | `shell.html` | Main workspace UI — HTML→MD converter for design-system components (the `/text`, `/ui`, `/figma` route) |
 | `home.html` | Homepage — hero, filter pills and the grid of tool cards |
 | `nav.css`, `nav.js` | The site nav bar, shared by `home.html`, `shell.html` and `compare.html`. Injected into `<div id="site-nav"></div>` by `nav.js`; self-contained (its own `--nv-*` tokens) because the pages' own design tokens differ. Edit here, not per page |
@@ -69,7 +73,7 @@ It runs in one of two modes from the same codebase, controlled by `ILOVEMD_MODE`
 | `/api/ai` | POST | **AI call** — general "generate/improve Markdown" endpoint used by shell.html |
 | `/api/compare-ai` | POST | **AI call** — compare two Markdown files; AI can return updated versions |
 | `/api/setup` | GET | Report current AI strategy status, plus `mode` and (public mode) `figmaDemo` availability, for the frontend to adapt its UI |
-| `/api/ai/diagnose` | GET | Test all AI invocation strategies and report which ones work (local mode only — meaningless in public mode) |
+| `/api/ai/diagnose` | GET | Probe the active provider (for `claude-cli`, every invocation strategy) and report what works. `404` in public mode, since probes cost money |
 | `/api/login` | POST | Public-mode-only. Checks `{password}` against `ILOVEMD_GATE_PASSWORD`, sets a signed session cookie |
 | `/api/logout` | POST | Public-mode-only. Clears the session cookie (the token itself remains valid until it expires — see **Public mode**) |
 
@@ -77,7 +81,7 @@ It runs in one of two modes from the same codebase, controlled by `ILOVEMD_MODE`
 
 ## AI integration details (local mode)
 
-`runAI(prompt, req)` dispatches to the direct-API path in public mode (see **Public mode**) or, in local mode, tries multiple CLI invocation strategies in priority order:
+With `ILOVEMD_AI_PROVIDER` unset (or `claude-cli`), `ai/providers/claude-cli.mjs` tries multiple CLI invocation strategies in priority order:
 
 1. **Pinned winner** — whichever strategy succeeded last time is tried first
 2. **Stdin delivery** — `echo "prompt" | claude -p -` (works for long prompts)
@@ -135,7 +139,7 @@ Set `ILOVEMD_MODE=public` to run the password-gated public deployment instead of
 **Required env vars** (the server refuses to start in public mode without the first two):
 - `ILOVEMD_GATE_PASSWORD` — the one shared password protecting the whole site
 - `ILOVEMD_SESSION_SECRET` — random secret used to HMAC-sign session cookies
-- `ANTHROPIC_API_KEY` — used for direct Messages API calls (not the CLI)
+- One AI key: `GEMINI_API_KEY` (default), `XAI_API_KEY`, `OPENAI_API_KEY` or `ANTHROPIC_API_KEY` — optionally with `ILOVEMD_AI_PROVIDER` to choose explicitly and `ILOVEMD_AI_MODEL` to override the provider's default model
 
 **Optional env vars**:
 - `HOST=0.0.0.0` — public hosting must set this explicitly; the default stays `127.0.0.1`
@@ -145,7 +149,7 @@ Set `ILOVEMD_MODE=public` to run the password-gated public deployment instead of
 - `FIGMA_TOKEN` + `ILOVEMD_DEMO_FIGMA_KEY` — enables the fixed Figma demo (see the `/api/figma-doc` row above)
 
 **What's different from local mode**:
-- AI calls go straight to `https://api.anthropic.com/v1/messages` (`runAIViaAPI()`), not the CLI
+- AI calls go straight to the chosen vendor's HTTPS API, never the CLI (`claude-cli` is refused at startup in public mode)
 - Every route is behind the password gate except `/login` and `/api/login`; unauthenticated `/api/*` requests get `401`, unauthenticated pages redirect to `/login`
 - Sessions are stateless signed cookies (7-day expiry) with no server-side revocation list — `/api/logout` clears the browser's cookie, but a copied cookie string stays valid until it expires. Acceptable for a single shared-password demo; would need a real session store to do better
 - `realDir()` confines every `dir` a client can pass (`/api/kits`, `/api/components`, `/api/component`, `/api/component-doc`) to under `workspace/` — a client can never make the server read an arbitrary path on its own disk, unlike local mode where that's the entire point

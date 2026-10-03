@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /* ======================================================================
-   ilovemd - anything to Markdown. A local converter with Claude in the editor.
+   ilovemd - anything to Markdown. A local converter with AI in the editor.
 
      node server.mjs        ->  http://127.0.0.1:7777   (homepage)
                                 http://127.0.0.1:7777/app  (the editor)
@@ -12,11 +12,14 @@
    Access API. That is deliberate - it means no Chrome-only restriction, no
    permission prompts, no folder to re-connect after a restart. Save just works.
 
-   The prompt bar calls POST /api/ai, which shells out to the Claude Code CLI,
-   so there is no API key in this folder or in the browser. It reuses whatever
-   auth `claude` already has.
+   The prompt bar calls POST /api/ai, which goes through the AIService in ./ai/.
+   By default (local mode) that shells out to the Claude Code CLI, so there is
+   no API key in this folder or in the browser - it reuses whatever auth
+   `claude` already has. ILOVEMD_AI_PROVIDER switches it to Gemini, Grok,
+   OpenAI or the Anthropic API instead.
 
-   Loopback only. Nothing here is reachable from the network.
+   Local mode is loopback only. Public mode (ILOVEMD_MODE=public) is the
+   password-gated internet deployment - see DEPLOY.md.
    ====================================================================== */
 
 import fs from 'node:fs';
@@ -26,6 +29,7 @@ import zlib from 'node:zlib';
 import crypto from 'node:crypto';
 import { spawn, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { createAIService } from './ai/index.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 
@@ -72,48 +76,6 @@ const PORT = Number(process.env.PORT || 7777);
 const HOST = process.env.HOST || '127.0.0.1';
 const BUILD = 'ilovemd-1';
 
-/* Finding the CLI. `claude` on PATH is the normal case, but a GUI-launched
-   process does not always inherit a login shell's PATH, and the installer puts
-   the binary in different places depending on how it was installed. So: if the
-   bare name is not runnable, look in the known locations before giving up. */
-const HOME = process.env.HOME || '';
-const CLI_CANDIDATES = [
-  path.join(HOME, '.claude', 'local', 'claude'),
-  path.join(HOME, '.local', 'bin', 'claude'),
-  path.join(HOME, '.bun', 'bin', 'claude'),
-  path.join(HOME, '.npm-global', 'bin', 'claude'),
-  '/opt/homebrew/bin/claude',
-  '/usr/local/bin/claude',
-  '/usr/bin/claude',
-];
-
-/* Optional escape hatch from OAuth. The CLI accepts ANTHROPIC_API_KEY and
-   prefers it over its stored sign-in, so a key makes the prompt bar work even
-   when the OAuth token has been revoked. Put the key in a file next to this
-   server rather than exporting it every time.
-
-   The file is read once at startup and passed only to the child process - it is
-   never sent to the browser and never appears in an API response. */
-const KEY_FILE = DATA_DIR ? path.join(DATA_DIR, '.anthropic-key') : path.join(HERE, '.anthropic-key');
-function readKeyFile() {
-  try {
-    const raw = fs.readFileSync(KEY_FILE, 'utf8').trim();
-    // Ignore a placeholder or a commented-out line.
-    if (!raw || raw.startsWith('#')) return '';
-    return raw.split('\n')[0].trim();
-  } catch (e) { return ''; }
-}
-
-const AI = {
-  command: process.env.ILOVEMD_AI_CMD || 'claude',
-  apiKey: process.env.ANTHROPIC_API_KEY || readKeyFile(),
-  resolvedFrom: 'PATH',
-  model: process.env.ILOVEMD_AI_MODEL || '',
-  timeoutMs: Number(process.env.ILOVEMD_AI_TIMEOUT || 300000),
-  pinned: process.env.ILOVEMD_AI_STRATEGY || '',
-  winner: null,
-};
-
 /* ---- public-mode-only configuration ----
    None of this is read or used when MODE is 'local'. */
 const GATE_PASSWORD = process.env.ILOVEMD_GATE_PASSWORD || '';
@@ -133,18 +95,6 @@ if (MODE === 'public' && (!GATE_PASSWORD || !SESSION_SECRET)) {
   console.error('ILOVEMD_MODE=public requires ILOVEMD_GATE_PASSWORD and ILOVEMD_SESSION_SECRET to be set.');
   process.exit(1);
 }
-
-/* How the CLI wants to be called varies by version, and two things vary
-   independently: how the prompt is delivered, and which flags are accepted. So
-   all four combinations are tried and the one that answers is kept. stdin is a
-   real /dev/null for the argument forms, which is what stops the CLI waiting
-   and warning "no stdin data received in 3s". */
-const STRATEGIES = [
-  { name: 'argv', note: 'full flags, prompt as trailing argument', flags: 'full', deliver: 'argv' },
-  { name: 'bare-argv', note: 'only -p, prompt as trailing argument', flags: 'none', deliver: 'argv' },
-  { name: 'stdin', note: 'full flags, prompt piped on stdin', flags: 'full', deliver: 'stdin' },
-  { name: 'bare-stdin', note: 'only -p, prompt piped on stdin', flags: 'none', deliver: 'stdin' },
-];
 
 const SYSTEM_PROMPT = [
   'You write clear, well-structured Markdown documents.',
@@ -1134,14 +1084,14 @@ function pptxText(file) {
   }).join('\n\n');
 }
 
-// Returns { content } for extracted text, or { selfRead: true } when the CLI
-// should read the file itself (local mode PDFs - the CLI's Read tool parses
-// those directly). Public mode has no CLI/Read tool, so PDF and DOCX go
-// through npm packages instead - loaded with a dynamic import so local mode
+// Returns { content } for extracted text, or { selfRead: true } when the AI
+// backend can read the file itself (the Claude CLI's Read tool parses PDFs
+// directly). Other providers, and public mode, get PDF and DOCX through npm
+// packages instead - loaded with a dynamic import so local mode
 // (zero npm dependencies) never has to have them installed.
 async function extractFile(file, ext) {
   if (ext === '.pdf') {
-    if (MODE === 'public') {
+    if (!ai.capabilities.readsLocalFiles) {
       const { default: pdfParse } = await import('pdf-parse');
       const data = await pdfParse(fs.readFileSync(file));
       if (!data.text.trim()) throw new Error('pdf-parse could not read this file');
@@ -1210,284 +1160,29 @@ function convertPrompt(filename, extracted, filePath) {
 
 /* -------------------------------------------------------------------- ai */
 
-let aiStatus = { available: false, detail: 'not checked', command: AI.command, model: AI.model || 'CLI default' };
-
-// Try one specific command. Resolves { ok, detail }.
-function tryVersion(cmd) {
-  return new Promise((done) => {
-    let p;
-    try {
-      p = spawn(cmd, ['--version'], {
-        cwd: HERE, stdio: ['ignore', 'pipe', 'pipe'],
-        env: AI.apiKey ? { ...process.env, ANTHROPIC_API_KEY: AI.apiKey } : process.env,
-      });
-    } catch (e) {
-      return done({ ok: false, detail: e.message });
-    }
-    let out = '', err = '';
-    const timer = setTimeout(() => { p.kill('SIGKILL'); done({ ok: false, detail: 'timed out' }); }, 20000);
-    p.stdout.on('data', (d) => (out += d));
-    p.stderr.on('data', (d) => (err += d));
-    p.on('error', (e) => { clearTimeout(timer); done({ ok: false, detail: e.code === 'ENOENT' ? 'not found' : e.message }); });
-    p.on('close', (code) => {
-      clearTimeout(timer);
-      done(code === 0
-        ? { ok: true, detail: out.trim() || 'ready' }
-        : { ok: false, detail: (err.trim().split('\n')[0] || `exited ${code}`) });
-    });
-  });
+/* Every vendor-specific detail lives in ./ai/ behind one interface - see
+   ai/index.mjs. ILOVEMD_AI_PROVIDER picks the backend. */
+let ai;
+try {
+  ai = createAIService({ mode: MODE, here: HERE, dataDir: DATA_DIR, systemPrompt: SYSTEM_PROMPT });
+} catch (e) {
+  console.error(e.message);
+  process.exit(1);
 }
 
-async function checkAI() {
-  // Public mode never shells out to a CLI - it calls the Anthropic API
-  // directly, so "available" just means a key is configured.
-  if (MODE === 'public') {
-    return {
-      available: !!AI.apiKey,
-      detail: AI.apiKey ? 'Anthropic API key configured' : 'ANTHROPIC_API_KEY is not set',
-      command: 'direct API', resolvedFrom: 'env', model: AI.model || 'default', searched: [],
-    };
-  }
-  // The configured name first, then the usual install locations.
-  const tries = [{ cmd: AI.command, from: 'PATH' }];
-  if (!process.env.ILOVEMD_AI_CMD) {
-    for (const p of CLI_CANDIDATES) {
-      if (fs.existsSync(p)) tries.push({ cmd: p, from: p });
-    }
-  }
+let aiStatus = { available: false, detail: 'not checked' };
 
-  const notes = [];
-  for (const t of tries) {
-    const r = await tryVersion(t.cmd);
-    if (r.ok) {
-      AI.command = t.cmd;
-      AI.resolvedFrom = t.from;
-      return {
-        available: true, detail: r.detail, command: t.cmd,
-        resolvedFrom: t.from, model: AI.model || 'CLI default',
-        searched: notes,
-      };
-    }
-    notes.push(`${t.cmd}: ${r.detail}`);
-  }
-
-  return {
-    available: false,
-    detail: notes[0] || 'not found',
-    command: AI.command,
-    resolvedFrom: null,
-    model: AI.model || 'CLI default',
-    searched: notes,
-    // Where we looked, so "not found" is checkable rather than mysterious.
-    looked: tries.map((t) => t.cmd),
-    pathSeen: (process.env.PATH || '').split(':'),
-  };
+// Resolves true when AI is usable; otherwise answers 503 itself.
+async function ensureAI(res) {
+  if (aiStatus.available) return true;
+  aiStatus = await ai.check();
+  if (aiStatus.available) return true;
+  sendJson(res, 503, { error: aiStatus.detail, explain: ai.explain(aiStatus.detail) });
+  return false;
 }
 
-function attempt(strategy, prompt, timeoutMs) {
-  return new Promise((done, fail) => {
-    const full = strategy.flags === 'full';
-    // Without --append-system-prompt the rules have to ride inside the prompt.
-    const body = full ? prompt : SYSTEM_PROMPT + '\n\n---\n\n' + prompt;
-    const viaStdin = strategy.deliver === 'stdin';
-
-    const args = ['-p'];
-    // For argv delivery, the prompt goes immediately after -p, before any
-    // flags: --disallowedTools is variadic and swallows a trailing bare
-    // token as one of its own values if nothing else follows it. Putting the
-    // flags after the prompt sidesteps that regardless of which flags end up
-    // adjacent to it (verified against Claude Code 2.1.153).
-    if (!viaStdin) args.push(body);
-    if (full) {
-      args.push('--disallowedTools', 'Bash,Edit,Write,NotebookEdit,WebFetch,WebSearch');
-      // --disallowedTools alone hides MCP tools (e.g. Figma) from the model
-      // entirely, not just the built-ins it names - re-including all MCP
-      // servers explicitly is what actually restores their visibility
-      // (verified against Claude Code 2.1.153).
-      args.push('--allowedTools', 'mcp__*');
-      args.push('--append-system-prompt', SYSTEM_PROMPT);
-      if (AI.model) args.push('--model', AI.model);
-    }
-
-    const reject = (msg, extra) => { const e = new Error(msg); Object.assign(e, extra || {}); fail(e); };
-
-    let p;
-    try {
-      p = spawn(AI.command, args, {
-        cwd: HERE,
-        stdio: [viaStdin ? 'pipe' : 'ignore', 'pipe', 'pipe'],
-        // A key, when present, takes precedence over the CLI's stored sign-in.
-        env: AI.apiKey ? { ...process.env, ANTHROPIC_API_KEY: AI.apiKey } : process.env,
-      });
-    } catch (e) { return reject(`spawn failed: ${e.message}`); }
-
-    if (viaStdin) {
-      p.stdin.on('error', () => {});
-      p.stdin.end(body);
-    }
-
-    let out = '', err = '';
-    const timer = setTimeout(() => {
-      p.kill('SIGKILL');
-      reject(`timed out after ${Math.round(timeoutMs / 1000)}s`);
-    }, timeoutMs);
-
-    p.stdout.on('data', (d) => (out += d));
-    p.stderr.on('data', (d) => (err += d));
-    p.on('error', (e) => { clearTimeout(timer); reject(`cannot run \`${AI.command}\`: ${e.message}`); });
-    p.on('close', (code) => {
-      clearTimeout(timer);
-      const first = (s) => s.trim().split('\n').filter(Boolean)[0] || '';
-      let text = out.trim();
-      // Both streams matter: this CLI reports some failures on stdout.
-      if (code !== 0) {
-        return reject(`exit ${code}: ${first(err) || first(out) || 'no output'}`,
-          { code, stdout: out.trim(), stderr: err.trim() });
-      }
-      const fenced = text.match(/^```(?:markdown|md)?\s*\n([\s\S]*?)\n```$/);
-      if (fenced) text = fenced[1].trim();
-      if (!text) return reject(`exit 0 but printed nothing${first(err) ? ': ' + first(err) : ''}`,
-        { code, stdout: '', stderr: err.trim() });
-
-      // Exit 0 is not proof of success with this CLI.
-      const status = cliStatusMessage(text);
-      if (status) return reject(status + '  CLI said: "' + text.slice(0, 120) + '"',
-        { code, stdout: text, stderr: err.trim(), status: true });
-
-      done({ text, stderr: err.trim() });
-    });
-  });
-}
-
-const ARGV_SAFE = 120000;
-
-function ordered(prompt) {
-  let list = STRATEGIES;
-  if (AI.pinned) {
-    const only = STRATEGIES.filter((s) => s.name === AI.pinned);
-    if (only.length) return only;
-  }
-  if (AI.winner) list = [AI.winner, ...list.filter((s) => s !== AI.winner)];
-  if (prompt.length > ARGV_SAFE) {
-    const ok = list.filter((s) => s.deliver === 'stdin');
-    if (ok.length) list = ok;
-  }
-  return list;
-}
-
-/* The CLI reports some conditions by printing a one-line status to STDOUT and
-   exiting 0 - "Not logged in · Please run /login" is the important one. Taken at
-   face value that becomes the document, so a signed-out CLI would silently save
-   a file containing its own error message. Verified against Claude Code 2.1.234.
-
-   Only short, structureless output is judged: a real document opens with a
-   heading and runs to hundreds of characters, so a genuine article that happens
-   to discuss logging in is not mistaken for a status line. */
-const CLI_STATUS = [
-  [/not logged in|please run\s*\/login|\/login\b/i, 'Claude Code is not signed in.'],
-  // Observed verbatim from 2.1.234: "Failed to authenticate. API Error: 401
-  // OAuth access token has been revoked." A revoked or expired token is a
-  // different condition from never having signed in, and needs saying so.
-  [/token has been revoked|token .{0,20}revoked|revoked/i, 'Claude Code\'s saved sign-in has been revoked. It needs signing in again.'],
-  [/failed to authenticate|\b401\b|\b403\b|oauth/i, 'Claude Code could not authenticate. Its sign-in has expired or been withdrawn.'],
-  [/invalid api key|unauthor|not authenticated|authentication (failed|required)/i, 'Claude Code rejected the credentials it has.'],
-  [/usage limit|rate limit|quota|credit balance|billing/i, 'The Claude account has hit a usage or billing limit.'],
-  [/do you trust|trust this (folder|directory)|not a trusted/i, 'Claude Code needs this folder trusted first.'],
-  [/onboard|welcome to claude code|select a theme|first run/i, 'Claude Code has not finished its first-run setup.'],
-  [/no conversation found|session .* not found/i, 'Claude Code could not start a session.'],
-];
-
-function cliStatusMessage(text) {
-  const t = String(text || '').trim();
-  if (!t) return null;
-  const structured = /^#{1,6}\s/m.test(t) || t.length > 500;
-  if (structured) return null;
-  for (const [re, why] of CLI_STATUS) if (re.test(t)) return why;
-  return null;
-}
-
-// Plain-English cause, so the app can tell the user what to do instead of
-// showing them a CLI exit code.
-function explain(blob) {
-  const t = String(blob || '').toLowerCase();
-  if (/revoked|expired|\b401\b|\b403\b/.test(t)) {
-    return 'Claude Code\'s saved sign-in has been REVOKED or expired. Open Terminal and run `claude` on its own, type `/login` inside it, sign in, quit, then reload this page.';
-  }
-  if (/log ?in|logged in|unauthor|authenticat|api key|credential|\/login/.test(t)) {
-    return 'Claude Code is installed but NOT SIGNED IN. Open Terminal and run `claude` on its own, type `/login` inside it, complete the sign-in, quit, then reload this page.';
-  }
-  if (/trust|do you trust|not a trusted/.test(t)) {
-    return 'Claude Code wants this folder trusted first. Open Terminal, run `cd ~/ilovemd && claude`, accept the trust prompt, then try again.';
-  }
-  if (/onboard|welcome|first run|theme|select a theme/.test(t)) {
-    return 'Claude Code has not finished its first-run setup. Open Terminal, run `claude`, complete the setup, then try again.';
-  }
-  if (/rate limit|quota|credit|billing|usage limit/.test(t)) {
-    return 'The Claude account this CLI uses has hit a usage or billing limit.';
-  }
-  if (/unknown option|unrecognized|invalid option|unexpected argument/.test(t)) {
-    return 'This CLI version rejected some options. The simpler fallback forms should have handled it - if you are seeing this, report the diagnose output.';
-  }
-  if (/not found|enoent|not on path/.test(t)) {
-    return 'Claude Code is not installed, or not on PATH. Install it, or set an Anthropic API key instead.';
-  }
-  return '';
-}
-
-// Public mode's error surface (human-readable, mapped by HTTP status) mirrors
-// what explain() does for the CLI's stderr patterns in local mode.
-function explainApiError(status, bodyText) {
-  if (status === 401) return 'The Anthropic API key configured on this server is invalid.';
-  if (status === 429) return 'The Anthropic API rate limit or quota was hit - try again shortly.';
-  if (status >= 500) return 'The Anthropic API is having issues right now - try again shortly.';
-  return String(bodyText || '').slice(0, 200);
-}
-
-async function runAIViaAPI(prompt) {
-  if (!AI.apiKey) {
-    const err = new Error('No Anthropic API key is configured on this server.');
-    err.explain = 'Set ANTHROPIC_API_KEY in the environment.';
-    throw err;
-  }
-  let resp;
-  try {
-    resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'x-api-key': AI.apiKey,
-        'anthropic-version': '2023-06-01',
-        'content-type': 'application/json',
-      },
-      // A fixed, known-good snapshot by default - override with ILOVEMD_AI_MODEL
-      // to point at whichever current model the deployment should use.
-      body: JSON.stringify({
-        model: AI.model || 'claude-3-5-sonnet-20241022',
-        max_tokens: 8000,
-        system: SYSTEM_PROMPT,
-        messages: [{ role: 'user', content: prompt }],
-      }),
-    });
-  } catch (e) {
-    const err = new Error('Could not reach the Anthropic API: ' + e.message);
-    err.explain = 'Check that this server has outbound HTTPS access to api.anthropic.com.';
-    throw err;
-  }
-  if (!resp.ok) {
-    const bodyText = await resp.text().catch(() => '');
-    const err = new Error(`Anthropic API responded ${resp.status}`);
-    err.explain = explainApiError(resp.status, bodyText);
-    throw err;
-  }
-  const data = await resp.json();
-  const text = (data.content || []).map((b) => b.text || '').join('').trim();
-  if (!text) {
-    const err = new Error('Anthropic API returned no text');
-    err.explain = '';
-    throw err;
-  }
-  return { text, strategy: 'direct-api' };
-}
-
+// The public demo's courtesy limits apply before any provider is called,
+// whichever route asked.
 async function runAI(prompt, req) {
   if (MODE === 'public') {
     if (!checkDailyCap()) {
@@ -1502,27 +1197,8 @@ async function runAI(prompt, req) {
       err.limited = true;
       throw err;
     }
-    return runAIViaAPI(prompt);
   }
-
-  const tried = [];
-  for (const s of ordered(prompt)) {
-    const budget = tried.length === 0 ? AI.timeoutMs : Math.min(AI.timeoutMs, 120000);
-    try {
-      const r = await attempt(s, prompt, budget);
-      if (AI.winner !== s) {
-        AI.winner = s;
-        console.log(`ai  invocation form: ${s.name} (${s.note})`);
-      }
-      return { text: r.text, strategy: s.name };
-    } catch (e) {
-      tried.push({ form: s.name, why: e.message, stdout: e.stdout || '', stderr: e.stderr || '' });
-    }
-  }
-  const err = new Error('Claude could not be run');
-  err.tried = tried;
-  err.explain = explain(tried.map((t) => t.why + ' ' + t.stdout + ' ' + t.stderr).join(' '));
-  throw err;
+  return ai.generate(prompt);
 }
 
 /* --------------------------------------------------------------- routing */
@@ -1557,7 +1233,9 @@ const server = http.createServer(async (req, res) => {
       const ok = GATE_PASSWORD.length > 0 && given.length === expected.length && crypto.timingSafeEqual(given, expected);
       if (!ok) return sendJson(res, 401, { error: 'wrong password' });
       const token = makeSessionToken();
-      res.setHeader('Set-Cookie', `${SESSION_COOKIE}=${token}; HttpOnly; Path=/; Max-Age=${Math.floor(SESSION_TTL_MS / 1000)}; SameSite=Lax`);
+      // Behind the host's HTTPS proxy, keep the cookie off plain-HTTP requests.
+      const secure = req.headers['x-forwarded-proto'] === 'https' ? '; Secure' : '';
+      res.setHeader('Set-Cookie', `${SESSION_COOKIE}=${token}; HttpOnly; Path=/; Max-Age=${Math.floor(SESSION_TTL_MS / 1000)}; SameSite=Lax${secure}`);
       return sendJson(res, 200, { ok: true });
     }
 
@@ -1719,12 +1397,7 @@ const server = http.createServer(async (req, res) => {
         truncated = true;
       }
 
-      if (!aiStatus.available) {
-        aiStatus = await checkAI();
-        if (!aiStatus.available) {
-          return sendJson(res, 503, { error: aiStatus.detail, explain: explain(aiStatus.detail) });
-        }
-      }
+      if (!(await ensureAI(res))) return;
 
       const started = Date.now();
       process.stdout.write(`ai  convert: ${path.basename(file)} ... `);
@@ -1805,12 +1478,7 @@ const server = http.createServer(async (req, res) => {
         return sendJson(res, 400, { error: 'Please provide at least one HTML or CSS file with content.' });
       }
 
-      if (!aiStatus.available) {
-        aiStatus = await checkAI();
-        if (!aiStatus.available) {
-          return sendJson(res, 503, { error: aiStatus.detail, explain: explain(aiStatus.detail) });
-        }
-      }
+      if (!(await ensureAI(res))) return;
 
       const started = Date.now();
       process.stdout.write(`ai  component: ${src.name} (${src.files.length} files) ... `);
@@ -1845,12 +1513,7 @@ const server = http.createServer(async (req, res) => {
       if (!FIGMA_TOKEN || !DEMO_FIGMA_KEY) {
         return sendJson(res, 503, { error: 'The Figma demo is not configured on this server.' });
       }
-      if (!aiStatus.available) {
-        aiStatus = await checkAI();
-        if (!aiStatus.available) {
-          return sendJson(res, 503, { error: aiStatus.detail, explain: explain(aiStatus.detail) });
-        }
-      }
+      if (!(await ensureAI(res))) return;
       const started = Date.now();
       process.stdout.write('ai  figma demo ... ');
       try {
@@ -1876,12 +1539,7 @@ const server = http.createServer(async (req, res) => {
         return sendJson(res, 400, { error: 'That does not look like a Figma link.' });
       }
 
-      if (!aiStatus.available) {
-        aiStatus = await checkAI();
-        if (!aiStatus.available) {
-          return sendJson(res, 503, { error: aiStatus.detail, explain: explain(aiStatus.detail) });
-        }
-      }
+      if (!(await ensureAI(res))) return;
 
       /* Preferred path: the Figma desktop app's local MCP server. It needs no
          org tool approval and no access token, and it hands us the real node
@@ -1917,6 +1575,16 @@ const server = http.createServer(async (req, res) => {
         const why = /fetch failed|ECONNREFUSED|timed out|aborted|Figma MCP/i.test(e.message)
           ? 'local Figma MCP unreachable'
           : e.message;
+        // Only the Claude CLI has MCP tools to fall back on.
+        if (!ai.capabilities.mcpTools) {
+          console.log(why);
+          return sendJson(res, 502, {
+            error: "We couldn't reach Figma.",
+            explain: 'Open the Figma desktop app, open the file, and turn on ' +
+              'Preferences → Enable local MCP server. ilovemd talks to that server ' +
+              'directly on 127.0.0.1:3845 (' + why + ').',
+          });
+        }
         console.log(`${why} - trying CLI MCP`);
       }
 
@@ -2026,50 +1694,23 @@ const server = http.createServer(async (req, res) => {
 
     /* ---- what is working, in plain English ---- */
     if (route === '/api/setup') {
-      aiStatus = await checkAI();
+      aiStatus = await ai.check();
       return sendJson(res, 200, {
         build: BUILD,
         mode: MODE,
         figmaDemo: MODE === 'public' ? !!(FIGMA_TOKEN && DEMO_FIGMA_KEY) : null,
         documentsDir: DOCS,
         documents: listDocs().length,
-        ai: {
-          ...aiStatus,
-          strategy: AI.winner ? AI.winner.name : (AI.pinned || 'determined on first use'),
-          // Whether a key is in play, never the key.
-          auth: AI.apiKey ? 'API key' : 'the CLI\'s own sign-in',
-          keyFile: KEY_FILE,
-        },
+        ai: { ...aiStatus, ...ai.describe() },
       });
     }
 
     if (route === '/api/ai/diagnose') {
-      const probe = 'Reply with exactly the word OK and nothing else.';
-      const results = [];
-      let blob = '';
-      for (const s of STRATEGIES) {
-        const t0 = Date.now();
-        try {
-          const r = await attempt(s, probe, 60000);
-          results.push({ form: s.name, note: s.note, ok: true, ms: Date.now() - t0, stdout: r.text.slice(0, 300) });
-        } catch (e) {
-          results.push({
-            form: s.name, note: s.note, ok: false, ms: Date.now() - t0,
-            exitCode: e.code === undefined ? null : e.code,
-            error: String(e.message).slice(0, 300),
-            stdout: (e.stdout || '').slice(0, 600),
-            stderr: (e.stderr || '').slice(0, 600),
-          });
-          blob += ' ' + (e.stdout || '') + ' ' + (e.stderr || '') + ' ' + e.message;
-        }
-      }
-      const working = results.filter((r) => r.ok).map((r) => r.form);
-      if (working.length) AI.winner = STRATEGIES.find((s) => s.name === working[0]);
-      console.log('diagnose: working forms -> ' + (working.join(', ') || 'none'));
-      return sendJson(res, 200, {
-        build: BUILD, command: AI.command, version: aiStatus.detail,
-        working, explain: working.length ? '' : explain(blob), results,
-      });
+      // Real API calls cost money; the public demo does not expose this.
+      if (MODE === 'public') return sendJson(res, 404, { error: 'not available in this deployment' });
+      const d = await ai.diagnose();
+      console.log('diagnose: working forms -> ' + (d.working.join(', ') || 'none'));
+      return sendJson(res, 200, { build: BUILD, provider: ai.id, version: aiStatus.detail, ...d });
     }
 
     /* ---- documents ---- */
@@ -2133,12 +1774,7 @@ const server = http.createServer(async (req, res) => {
       const instruction = String(body.instruction || '').trim();
       if (!instruction) return sendJson(res, 400, { error: 'say what you want' });
 
-      if (!aiStatus.available) {
-        aiStatus = await checkAI();
-        if (!aiStatus.available) {
-          return sendJson(res, 503, { error: aiStatus.detail, explain: explain(aiStatus.detail) });
-        }
-      }
+      if (!(await ensureAI(res))) return;
 
       const current = typeof body.markdown === 'string' ? body.markdown : '';
 
@@ -2213,10 +1849,7 @@ const server = http.createServer(async (req, res) => {
       const nameB = String(body.nameB || 'File B').slice(0, 80);
       if (!instruction) return sendJson(res, 400, { error: 'say what you want' });
 
-      if (!aiStatus.available) {
-        aiStatus = await checkAI();
-        if (!aiStatus.available) return sendJson(res, 503, { error: aiStatus.detail, explain: explain(aiStatus.detail) });
-      }
+      if (!(await ensureAI(res))) return;
 
       const prompt = [
         'You are reviewing two Markdown documents and helping the user improve them.',
@@ -2294,7 +1927,7 @@ const server = http.createServer(async (req, res) => {
 
 fs.mkdirSync(DOCS, { recursive: true });
 if (WORKSPACE_DIR) fs.mkdirSync(WORKSPACE_DIR, { recursive: true });
-aiStatus = await checkAI();
+aiStatus = await ai.check();
 
 server.listen(PORT, HOST, () => {
   console.log('');
@@ -2304,19 +1937,16 @@ server.listen(PORT, HOST, () => {
   console.log('');
   console.log('  build      ' + BUILD);
   console.log('  documents  ' + DOCS + '   (' + listDocs().length + ' files)');
+  const d = ai.describe();
+  console.log('  ai         ' + d.label + ' via ' + ai.id + ' - ' + d.model + (aiStatus.available ? '' : '  (unavailable: ' + aiStatus.detail + ')'));
   if (MODE === 'public') {
-    console.log('  ai backend direct Anthropic API' + (aiStatus.available ? '' : ' - ANTHROPIC_API_KEY is not set'));
     console.log('  workspace  ' + WORKSPACE_DIR);
     console.log('  figma demo ' + (FIGMA_TOKEN && DEMO_FIGMA_KEY ? 'configured' : 'not configured'));
-  } else {
-    console.log('  prompt bar ' + (aiStatus.available
-      ? `${AI.command} - ${aiStatus.detail}` + (AI.model ? ' - model ' + AI.model : '') + '  (no API key needed)'
-      : 'unavailable - the claude command could not be run'));
-    if (!aiStatus.available) {
-      for (const line of aiStatus.searched || []) console.log('             tried ' + line);
-      console.log('             If Claude Code IS installed, run `which claude` and start with:');
-      console.log('               ILOVEMD_AI_CMD=/full/path/to/claude node server.mjs');
-    }
+  } else if (ai.id === 'claude-cli' && !aiStatus.available) {
+    for (const line of aiStatus.searched || []) console.log('             tried ' + line);
+    console.log('             If Claude Code IS installed, run `which claude` and start with:');
+    console.log('               ILOVEMD_AI_CMD=/full/path/to/claude node server.mjs');
+    console.log('             Or use an API instead: ILOVEMD_AI_PROVIDER=gemini GEMINI_API_KEY=... node server.mjs');
   }
   console.log('');
   console.log('  Editing and saving work regardless of the prompt bar.');

@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Anything to Markdown - local AI-powered toolchain, with an optional public demo mode.",
+  "description": "Anything to Markdown - AI-powered toolchain. Local mode uses the Claude CLI; public mode uses Gemini, Grok, OpenAI or Anthropic.",
   "scripts": {
     "build": "echo build",
     "start": "node server.mjs"
@@ -11,5 +11,9 @@
   "dependencies": {
     "mammoth": "^1.8.0",
     "pdf-parse": "^1.1.1"
+  },
+  "main": "app.cjs",
+  "engines": {
+    "node": ">=18"
   }
 }
