@@ -430,15 +430,8 @@
   .touch.is-touching .tc-burst { animation: tcBreathe 2.8s ease-in-out infinite; }
   @keyframes tcBreathe { 50% { transform: scale(1.12); opacity: .8; } }
   .touch__cap {
-    display: grid; grid-template-columns: 1fr auto 1fr; align-items: baseline; gap: 16px;
-    margin: 6px auto 0; max-width: 760px;
-    font: 400 12px var(--mono); color: var(--text-3); letter-spacing: .02em;
-  }
-  .touch__cap > :first-child { text-align: left; }
-  .touch__cap > :last-child { text-align: right; }
-  .touch__cap b { font-weight: 600; color: var(--text-2); }
-  .touch__mid {
-    font: 600 12.5px var(--font); letter-spacing: 0;
+    margin: 6px auto 0; text-align: center;
+    font: 650 clamp(22px, 3.6vw, 37.5px)/1.2 var(--font); letter-spacing: -.025em;
     background: var(--gradient); -webkit-background-clip: text; background-clip: text;
     -webkit-text-fill-color: transparent; color: transparent;
   }
@@ -454,7 +447,7 @@
   .bridge > p { margin: 0 auto; max-width: 56ch; color: var(--text-2); font-size: 16px; }
   .bridge__flow {
     display: flex; align-items: stretch; justify-content: center;
-    gap: 10px; flex-wrap: wrap; margin: 46px 0 44px;
+    gap: 10px; flex-wrap: wrap; margin: 46px 0 0;
   }
   .bnode {
     flex: 0 1 216px; text-align: left;
@@ -476,12 +469,6 @@
   .bnode--md .bnode__lbl { color: var(--accent); }
   .bridge__arr {
     align-self: center; color: var(--text-3); font-size: 16px; flex: none;
-  }
-  .bridge__close {
-    margin: 0; font-size: clamp(19px, 2.6vw, 26px); font-weight: 660; letter-spacing: -.02em;
-    background: var(--gradient);
-    -webkit-background-clip: text; background-clip: text;
-    -webkit-text-fill-color: transparent; color: transparent;
   }
 
   /* cta */
@@ -534,8 +521,6 @@
     .bridge__flow { flex-direction: column; align-items: stretch; gap: 8px; }
     .bnode { flex: 1 1 auto; }
     .bridge__arr { transform: rotate(90deg); }
-    .touch__cap { grid-template-columns: 1fr 1fr; }
-    .touch__mid { grid-column: 1 / -1; grid-row: 2; text-align: center; }
   }
   @media (max-width: 560px) {
     .tools { grid-template-columns: 1fr; }
@@ -802,11 +787,7 @@
         <circle class="tc-burst" cx="600" cy="200" r="70" fill="url(#tc-burst)"/>
       </svg>
     </div>
-    <figcaption class="touch__cap">
-      <span><b>AI</b> reads it</span>
-      <span class="touch__mid">Markdown &mdash; the language you both speak</span>
-      <span><b>You</b> write it</span>
-    </figcaption>
+    <figcaption class="touch__cap">Markdown &mdash; the language you both speak</figcaption>
   </figure>
 
   <div class="bridge__flow">
@@ -828,8 +809,6 @@
       <div class="bnode__meta">any model, any editor<br>any agent you work with</div>
     </div>
   </div>
-
-  <p class="bridge__close">Give AI better context. Get better things back.</p>
 </section>
 
 <!-- -------------------------------------------------------------- cta -->
