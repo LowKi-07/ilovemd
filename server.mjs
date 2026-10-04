@@ -164,7 +164,7 @@ const SYSTEM_PROMPT = [
 const PUBLIC_FILES = new Set([
   'nav.css', 'nav.js',
   'home.html', 'shell.html', 'compare.html', 'login.html',
-  'Menu.svg', 'Profile.svg', 'ilovemd logo.svg',
+  'Menu.svg', 'Profile.svg', 'ilovemd logo.svg', 'favicon.svg',
 ]);
 
 const MIME = {
@@ -2120,6 +2120,13 @@ async function handle(req, res) {
     }
 
     if (route.startsWith('/api/')) return sendJson(res, 404, { error: 'no such route' });
+
+    // Some clients ask for /favicon.ico regardless of <link rel="icon">.
+    if (route === '/favicon.ico') {
+      const buf = fs.readFileSync(path.join(HERE, 'favicon.svg'));
+      res.writeHead(200, { 'Content-Type': MIME['.svg'], 'Content-Length': buf.length, 'Cache-Control': 'public, max-age=86400' });
+      return res.end(buf);
+    }
 
     /* ---- static assets: an allowlist, never "any file in this folder" ----
        This folder also holds server code, .git, a possible .env or

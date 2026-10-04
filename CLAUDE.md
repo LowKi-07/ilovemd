@@ -27,6 +27,7 @@ It runs in one of two modes from the same codebase, controlled by `ILOVEMD_MODE`
 | `DEPLOY.md`, `render.yaml`, `.env.example` | Public deployment guide (Render + GoDaddy DNS, or GoDaddy cPanel), Render blueprint, and every env var |
 | `shell.html` | Main workspace UI — HTML→MD converter for design-system components (the `/text`, `/ui`, `/figma` route) |
 | `home.html` | Homepage — hero, filter pills and the grid of tool cards |
+| `favicon.svg` | Browser-tab icon: the logo's red heart on its own. Linked from every page's `<head>` and also served for `/favicon.ico` |
 | `nav.css`, `nav.js` | The site nav bar, shared by `home.html`, `shell.html` and `compare.html`. Injected into `<div id="site-nav"></div>` by `nav.js`; self-contained (its own `--nv-*` tokens) because the pages' own design tokens differ. Edit here, not per page |
 | `compare.html` | Side-by-side Markdown diff page with AI chat panel |
 | `app.html` | **Legacy** single-page editor, superseded by `shell.html`. Can be deleted. |
