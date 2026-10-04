@@ -128,6 +128,16 @@
   .shell {
     position: fixed; inset: calc(var(--navh) + 52px) 0 0 0; z-index: 1; display: flex;
   }
+  /* The homepage hero's dot pattern, fainter: behind every card in the
+     workspace (z-index -1 inside .shell's stacking context), fading out
+     toward the edges so it reads as texture, not a grid. */
+  .shell::before {
+    content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+    background-image: radial-gradient(circle at 1px 1px, rgba(163,163,180,.24) 1px, transparent 1.25px);
+    background-size: 16px 16px;
+    -webkit-mask-image: radial-gradient(ellipse 70% 75% at 50% 40%, #000 25%, transparent 85%);
+            mask-image: radial-gradient(ellipse 70% 75% at 50% 40%, #000 25%, transparent 85%);
+  }
   .panel { min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
   /* No rule or tint under the label: inside a card it read as a seam across
      the top of every panel. The label sits straight on the card now. */
@@ -255,6 +265,9 @@
     border-top-color: transparent;
     border-radius: var(--r-lg);
     background: var(--panel);
+    /* The panels are translucent: blur what is behind them so the workspace
+       dot pattern frames the cards without dotting the writing area. */
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
     overflow: hidden;
   }
   /* A zero-width chat still leaves the row's gap behind it, and its border
