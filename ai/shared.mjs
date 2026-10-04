@@ -37,17 +37,22 @@ export async function postJson({ url, headers, body, timeoutMs, label, host, key
   }
   if (!resp.ok) {
     const text = await resp.text().catch(() => '');
+    // The vendor's raw error goes to the server log only; the browser gets
+    // a plain-English cause.
+    console.error(`${label} ${resp.status}: ${text.slice(0, 500)}`);
     throw aiError(`${label} responded ${resp.status}`, explainStatus(resp.status, text, label, keyEnv));
   }
   return resp.json();
 }
 
 function explainStatus(status, bodyText, label, keyEnv) {
-  if (status === 401 || status === 403) return `The ${label} API key configured on this server (${keyEnv}) is invalid or lacks access.`;
+  if (status === 401 || status === 403 || /api.?key.{0,20}(not valid|invalid)|API_KEY_INVALID/i.test(bodyText)) {
+    return `The ${label} API key configured on this server (${keyEnv}) is invalid or lacks access.`;
+  }
   if (status === 404) return `${label} does not know the configured model. Check ILOVEMD_AI_MODEL.`;
   if (status === 429) return `The ${label} rate limit or quota was hit - try again shortly.`;
   if (status >= 500) return `${label} is having issues right now - try again shortly.`;
-  return String(bodyText || '').slice(0, 200);
+  return `${label} rejected the request (status ${status}). The server log has the details.`;
 }
 
 /* Diagnose for the single-request HTTP providers: one probe call. */

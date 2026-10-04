@@ -160,6 +160,13 @@ const SYSTEM_PROMPT = [
 
 /* --------------------------------------------------------------- helpers */
 
+// The only files the static handler will serve. Add new front-end assets here.
+const PUBLIC_FILES = new Set([
+  'nav.css', 'nav.js',
+  'home.html', 'shell.html', 'compare.html', 'login.html',
+  'Menu.svg', 'Profile.svg', 'ilovemd logo.svg',
+]);
+
 const MIME = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
   '.css': 'text/css; charset=utf-8', '.json': 'application/json; charset=utf-8',
@@ -1980,10 +1987,16 @@ async function handle(req, res) {
 
     if (route.startsWith('/api/')) return sendJson(res, 404, { error: 'no such route' });
 
-    /* ---- static assets from this folder only ---- */
+    /* ---- static assets: an allowlist, never "any file in this folder" ----
+       This folder also holds server code, .git, a possible .env or
+       .anthropic-key, and (public mode) users/ - none of which a browser may
+       read. Pages are served by their own routes above. */
     const rel = decodeURIComponent(route).replace(/^\/+/, '');
-    const target = path.resolve(HERE, rel);
-    if (!target.startsWith(HERE + path.sep)) { res.writeHead(403); return res.end('Forbidden'); }
+    if (!PUBLIC_FILES.has(rel)) {
+      res.writeHead(404, { 'Content-Type': 'text/plain' });
+      return res.end('404 Not Found');
+    }
+    const target = path.join(HERE, rel);
     if (!fs.existsSync(target) || !fs.statSync(target).isFile()) {
       res.writeHead(404, { 'Content-Type': 'text/plain' });
       return res.end('404 Not Found');

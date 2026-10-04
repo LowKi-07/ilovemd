@@ -174,6 +174,8 @@ Set `ILOVEMD_MODE=public` to run the internet-facing deployment instead of the l
 
 - Local mode: zero npm dependencies — if you need a library, inline it or implement it from scratch. Public mode's doc conversion is the one deliberate exception (`mammoth`, `pdf-parse`) — see **Public mode**
 - No build step for the frontend — edit HTML/JS/CSS files directly
+- Static files are served from an **allowlist** (`PUBLIC_FILES` in `server.mjs`), never "any file in the folder" — that folder holds server code, `.git`, possible key files and `users/`. A new front-end asset must be added there or it 404s
+- AI keys are read only in `ai/providers/*` and sent only in server-to-vendor request headers (never a URL). The browser talks to `/api/*`; it never sees a key, a vendor URL or a raw vendor error (those go to the server log)
 - Server restarts are needed after editing `server.mjs`; HTML/CSS/JS changes take effect on browser reload
 - Local mode is loopback-only by design — `HOST` defaults to `127.0.0.1` and only public-mode hosting should ever set it otherwise
 - `.claude/launch.json` is committed — it lets Claude Code start the dev server with the Browser panel
