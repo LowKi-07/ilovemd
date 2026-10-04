@@ -373,7 +373,7 @@
   .upl__count { flex: none; font: 400 11px var(--mono); color: var(--text-3); }
   .upl__bar { height: 4px; border-radius: var(--r-pill); background: var(--hairline-strong); overflow: hidden; }
   .upl__bar > span { display: block; height: 100%; width: 0; background: var(--accent); border-radius: inherit; transition: width .2s ease; }
-  .upl__foot { display: flex; justify-content: flex-end; margin-top: 10px; }
+  .upl__foot { display: flex; justify-content: center; margin-top: 18px; }
   /* While a folder uploads, nothing else may start another one. */
   body.is-uploading #btn-pick, body.is-uploading #btn-repick,
   body.is-uploading #sub-pick, body.is-uploading #sub-repick,
@@ -1228,13 +1228,16 @@
       wrap.innerHTML =
         '<div class="placeholder"><div class="dropbox dropbox--beam" style="width:min(400px,90%)">' + BEAM +
         '<h3>UI Component &rarr; Markdown</h3>' +
-        (!S.importDir
+        // While a folder uploads the card holds only the progress and its
+        // Cancel; the folder button and pickers come back when it ends.
+        (S.upload
+          ? '<p>' + (S.importDir ? 'Replacing the current folder.' : 'Select the folder on your computer that holds your design system’s components.') + '</p>' +
+            uploadProgressHTML()
+          : !S.importDir
           ? '<p>Select the folder on your computer that holds your design system’s components.</p>' +
-            uploadProgressHTML() +
             '<button class="btn btn--primary" id="ed-pick">Choose Component Folder</button>' +
             '<div class="hint" style="margin-top:12px;font:400 10px var(--mono);color:var(--text-3)">Supported: HTML, CSS</div>'
           : '<p>' + (S.groups ? 'Choose a page, section or component found in this folder.' : 'Pick a design system, then choose a component to document.') + '</p>' +
-            uploadProgressHTML() +
             '<div class="folder" style="margin:0 0 10px;text-align:left">' +
             '<span style="flex:none;color:var(--text-3)">&#128193;</span>' +
             '<span class="folder__path" title="' + esc(S.importDir) + '">' + esc(S.importDir) + '</span>' +
@@ -1249,10 +1252,7 @@
         '</div></div>';
       var ep = $('ed-pick') || $('ed-repick');
       if (ep) ep.onclick = pickImport;
-      if (S.upload) {
-        ['ed-pick', 'ed-repick', 'kitsel-ed', 'compsel-ed'].forEach(function (id) { if ($(id)) $(id).disabled = true; });
-        $('upl-cancel').onclick = function () { if (S.upload) S.upload.ctrl.abort(); };
-      }
+      if (S.upload) $('upl-cancel').onclick = function () { if (S.upload) S.upload.ctrl.abort(); };
       var eks = $('kitsel-ed');
       if (eks) eks.onchange = function () { setKit(eks.value); };
       var ecs = $('compsel-ed');
