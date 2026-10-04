@@ -4,23 +4,24 @@ services:
   - type: web
     name: ilovemd
     runtime: node
-    # A persistent disk needs a paid plan. On "free", drop the disk block and
-    # ILOVEMD_DATA_DIR: visitors' saved files then reset on every deploy.
-    plan: starter
+    # Free: sleeps after 15 idle minutes, and visitors' saved files reset on
+    # every deploy or restart (no persistent disk on free). To keep them,
+    # switch to plan: starter and uncomment the disk block and ILOVEMD_DATA_DIR.
+    plan: free
     buildCommand: npm install
     startCommand: node server.mjs
     healthCheckPath: /healthz
-    disk:
-      name: ilovemd-data
-      mountPath: /var/data
-      sizeGB: 1
+    # disk:
+    #   name: ilovemd-data
+    #   mountPath: /var/data
+    #   sizeGB: 1
     envVars:
       - key: ILOVEMD_MODE
         value: public
       - key: HOST
         value: 0.0.0.0
-      - key: ILOVEMD_DATA_DIR
-        value: /var/data
+      # - key: ILOVEMD_DATA_DIR
+      #   value: /var/data
       - key: ILOVEMD_AI_PROVIDER
         value: gemini
       - key: ILOVEMD_SESSION_SECRET

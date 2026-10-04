@@ -6,7 +6,7 @@ ilovemd is a Node.js server, so it needs a host that runs Node. A GoDaddy
 | | Option A: Render + GoDaddy DNS (recommended) | Option B: GoDaddy cPanel hosting |
 |---|---|---|
 | You need | The GoDaddy domain you already have | A GoDaddy **Web Hosting (cPanel, Linux)** plan that shows **Setup Node.js App** |
-| Cost | ~$7/month + $0.25/GB disk (Starter). Free tier works but resets visitors' files on each deploy | Your hosting plan |
+| Cost | Free to start (sleeps when idle, files reset on deploy). ~$7/month + disk for Starter later | Your hosting plan |
 | Deploys | Automatically on every `git push` | Manual pull + restart in cPanel |
 | HTTPS | Automatic | Via cPanel AutoSSL |
 
@@ -39,11 +39,15 @@ To use Grok instead, set `ILOVEMD_AI_PROVIDER=grok` and `XAI_API_KEY`. OpenAI us
 
 1. Sign up at <https://render.com> with your GitHub account.
 2. **New > Blueprint**, then pick `LowKi-07/ilovemd`. Render reads
-   [render.yaml](render.yaml): a Starter web service with a 1 GB disk at
-   `/var/data` for visitors' files. It asks once for `GEMINI_API_KEY`.
-   - To try it free first: in `render.yaml`, set `plan: free` and delete the
-     `disk:` block and the `ILOVEMD_DATA_DIR` entry. Everything works, but
-     visitors' saved files reset on each deploy, and the site sleeps when idle.
+   [render.yaml](render.yaml): a **Free** web service. It asks once for `GEMINI_API_KEY`.
+   Or set it up by hand with **New > Web Service**: build `npm install`, start
+   `node server.mjs`, instance type Free, health check `/healthz`, plus the env
+   vars `ILOVEMD_MODE=public`, `HOST=0.0.0.0`, `ILOVEMD_AI_PROVIDER=gemini`,
+   `GEMINI_API_KEY` and `ILOVEMD_SESSION_SECRET`.
+   - Free sleeps after 15 idle minutes (the next visit takes ~30-60 s to wake),
+     and visitors' saved files reset on each deploy or restart. To keep them,
+     upgrade to Starter and add a 1 GB disk at `/var/data` with
+     `ILOVEMD_DATA_DIR=/var/data` (the commented-out lines in `render.yaml`).
 3. When the deploy is green, open the `https://ilovemd-xxxx.onrender.com` URL.
    The homepage should load straight away, with no login.
 
