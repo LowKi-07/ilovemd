@@ -347,37 +347,53 @@
     border-radius: var(--r-pill); padding: 2px 8px; white-space: nowrap;
   }
 
-  /* core features
-     Each card ends in a mono "input -> Markdown" formula, so the card states
-     the transformation rather than describing it. */
-  .feat { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
-  .feat__card {
-    position: relative; display: flex; flex-direction: column;
-    border: 1px solid var(--hairline); background: var(--panel);
-    border-radius: var(--r-lg); padding: 22px 20px 20px;
+  /* Templates marquee, after Magic UI's: the row of cards is repeated and
+     every copy slides left by its own width plus the gap, so the loop has no
+     seam. Full viewport width with faded edges; pauses on hover or focus. */
+  .marquee {
+    --gap: 16px; --duration: 40s;
+    position: relative; z-index: 1;
+    display: flex; gap: var(--gap); overflow: hidden; padding: 6px 0;
+    -webkit-mask-image: linear-gradient(to right, transparent, #000 12%, #000 88%, transparent);
+            mask-image: linear-gradient(to right, transparent, #000 12%, #000 88%, transparent);
+  }
+  .marquee__group {
+    flex-shrink: 0; display: flex; gap: var(--gap);
+    animation: marquee var(--duration) linear infinite;
+  }
+  .marquee:hover .marquee__group,
+  .marquee:focus-within .marquee__group { animation-play-state: paused; }
+  @keyframes marquee { to { transform: translateX(calc(-100% - var(--gap))); } }
+  .tcard {
+    flex: none; width: 300px; display: flex; flex-direction: column; gap: 12px;
+    border: 1px solid var(--hairline); border-radius: var(--r-lg); padding: 18px 18px 16px;
+    background: linear-gradient(135deg, rgba(139,124,255,.05) 0%, rgba(111,139,255,.015) 40%, rgba(8,8,16,.5) 100%);
     color: var(--text); text-decoration: none;
-    transition: transform .18s var(--ease), border-color .18s var(--ease), background-color .18s var(--ease);
+    transition: border-color .18s var(--ease), background-color .18s var(--ease), transform .18s var(--ease);
   }
-  a.feat__card:hover {
-    transform: translateY(-3px);
-    border-color: rgba(139,124,255,.28);
-    background: var(--panel-raised);
+  .tcard:hover { border-color: rgba(139,124,255,.32); background-color: rgba(255,255,255,.025); transform: translateY(-2px); }
+  .tcard__top { display: flex; align-items: center; gap: 11px; }
+  .tcard__ico {
+    flex: none; width: 36px; height: 36px; border-radius: 10px;
+    display: grid; place-items: center; font-size: 17px; line-height: 1;
+    background: var(--accent-soft); border: 1px solid rgba(139,124,255,.28);
+    font-weight: 700; color: #cfc8ff;
   }
-  .feat__card h3 { margin: 0 0 6px; font-size: 16px; font-weight: 650; letter-spacing: -.012em; }
-  .feat__card p { margin: 0 0 18px; font-size: 13px; color: var(--text-2); line-height: 1.6; }
-  .feat__io {
-    margin-top: auto; padding-top: 14px; border-top: 1px dashed var(--hairline);
-    font: 400 11.5px/1.5 var(--mono); color: var(--text-3);
+  .tcard h3 { margin: 0; font-size: 14.5px; font-weight: 640; letter-spacing: -.01em; }
+  .tcard__meta { font: 400 11px var(--mono); color: var(--text-3); margin-top: 1px; }
+  .tcard p {
+    margin: 0; font-size: 12.8px; line-height: 1.55; color: var(--text-2);
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
   }
-  .feat__io .to { color: var(--accent); margin: 0 5px; }
-  .feat__io .out { color: var(--text); }
-  .feat__tag {
-    position: absolute; top: 18px; right: 16px;
-    font: 600 9px var(--font); letter-spacing: .08em; text-transform: uppercase;
-    color: var(--warn); border: 1px solid rgba(251,191,36,.35);
-    border-radius: var(--r-pill); padding: 2px 8px; white-space: nowrap;
+  .tpl-sec { padding: 104px 0; }
+  .tpl-cta { display: flex; justify-content: center; margin-top: 34px; }
+  @media (prefers-reduced-motion: reduce) {
+    /* still: one copy, scrolled by hand */
+    .marquee { overflow-x: auto; -webkit-mask-image: none; mask-image: none; padding-inline: 24px; }
+    .marquee__group { animation: none; }
+    .marquee__group[aria-hidden="true"] { display: none; }
+    .tcard:hover { transform: none; }
   }
-  .feat__card--soon h3, .feat__card--soon p { opacity: .55; }
 
   /* bridge — the one non-card section on the page, so it breaks the rhythm */
   .bridge { text-align: center; }
@@ -508,10 +524,10 @@
 
   @media (max-width: 1080px) {
     .tools { grid-template-columns: repeat(2, 1fr); }
-    .feat { grid-template-columns: repeat(2, 1fr); }
   }
   @media (max-width: 940px) {
     section.wrap { padding-top: 72px; padding-bottom: 72px; }
+    .tpl-sec { padding: 72px 0; }
     .hero { padding: 64px 0 20px; }
     .demo__grid { grid-template-columns: 1fr; }
     .demo__arrow { flex-direction: row; padding: 2px 0; }
@@ -524,7 +540,6 @@
   }
   @media (max-width: 560px) {
     .tools { grid-template-columns: 1fr; }
-    .feat { grid-template-columns: 1fr; }
   }
 
   /* -------------------------------------------------------- filter pills */
@@ -713,39 +728,19 @@
   </p>
 </section>
 
-<!-- --------------------------------------------------- core features -->
-<section id="features" class="wrap">
-  <div class="sec-h">
-    <div class="kicker">Core features</div>
-    <h2>One format. A lot less work.</h2>
-    <p>Four things ilovemd does with Markdown &mdash; bring anything in, get something you can build from.</p>
+<!-- --------------------------------------------------------- templates -->
+<!-- Not a .wrap itself: the marquee runs the full page width, and only the
+     heading and button sit in the centred column. -->
+<section id="templates" class="tpl-sec">
+  <div class="wrap sec-h">
+    <div class="kicker">Templates</div>
+    <h2>Never start from a blank page.</h2>
+    <p>Ready-made Markdown for the documents you write every week &mdash; pick one, then let AI fill in the rest.</p>
   </div>
-  <div class="feat">
-
-    <a class="feat__card" href="/convert?type=pdf">
-      <h3>Convert</h3>
-      <p>The documents you already have, turned into Markdown you can actually edit.</p>
-      <div class="feat__io">PDF, Word, Excel, PPT, HTML<span class="to">&rarr;</span><span class="out">Markdown</span></div>
-    </a>
-
-    <a class="feat__card" href="/text">
-      <h3>Generate</h3>
-      <p>Describe it in plain English or point at a component. AI writes the document.</p>
-      <div class="feat__io">Ideas<span class="to">&rarr;</span><span class="out">structured documentation</span></div>
-    </a>
-
-    <a class="feat__card" href="/compare">
-      <h3>Compare</h3>
-      <p>Two versions side by side, every change called out, with AI to explain the diff.</p>
-      <div class="feat__io">Markdown<span class="to">&rarr;</span><span class="out">see what&rsquo;s changed</span></div>
-    </a>
-
-    <a class="feat__card" href="/templates">
-      <h3>Templates</h3>
-      <p>Start from a finished structure instead of a blank page &mdash; then make it yours.</p>
-      <div class="feat__io">Ready-made Markdown<span class="to">&rarr;</span><span class="out">your own document</span></div>
-    </a>
-
+  <!-- Cards come from /api/templates (script below). -->
+  <div class="marquee" id="tpl-marquee" hidden></div>
+  <div class="wrap tpl-cta">
+    <a class="btn btn--stroke" href="/templates">View Templates <span aria-hidden="true">&rarr;</span></a>
   </div>
 </section>
 
@@ -1006,6 +1001,37 @@
     new IntersectionObserver(function (es) { near = es[0].isIntersecting; kick(); }, { rootMargin: '25% 0px' }).observe(fig);
   } else { near = true; }
   measure(); cur = target; set(cur);
+})();
+</script>
+<script>
+/* Templates marquee: one group of cards from /api/templates, repeated so the
+   row always overflows the viewport (copies are hidden from assistive tech
+   and from tabbing). Speed scales with the row, ~40s for six cards. */
+(function () {
+  var box = document.getElementById('tpl-marquee');
+  if (!box) return;
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+    });
+  }
+  fetch('/api/templates', { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
+    var list = (j.templates || []).slice(0, 12);
+    if (!list.length) return;
+    var cards = list.map(function (t) {
+      return '<a class="tcard" href="/templates?t=' + encodeURIComponent(t.slug) + '">' +
+        '<div class="tcard__top"><span class="tcard__ico">' + esc(t.icon || t.title.charAt(0).toUpperCase()) + '</span>' +
+        '<div><h3>' + esc(t.title) + '</h3><div class="tcard__meta">' + esc(t.category) + ' · ' + t.sections + ' sections</div></div></div>' +
+        '<p>' + esc(t.description) + '</p></a>';
+    }).join('');
+    var copies = 4, html = '';
+    for (var i = 0; i < copies; i++) {
+      html += '<div class="marquee__group"' + (i ? ' aria-hidden="true" inert' : '') + '>' + cards + '</div>';
+    }
+    box.style.setProperty('--duration', Math.max(24, list.length * 6.5) + 's');
+    box.innerHTML = html;
+    box.hidden = false;
+  }).catch(function () { /* the View Templates button still works */ });
 })();
 </script>
 <script src="/nav.js"></script>
