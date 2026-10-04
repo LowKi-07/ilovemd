@@ -1395,9 +1395,8 @@
     }
     var ta = document.createElement('textarea');
     ta.id = 'ed'; ta.spellcheck = false;
-    ta.placeholder = MODE === 'text'
-      ? 'Write here, or ask the assistant →'
-      : 'Generated Markdown lands here. Edit freely.';
+    ta.placeholder = MODE === 'text' ? '' : 'Generated Markdown lands here. Edit freely.';
+    ta.setAttribute('aria-label', 'Markdown editor');
     ta.value = S.md;
     ta.addEventListener('input', function () {
       S.md = ta.value;
@@ -1418,6 +1417,34 @@
     });
     wrap.innerHTML = '';
     wrap.appendChild(ta);
+    if (MODE === 'text') typePlaceholder(ta);
+  }
+
+  /* Text mode's empty-editor prompt types itself in, after Magic UI's
+     TypingAnimation: 100ms a character, then a line cursor that blinks while
+     the editor is empty and unfocused (focused, the real caret takes over).
+     It types once per page load; later repaints show it whole. */
+  var PH_TEXT = 'Write here, or ask the assistant →';
+  var PH_TYPE_MS = 100, PH_BLINK_MS = 530, PH_CURSOR = '|';
+  var phTyped = false, phTimer = null;
+  function typePlaceholder(ta) {
+    clearTimeout(phTimer);
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      ta.placeholder = PH_TEXT; phTyped = true; return;
+    }
+    var n = phTyped ? PH_TEXT.length : 0, on = true;
+    (function step() {
+      if (!ta.isConnected) return;   // repainted: the new editor runs its own
+      if (n < PH_TEXT.length) {
+        ta.placeholder = PH_TEXT.slice(0, ++n) + PH_CURSOR;
+        phTimer = setTimeout(step, PH_TYPE_MS);
+        return;
+      }
+      phTyped = true;
+      ta.placeholder = PH_TEXT + (on && document.activeElement !== ta ? PH_CURSOR : '');
+      on = !on;
+      phTimer = setTimeout(step, PH_BLINK_MS);
+    })();
   }
 
   function paintPreview() {
