@@ -74,7 +74,7 @@
       </div>
 
       <a href="/compare">Compare MD</a>
-      <a href="#">Templates</a>
+      <a href="/templates">Templates</a>
     </div>
     <span class="sp"></span>
     <!-- Profile dropdown -->

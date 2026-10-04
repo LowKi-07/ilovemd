@@ -162,7 +162,7 @@ const SYSTEM_PROMPT = [
 
 // The only files the static handler will serve. Add new front-end assets here.
 const PUBLIC_FILES = new Set([
-  'nav.css', 'nav.js',
+  'nav.css', 'nav.js', 'md.js',
   'home.html', 'shell.html', 'compare.html', 'login.html',
   'Menu.svg', 'Profile.svg', 'ilovemd logo.svg', 'favicon.svg',
   'hand-ai.webp', 'hand-human.webp',
@@ -1355,6 +1355,72 @@ async function runAI(prompt, req) {
   finally { release(); }
 }
 
+/* ------------------------------------------------------------ templates
+   Ready-made Markdown files in ./templates/ (ILOVEMD_TEMPLATES_DIR to point
+   elsewhere), the same for every visitor and read-only. Optional front
+   matter feeds the templates page:
+
+     ---
+     title: Product requirements
+     description: One line on what it is for.
+     category: Product
+     icon: 📋
+     tags: planning, specs
+     order: 1
+     ---
+
+   Without it, the first # heading and first paragraph stand in. The front
+   matter is stripped from what visitors copy or download. */
+const TEMPLATES_DIR = process.env.ILOVEMD_TEMPLATES_DIR
+  ? path.resolve(process.env.ILOVEMD_TEMPLATES_DIR) : path.join(HERE, 'templates');
+const TEMPLATE_SLUG = /^[A-Za-z0-9][A-Za-z0-9_-]{0,80}$/;
+
+function parseTemplate(slug, raw) {
+  let body = raw.replace(/^\uFEFF/, '');
+  const meta = {};
+  const fm = body.match(/^---\r?\n([\s\S]*?)\r?\n---[ \t]*(\r?\n|$)/);
+  if (fm) {
+    for (const line of fm[1].split(/\r?\n/)) {
+      const m = line.match(/^([A-Za-z]+)\s*:\s*(.*)$/);
+      if (m) meta[m[1].toLowerCase()] = m[2].trim().replace(/^(["'])(.*)\1$/, '$2');
+    }
+    body = body.slice(fm[0].length);
+  }
+  const plain = (t) => t.replace(/\[([^\]]*)\]\([^)]*\)/g, '$1').replace(/[*_`~]/g, '').replace(/\s+/g, ' ').trim();
+  const h1 = body.match(/^#\s+(.+)$/m);
+  const para = body.split(/\r?\n\s*\r?\n/).map((b) => b.trim())
+    .find((b) => b && !/^(#|[-*+]\s|\d+[.)]\s|\||>|```|<!--)/.test(b));
+  return {
+    slug,
+    title: meta.title || (h1 ? plain(h1[1]) : slug.replace(/[-_]+/g, ' ').replace(/^\w/, (c) => c.toUpperCase())),
+    description: meta.description || (para ? plain(para).slice(0, 240) : ''),
+    category: meta.category || 'General',
+    icon: meta.icon || '',
+    tags: (meta.tags || '').split(',').map((t) => t.trim()).filter(Boolean),
+    order: Number(meta.order) || 999,
+    sections: (body.match(/^##\s+/gm) || []).length,
+    words: (body.trim().match(/\S+/g) || []).length,
+    markdown: body.replace(/^\s*\n/, ''),
+  };
+}
+
+function readTemplate(slug) {
+  if (!TEMPLATE_SLUG.test(slug)) return null;
+  try { return parseTemplate(slug, fs.readFileSync(path.join(TEMPLATES_DIR, slug + '.md'), 'utf8')); }
+  catch (e) { return null; }
+}
+
+function listTemplates() {
+  let names = [];
+  try { names = fs.readdirSync(TEMPLATES_DIR); } catch (e) { return []; }
+  return names
+    .filter((n) => n.toLowerCase().endsWith('.md'))
+    .map((n) => readTemplate(n.slice(0, -3)))
+    .filter(Boolean)
+    .sort((a, b) => a.order - b.order || a.title.localeCompare(b.title))
+    .map(({ markdown, order, ...card }) => card);
+}
+
 /* --------------------------------------------------------------- routing */
 
 /* Public mode: work out who is asking, then handle the request inside their
@@ -1427,6 +1493,22 @@ async function handle(req, res) {
     }
 
     /* ---- the unified workspace: /text, /ui, /figma ---- */
+    if (route === '/templates') {
+      const html = fs.readFileSync(path.join(HERE, 'templates.html'));
+      res.writeHead(200, { 'Content-Type': MIME['.html'], 'Cache-Control': 'no-store' });
+      return res.end(html);
+    }
+
+    if (route === '/api/templates' && req.method === 'GET') {
+      return sendJson(res, 200, { templates: listTemplates() });
+    }
+
+    if (route === '/api/template' && req.method === 'GET') {
+      const t = readTemplate(String(url.searchParams.get('slug') || ''));
+      if (!t) return sendJson(res, 404, { error: 'no such template' });
+      return sendJson(res, 200, { slug: t.slug, title: t.title, markdown: t.markdown });
+    }
+
     if (route === '/compare') {
       const html = fs.readFileSync(path.join(HERE, 'compare.html'));
       res.writeHead(200, { 'Content-Type': MIME['.html'], 'Cache-Control': 'no-store' });

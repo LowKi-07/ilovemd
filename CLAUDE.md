@@ -30,6 +30,9 @@ It runs in one of two modes from the same codebase, controlled by `ILOVEMD_MODE`
 | `hand-ai.webp`, `hand-human.webp` | Homepage bridge-section renders, cropped and compressed from the Meshy PNG sources. Placement in `.tc-hand--*` assumes these exact crops (index fingertips meet at stage point 600,200) - re-derive the percentages if they change |
 | `favicon.svg` | Browser-tab icon: the logo's red heart on its own. Linked from every page's `<head>` and also served for `/favicon.ico` |
 | `nav.css`, `nav.js` | The site nav bar, shared by `home.html`, `shell.html` and `compare.html`. Injected into `<div id="site-nav"></div>` by `nav.js`; self-contained (its own `--nv-*` tokens) because the pages' own design tokens differ. Edit here, not per page |
+| `templates.html` | Templates page (`/templates`): search, category pills, cards and a preview dialog (rendered/raw, Copy, Download, Use template → `/text?template=<slug>`) |
+| `templates/` | The template `.md` files the templates page lists - one file per template, file name = slug. Optional front matter (`title`, `description`, `category`, `icon`, `tags`, `order`) feeds the cards and is stripped from what visitors copy. `ILOVEMD_TEMPLATES_DIR` overrides the folder |
+| `md.js` | The shared Markdown renderer (`window.ilovemdMarkdown`), used by `shell.html` and `templates.html`. Escapes first, so its output is innerHTML-safe |
 | `compare.html` | Side-by-side Markdown diff page with AI chat panel |
 | `app.html` | **Legacy** single-page editor, superseded by `shell.html`. Can be deleted. |
 | `ilovemd.command` | macOS double-click launcher — starts the server in a Terminal window |
@@ -51,6 +54,7 @@ It runs in one of two modes from the same codebase, controlled by `ILOVEMD_MODE`
 | `/` | `home.html` — tool homepage |
 | `/text`, `/ui`, `/figma`, `/convert` | `shell.html` — main workspace |
 | `/compare` | `compare.html` — file comparison |
+| `/templates` | `templates.html` — template gallery (`?q=`, `?category=`, `?t=<slug>` opens a preview) |
 | `/app` | `app.html` — legacy editor (redirects to `/text`) |
 | `/login` | `login.html` — public-mode password gate (redirects to `/` when no password is set) |
 | `/healthz` | `{ok}` for host health checks — never gated |
@@ -59,6 +63,8 @@ It runs in one of two modes from the same codebase, controlled by `ILOVEMD_MODE`
 
 | Endpoint | Method | Purpose |
 |---|---|---|
+| `/api/templates` | GET | List the templates in `templates/` (card fields only, no body) |
+| `/api/template` | GET | `?slug=` → `{slug, title, markdown}` with front matter stripped. Text mode loads it when opened as `/text?template=<slug>` |
 | `/api/state` | GET/PUT | Persist/restore last-used kit and folder path. `importDir` is confined to the visitor's own `workspace/` in public mode |
 | `/api/kits` | GET | List available design-system kits from the configured folder |
 | `/api/components` | GET | List components for a given kit |
