@@ -40,7 +40,7 @@ export async function postJson({ url, headers, body, timeoutMs, label, host, key
     // The vendor's raw error goes to the server log only; the browser gets
     // a plain-English cause.
     console.error(`${label} ${resp.status}: ${text.slice(0, 500)}`);
-    throw aiError(`${label} responded ${resp.status}`, explainStatus(resp.status, text, label, keyEnv));
+    throw aiError(`${label} responded ${resp.status}`, explainStatus(resp.status, text, label, keyEnv), { status: resp.status });
   }
   return resp.json();
 }
