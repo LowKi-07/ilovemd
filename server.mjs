@@ -934,15 +934,103 @@ function figmaLocalPrompt({ structure, tokens }, url) {
    owner configured, summarized down to what's useful for documentation
    (styles, named components, top-level structure) rather than the full node
    tree, which can be enormous. */
-async function fetchFigmaFile(key, token) {
-  const r = await fetch(`https://api.figma.com/v1/files/${encodeURIComponent(key)}`, {
-    headers: { 'X-Figma-Token': token },
-  });
+/* Figma REST API. The token goes only in this request's header - never a
+   URL, a log line or disk. A visitor's token is used for their one request
+   and then dropped. */
+async function figmaGet(pathAndQuery, token) {
+  let r;
+  try {
+    r = await fetch('https://api.figma.com/v1/' + pathAndQuery, {
+      headers: { 'X-Figma-Token': token }, signal: AbortSignal.timeout(45000),
+    });
+  } catch (e) {
+    const err = new Error('Could not reach Figma.');
+    err.explain = e.name === 'TimeoutError' ? 'Figma took too long to answer - try a smaller frame.' : 'Try again in a moment.';
+    throw err;
+  }
   if (!r.ok) {
     const body = await r.text().catch(() => '');
-    throw new Error(`Figma API ${r.status}: ${(body || r.statusText).slice(0, 200)}`);
+    console.error(`Figma API ${r.status}: ${body.slice(0, 200)}`);
+    const err = new Error(
+      r.status === 403 ? 'Figma did not accept this token for this file.'
+        : r.status === 404 ? 'Figma could not find that file or frame.'
+          : r.status === 429 ? 'Figma is rate-limiting this token.'
+            : `Figma responded ${r.status}.`);
+    err.explain =
+      r.status === 403 ? 'Check that the token was copied whole, has not expired, has "File content: read" access, and that your Figma account can open this file.'
+        : r.status === 404 ? 'Check the link - copy it from Figma with Share → Copy link, or right-click a frame → Copy link to selection.'
+          : r.status === 429 ? 'Wait a minute and try again.'
+            : 'Try again in a moment.';
+    err.figma = true;
+    throw err;
   }
   return r.json();
+}
+
+const fetchFigmaFile = (key, token) => figmaGet(`files/${encodeURIComponent(key)}`, token);
+
+/* A visitor's link: one frame when it has ?node-id=, otherwise the file's
+   pages and top-level frames. Returns { name, summary }. */
+async function fetchFigmaForVisitor(url, token) {
+  const { key, node } = parseFigmaUrl(url);
+  if (node) {
+    const data = await figmaGet(`files/${encodeURIComponent(key)}/nodes?ids=${encodeURIComponent(node)}&depth=6`, token);
+    const entry = data.nodes && data.nodes[node];
+    if (!entry || !entry.document) {
+      const err = new Error('Figma could not find that frame in the file.');
+      err.explain = 'Copy the link again with right-click → Copy link to selection.';
+      throw err;
+    }
+    return { name: entry.document.name || data.name || 'Figma frame', summary: summarizeFigmaNode(data.name, entry) };
+  }
+  const data = await figmaGet(`files/${encodeURIComponent(key)}?depth=2`, token);
+  return { name: data.name || 'Figma file', summary: summarizeFigmaFile(data) };
+}
+
+// One frame/component in enough depth to document: its layer tree with
+// layout, the component properties and variants, and text content.
+function summarizeFigmaNode(fileName, entry) {
+  const doc = entry.document;
+  const lines = [`Figma file: ${fileName || 'Untitled'}`, `Selected: ${doc.name} (${doc.type})`];
+  const comps = entry.components ? Object.values(entry.components) : [];
+  const own = comps.find((c) => c.name === doc.name) || null;
+  if (own && own.description) lines.push('Description: ' + own.description);
+  const defs = doc.componentPropertyDefinitions || {};
+  const props = Object.entries(defs).map(([k, d]) => {
+    const name = k.replace(/#[^#]*$/, '');
+    const opts = d.variantOptions ? ` - options: ${d.variantOptions.join(', ')}` : '';
+    return `- ${name}: ${d.type}${d.defaultValue !== undefined ? ` (default ${JSON.stringify(d.defaultValue)})` : ''}${opts}`;
+  });
+  if (props.length) lines.push('\nComponent properties:\n' + props.join('\n'));
+  if (doc.type === 'COMPONENT_SET' && doc.children) {
+    lines.push('\nVariants:\n' + doc.children.slice(0, 80).map((c) => '- ' + c.name).join('\n'));
+  }
+  const styles = entry.styles ? Object.values(entry.styles).map((st) => `- ${st.name} (${st.styleType})`) : [];
+  if (styles.length) lines.push('\nStyles used:\n' + styles.slice(0, 60).join('\n'));
+  if (comps.length) {
+    lines.push('\nComponents referenced:\n' + comps.slice(0, 60)
+      .map((c) => `- ${c.name}${c.description ? ': ' + c.description.slice(0, 160) : ''}`).join('\n'));
+  }
+  const tree = [];
+  (function walk(n, depth) {
+    if (!n || tree.length >= 400) return;
+    const bits = [];
+    if (n.layoutMode && n.layoutMode !== 'NONE') bits.push(`auto-layout ${n.layoutMode.toLowerCase()}`);
+    if (n.itemSpacing) bits.push(`gap ${n.itemSpacing}`);
+    const pad = [n.paddingTop, n.paddingRight, n.paddingBottom, n.paddingLeft];
+    if (pad.some(Boolean)) bits.push(`padding ${pad.map((v) => v || 0).join('/')}`);
+    if (n.cornerRadius) bits.push(`radius ${n.cornerRadius}`);
+    if (n.absoluteBoundingBox && depth < 2) bits.push(`${Math.round(n.absoluteBoundingBox.width)}x${Math.round(n.absoluteBoundingBox.height)}`);
+    if (n.type === 'TEXT' && n.characters) bits.push(`"${n.characters.slice(0, 80).replace(/\s+/g, ' ')}"`);
+    if (n.type === 'INSTANCE' && n.componentProperties) {
+      const cp = Object.entries(n.componentProperties).slice(0, 6).map(([k, v]) => `${k.replace(/#[^#]*$/, '')}=${v.value}`);
+      if (cp.length) bits.push(cp.join(', '));
+    }
+    tree.push(`${'  '.repeat(depth)}- ${n.name} (${n.type})${bits.length ? ' - ' + bits.join('; ') : ''}`);
+    if (n.children && depth < 6) for (const c of n.children) walk(c, depth + 1);
+  })(doc, 0);
+  lines.push('\nLayer tree:\n' + tree.join('\n') + (tree.length >= 400 ? '\n  ... (truncated)' : ''));
+  return lines.join('\n');
 }
 
 function summarizeFigmaFile(data) {
@@ -952,12 +1040,13 @@ function summarizeFigmaFile(data) {
   const comps = data.components ? Object.values(data.components).map((c) => `- ${c.name}${c.description ? ': ' + c.description : ''}`) : [];
   if (comps.length) lines.push('\nComponents:\n' + comps.slice(0, 60).join('\n'));
   const structure = [];
+  // Starts at -1 so the DOCUMENT root itself is skipped and pages sit at 0.
   (function walk(node, depth) {
     if (!node || depth > 2) return;
-    structure.push('  '.repeat(depth) + '- ' + (node.name || node.type) + ' (' + node.type + ')');
+    if (depth >= 0) structure.push('  '.repeat(depth) + '- ' + (node.name || node.type) + ' (' + node.type + ')');
     if (node.children) for (const c of node.children) walk(c, depth + 1);
   })(data.document, -1);
-  if (structure.length) lines.push('\nStructure (top levels):\n' + structure.slice(1, 120).join('\n'));
+  if (structure.length) lines.push('\nStructure (top levels):\n' + structure.slice(0, 120).join('\n'));
   return lines.join('\n');
 }
 
@@ -965,9 +1054,10 @@ function figmaDemoPrompt(summary, fileName) {
   const rulesBlock = DOC_RULES ? [DOC_RULES.rules, '', '---', ''] : [];
   return [
     ...rulesBlock,
-    'Write component/design documentation in Markdown from this REAL Figma file data.',
-    'Map the data into sections chosen from: Overview, Anatomy, Variants,',
-    'Design Tokens (from styles), Components, Structure - but ONLY where the data',
+    'Write component/design documentation in Markdown from this REAL Figma data.',
+    'Map the data into sections chosen from: Overview, Anatomy, Variants, Properties,',
+    'States, Sizes, Layout and spacing, Design Tokens (from styles), Components used,',
+    'Content, Structure - but ONLY where the data',
     'below actually supports them. Never invent properties, variants or tokens the',
     'data does not show. Preserve exact names.',
     '',
@@ -1587,30 +1677,59 @@ async function handle(req, res) {
     /* ---- figma frame -> md ----
        Local mode: the CLI may have Figma access through its own MCP
        configuration. We ask it to use the REAL data or say plainly it cannot.
-       Public mode: no CLI, no MCP, and no visitor-supplied URL - a single
-       fixed file the owner controls (FIGMA_TOKEN + ILOVEMD_DEMO_FIGMA_KEY),
-       fetched via Figma's REST API, so the public demo never touches anyone
-       else's design. */
+       Public mode: no CLI and no MCP - Figma's REST API instead. A visitor
+       documents their own file with their own personal access token, used
+       for that one request and never stored, so nobody can reach a design
+       their own Figma account cannot. Without a token, the optional fixed
+       demo file (FIGMA_TOKEN + ILOVEMD_DEMO_FIGMA_KEY) is the owner's. */
     if (route === '/api/figma-doc' && req.method === 'POST' && MODE === 'public') {
-      if (!FIGMA_TOKEN || !DEMO_FIGMA_KEY) {
-        return sendJson(res, 503, { error: 'The Figma demo is not configured on this server.' });
+      const body = await readBody(req);
+      const rawUrl = String(body.url || '').trim();
+      const token = String(body.token || '').trim();
+      const useDemo = !rawUrl && !token;
+      if (useDemo && (!FIGMA_TOKEN || !DEMO_FIGMA_KEY)) {
+        return sendJson(res, 400, { error: 'Paste a Figma link and your Figma access token.' });
+      }
+      if (!useDemo) {
+        if (!/^https:\/\/(www\.)?figma\.com\//.test(rawUrl) || !parseFigmaUrl(rawUrl).key) {
+          return sendJson(res, 400, { error: 'That does not look like a Figma file link.',
+            explain: 'In Figma, use Share → Copy link, or right-click a frame → Copy link to selection.' });
+        }
+        if (!/^\S{20,200}$/.test(token)) {
+          return sendJson(res, 400, { error: 'Paste your Figma personal access token.',
+            explain: 'Figma → Settings → Security → Personal access tokens → Generate new token.' });
+        }
       }
       if (!(await ensureAI(res))) return;
       const started = Date.now();
-      process.stdout.write('ai  figma demo ... ');
+      process.stdout.write(useDemo ? 'ai  figma demo ... ' : 'ai  figma(rest) ... ');
       try {
-        const data = await fetchFigmaFile(DEMO_FIGMA_KEY, FIGMA_TOKEN);
-        const r = await runAI(figmaDemoPrompt(summarizeFigmaFile(data), data.name || 'Demo file'), req);
+        let name, summary;
+        if (useDemo) {
+          const data = await fetchFigmaFile(DEMO_FIGMA_KEY, FIGMA_TOKEN);
+          name = data.name || 'Demo file';
+          summary = summarizeFigmaFile(data);
+        } else {
+          ({ name, summary } = await fetchFigmaForVisitor(rawUrl, token));
+        }
+        const r = await runAI(figmaDemoPrompt(summary, name), req);
         const ms = Date.now() - started;
         console.log(`${(ms / 1000).toFixed(1)}s  ${r.text.length} chars`);
+        const h1 = r.text.match(/^#\s+(.+)$/m);
+        if (h1 && rawUrl) {
+          const s = readState();
+          const frames = (Array.isArray(s.frames) ? s.frames : []).map((f) =>
+            f.url === rawUrl ? { ...f, name: h1[1].trim().slice(0, 80) } : f);
+          writeState({ frames });
+        }
         const split = extractQuestions(r.text);
         return sendJson(res, 200, {
           markdown: split.markdown, questions: split.questions, ms,
-          suggestedName: nameFromMarkdown(split.markdown, 'Figma demo').replace(/ \d+\.md$/, '.md'),
+          suggestedName: nameFromMarkdown(split.markdown, name).replace(/ \d+\.md$/, '.md'),
         });
       } catch (e) {
         console.log('failed');
-        return sendJson(res, e.limited ? 429 : 502, { error: e.message, explain: e.explain || '' });
+        return sendJson(res, e.limited ? 429 : e.figma ? 400 : 502, { error: e.message, explain: e.explain || '' });
       }
     }
 

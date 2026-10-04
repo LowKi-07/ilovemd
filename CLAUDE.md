@@ -62,7 +62,7 @@ It runs in one of two modes from the same codebase, controlled by `ILOVEMD_MODE`
 | `/api/components` | GET | List components for a given kit |
 | `/api/component` | GET | Get a single component's source details |
 | `/api/component-doc` | POST | **AI call** — generate Markdown doc for a component |
-| `/api/figma-doc` | POST | **AI call** — local mode: retrieves the frame from the **Figma desktop app's own MCP server** on `127.0.0.1:3845` (see **Figma retrieval** below), then has the model write the doc. Falls back to the CLI's Figma MCP if that server is unreachable. Public mode: ignores any URL and always documents one fixed, server-configured Figma file via Figma's REST API (`FIGMA_TOKEN` + `ILOVEMD_DEMO_FIGMA_KEY`) — never a visitor-supplied design |
+| `/api/figma-doc` | POST | **AI call** — local mode: retrieves the frame from the **Figma desktop app's own MCP server** on `127.0.0.1:3845` (see **Figma retrieval** below), then has the model write the doc. Falls back to the CLI's Figma MCP if that server is unreachable. Public mode: Figma's REST API with the **visitor's own** personal access token, sent as `{url, token}` and used for that one request — never stored or logged (the page keeps it in tab memory only). A `?node-id=` link fetches that frame (`/nodes`, depth 6: properties, variants, layout, text); a bare file link fetches pages and top frames. With no url/token, falls back to the optional fixed demo file (`FIGMA_TOKEN` + `ILOVEMD_DEMO_FIGMA_KEY`). Never use the server's own token for a visitor-supplied link — it would expose every file the owner's account can see |
 | `/api/frame` | POST | Save a Figma URL into the "recent frames" list (`.ilovemd-state.json`). Local mode only — despite the name, this does not extract anything via `osascript` |
 | `/api/pick-folder` | POST | Open a native macOS folder picker (via `osascript`). Local mode only — `404` in public mode |
 | `/api/kit-upload` | POST | Public-mode-only. Receives one file at a time (from a `webkitdirectory` picker) with `?kit=&relpath=`, reconstructing the folder tree under the visitor's `workspace/<kit>/` — the public-mode replacement for `/api/pick-folder` |
@@ -150,7 +150,7 @@ Set `ILOVEMD_MODE=public` to run the internet-facing deployment instead of the l
 - AI limits, checked in `runAI()` before every call whichever route asked: `ILOVEMD_RATE_LIMIT_PER_HOUR` (20, per visitor), `ILOVEMD_IP_RATE_LIMIT_PER_HOUR` (3x that, per address), `ILOVEMD_MAX_CALLS_PER_DAY` (200, site-wide, UTC day), `ILOVEMD_MAX_CONCURRENT_AI` (8 in flight; extra calls get an immediate "busy", never a queue). Upload limits: `ILOVEMD_UPLOADS_PER_HOUR` (60), `ILOVEMD_KIT_FILES_PER_HOUR` (3000). All in-memory per process — **not** a substitute for a budget cap on the AI key
 - `ILOVEMD_TRUSTED_PROXIES` (1) — how many proxies append to `X-Forwarded-For`; `clientIp()` reads that many hops from the right, because left-hand entries are client-supplied
 - `ILOVEMD_FIGMA_MCP_URL` — override the local Figma MCP endpoint (default `http://127.0.0.1:3845/mcp`)
-- `FIGMA_TOKEN` + `ILOVEMD_DEMO_FIGMA_KEY` — enables the fixed Figma demo (see the `/api/figma-doc` row above)
+- `FIGMA_TOKEN` + `ILOVEMD_DEMO_FIGMA_KEY` — optional fixed Figma demo file, offered as "Or try the demo file" next to the visitor-token form
 
 **Per-visitor isolation** (the part to keep intact when changing routes):
 - `platform/identity.mjs` gives every visitor a random id in a signed `ilovemd_vid` cookie (1 year). Real accounts later = `identify()` returning a user id; nothing downstream changes
@@ -165,7 +165,7 @@ Set `ILOVEMD_MODE=public` to run the internet-facing deployment instead of the l
 - `/healthz` — unauthenticated, no disk; for the host's health check
 - SIGTERM/SIGINT close the server gracefully (in-flight AI calls get up to 25 s)
 - No native macOS pickers: `/api/pick-folder` is disabled, replaced by `/api/kit-upload` + a `webkitdirectory` file input in `shell.html`
-- Figma import is a single fixed demo file the server operator configures, not a visitor-supplied URL — this is a deliberate choice so the public site never pulls in a stranger's Figma design
+- Figma import uses the visitor's own Figma token (see the `/api/figma-doc` row), so nobody can document a file their own account can't open; the operator's token is only ever used for the fixed demo file
 - DOCX/PDF conversion uses `mammoth`/`pdf-parse` (the project's only two npm dependencies, dynamically imported so local mode's zero-dependency story is untouched); DOC/RTF/RTFD/ODT aren't supported publicly
 
 **Scaling seams**: `platform/limits.mjs` (async `take()` — swap the memory map for Redis when running 2+ processes), `platform/userdata.mjs` (swap disk for object storage), `ai/` (provider). Routes don't change for any of these.

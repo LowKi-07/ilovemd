@@ -347,6 +347,11 @@
   }
   .dropbox h3 { margin: 0 0 6px; font-size: 15px; font-weight: 620; color: var(--text); }
   .dropbox p { margin: 0 0 16px; font-size: 12.5px; color: var(--text-2); line-height: 1.55; }
+  .figtok-help { margin: -4px 0 14px; text-align: left; font-size: 11.5px; color: var(--text-3); }
+  .figtok-help summary { cursor: pointer; width: max-content; }
+  .figtok-help summary:hover { color: var(--text-2); }
+  .figtok-help ol { margin: 8px 0 6px; padding-left: 18px; line-height: 1.6; color: var(--text-2); }
+  .figtok-help p { margin: 0; font-size: 11.5px; color: var(--text-3); }
   .dropbox input {
     width: 100%; font: 400 12px var(--mono); color: var(--text);
     background: rgba(0,0,0,.3); border: 1px solid var(--hairline);
@@ -730,6 +735,8 @@
     md: '', before: null, pending: false, busy: false, last: null, q: null,
     // folder upload in progress (public mode): { name, done, total, failed, ctrl }
     upload: null,
+    // public Figma: the visitor's token (this tab's memory only) and link draft
+    figmaToken: '', figUrlDraft: '',
     // text
     docs: [], docName: null, mtime: 0, dirty: false, filter: '',
     // ui
@@ -1290,6 +1297,8 @@
       return;
     }
     if (!S.md && MODE === 'figma' && !S.busy && S.siteMode === 'public') {
+      // Public: the visitor's own link and own Figma token. The token lives in
+      // this tab's memory only - never storage, never the URL.
       wrap.innerHTML =
         '<div class="placeholder"><div class="dropbox" style="width:min(440px,90%)">' +
         '<div class="fpair">' +
@@ -1298,11 +1307,26 @@
         '<span class="ftile" style="--tb:rgba(139,124,255,.12);--tl:rgba(139,124,255,.3)">' + MD_SVG + '</span>' +
         '</div>' +
         '<h3>Figma &rarr; Markdown</h3>' +
-        '<p>This demo documents one pre-configured Figma file — no arbitrary links accepted.</p>' +
-        (S.figmaDemo
-          ? '<button class="btn btn--primary" id="btn-fig-demo">Generate Documentation</button>'
-          : '<p class="hint" style="margin:0;font:400 11px var(--mono);color:var(--text-3)">The Figma demo is not configured on this server.</p>') +
+        '<p>Paste a link to a Figma file or frame, plus your Figma access token. ' + aiName() + ' writes structured documentation from the real design data.</p>' +
+        '<input id="figurl" type="text" spellcheck="false" placeholder="https://www.figma.com/design/…?node-id=…">' +
+        '<input id="figtok" type="password" spellcheck="false" autocomplete="off" data-1p-ignore placeholder="Figma personal access token (figd_…)">' +
+        '<details class="figtok-help"><summary>How do I get a token?</summary>' +
+        '<ol><li>In Figma, click your avatar → <b>Settings</b> → <b>Security</b>.</li>' +
+        '<li>Under <b>Personal access tokens</b>, choose <b>Generate new token</b>.</li>' +
+        '<li>Give it <b>File content: Read-only</b> access, then copy it.</li></ol>' +
+        '<p>ilovemd uses it only to read this file, for this one request. It is never saved; closing the tab forgets it.</p>' +
+        '</details>' +
+        '<button class="btn btn--primary" id="btn-fig">Generate Documentation</button>' +
+        (S.figmaDemo ? '<div style="margin-top:10px"><button class="btn btn--ghost btn--sm" id="btn-fig-demo">Or try the demo file</button></div>' : '') +
         '</div></div>';
+      var fu = $('figurl'), ft = $('figtok');
+      if (S.figUrlDraft) fu.value = S.figUrlDraft;
+      if (S.figmaToken) ft.value = S.figmaToken;
+      fu.oninput = function () { S.figUrlDraft = fu.value; };
+      ft.oninput = function () { S.figmaToken = ft.value.trim(); };
+      var go = function () { S.figmaToken = ft.value.trim(); figGenerate(fu.value.trim()); };
+      $('btn-fig').onclick = go;
+      [fu, ft].forEach(function (el) { el.addEventListener('keydown', function (e) { if (e.key === 'Enter') go(); }); });
       if ($('btn-fig-demo')) $('btn-fig-demo').onclick = figGenerateDemo;
       return;
     }
@@ -1845,6 +1869,10 @@
       notify('warn', 'Paste a Figma link first.', 'It should start with https://www.figma.com/');
       return;
     }
+    if (S.siteMode === 'public' && !S.figmaToken) {
+      notify('warn', 'Paste your Figma access token too.', 'Open “How do I get a token?” under the fields for the steps.');
+      return;
+    }
     S.busy = true;
     paintTop(); paintChips(); paintEditor();   // swap the form for the spinner
     say('u', 'Generate documentation for ' + url);
@@ -1866,7 +1894,7 @@
 
     var prevDoc = S.md;
     try {
-      var r = await post('/api/figma-doc', { url: url }, true);
+      var r = await post('/api/figma-doc', S.siteMode === 'public' ? { url: url, token: S.figmaToken } : { url: url }, true);
       clearInterval(tick);
       S.frameDocs[url] = r.markdown;
       S.qList = r.questions || [];
@@ -1906,6 +1934,7 @@
         'Ask me to regenerate it, or paste the link again.');
       // Prefill the drop box for one-click regeneration.
       paintEditor();
+      S.figUrlDraft = url;
       var u = $('figurl');
       if (u) u.value = url;
     }
