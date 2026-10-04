@@ -382,30 +382,39 @@
   /* bridge — the one non-card section on the page, so it breaks the rhythm */
   .bridge { text-align: center; }
   /* The touch: AI and a person reaching for each other; as the section
-     scrolls in, the hands close the gap and their fingertips meet under the
-     Markdown file (script at the end sets --p, 0 → 1, and --touch, the last
-     stretch of it). */
-  .touch { --p: 0; --touch: 0; margin: 34px auto 0; max-width: 1040px; }
-  .touch__art {
-    display: block; width: 100%; height: auto; overflow: visible;
-    /* forearms dissolve into the page instead of stopping at the frame */
-    -webkit-mask-image: linear-gradient(to right, transparent 0, #000 16%, #000 84%, transparent 100%);
-            mask-image: linear-gradient(to right, transparent 0, #000 16%, #000 84%, transparent 100%);
+     scrolls in, the hands close the gap and their index fingertips meet
+     under the Markdown file (script at the end sets --p, 0 → 1, and
+     --touch, the last stretch of it).
+
+     The stage is 1200 × 520 units. Both hand renders are drawn at the same
+     scale and placed so their index fingertips meet at (600, 200); each one
+     turns about that fingertip (transform-origin), which is what keeps the
+     tips together while the wrists settle. */
+  .touch { --p: 0; --touch: 0; margin: 30px auto 0; max-width: 1040px; }
+  .touch__stage { position: relative; aspect-ratio: 1200 / 520; container-type: inline-size; }
+  .tc-hand {
+    position: absolute; height: auto; max-width: none; user-select: none; pointer-events: none;
+    will-change: transform;
   }
-  .tc-robot { filter: drop-shadow(0 0 14px rgba(139,124,255,.28)); }
-  .tc-human { filter: drop-shadow(0 0 14px rgba(63,208,224,.16)); }
-  /* Each hand starts 130 units out and travels 257 in, settling 15 units
-     toward the shared fingertip line; a few degrees of wrist tilt unwind
-     on the way so the approach reads as a reach, not a slide. */
-  .tc-move { transform-box: fill-box; will-change: transform; }
-  .tc-move--l {
-    transform-origin: 0% 50%;
-    transform: translate(calc(var(--p) * 257px - 130px), calc(var(--p) * 15px)) rotate(calc((1 - var(--p)) * -4deg));
+  .tc-hand--ai {
+    left: 4.675%; top: 36.42%; width: 46.31%;
+    transform-origin: 97.5% 3.5%;
+    /* forearm dissolves into the page */
+    -webkit-mask-image: linear-gradient(to right, transparent 0, #000 26%);
+            mask-image: linear-gradient(to right, transparent 0, #000 26%);
+    /* dark chrome on a dark page: lift it and give it a cool rim */
+    filter: brightness(1.18) contrast(1.04) drop-shadow(0 0 18px rgba(139,124,255,.32));
+    transform: translateX(calc((var(--p) - 1) * 12cqw)) rotate(calc(var(--ai-rot, 6deg) - (1 - var(--p)) * 7deg));
   }
-  .tc-move--r {
-    transform-origin: 100% 50%;
-    transform: translate(calc(130px - var(--p) * 257px), calc(var(--p) * -15px)) rotate(calc((1 - var(--p)) * 4deg));
+  .tc-hand--you {
+    left: 49.67%; top: 36.96%; width: 42.28%;
+    transform-origin: 1.2% 2.8%;
+    -webkit-mask-image: linear-gradient(to left, transparent 0, #000 26%);
+            mask-image: linear-gradient(to left, transparent 0, #000 26%);
+    filter: drop-shadow(0 0 18px rgba(63,208,224,.16));
+    transform: translateX(calc((1 - var(--p)) * 12cqw)) rotate(calc(var(--you-rot, -8deg) + (1 - var(--p)) * 7deg));
   }
+  .touch__fx { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
   .tc-doc {
     transform-box: fill-box; transform-origin: 50% 100%;
     opacity: calc(.32 + var(--touch) * .68);
@@ -416,7 +425,7 @@
   .tc-burst {
     transform-box: fill-box; transform-origin: center;
     opacity: var(--touch); transform: scale(calc(.35 + var(--touch) * .65));
-    mix-blend-mode: screen; pointer-events: none;
+    mix-blend-mode: screen;
   }
   .touch.is-touching .tc-burst { animation: tcBreathe 2.8s ease-in-out infinite; }
   @keyframes tcBreathe { 50% { transform: scale(1.12); opacity: .8; } }
@@ -765,138 +774,34 @@
   <p>Turn anything &mdash; from a thought to a Figma component &mdash; into structured context AI can understand.</p>
 
   <figure class="touch">
-<svg class="touch__art" viewBox="0 0 1200 360" role="img" aria-labelledby="touch-title">
-<title id="touch-title">A robot hand and a human hand reaching toward each other until their fingertips touch beneath a glowing Markdown document</title>
-<defs>
-  <linearGradient id="tc-metal" gradientUnits="userSpaceOnUse" x1="0" y1="70" x2="0" y2="180">
-    <stop offset="0" stop-color="#e4e2f0"/><stop offset=".45" stop-color="#b3b0c8"/><stop offset="1" stop-color="#5e5a76"/>
-  </linearGradient>
-  <linearGradient id="tc-skin" gradientUnits="userSpaceOnUse" x1="0" y1="72" x2="0" y2="180">
-    <stop offset="0" stop-color="#e8bfa6"/><stop offset=".5" stop-color="#c58d71"/><stop offset="1" stop-color="#8a5643"/>
-  </linearGradient>
-  <linearGradient id="tc-sleeve" gradientUnits="userSpaceOnUse" x1="0" y1="78" x2="0" y2="160">
-    <stop offset="0" stop-color="#6a6680"/><stop offset="1" stop-color="#2d2b3a"/>
-  </linearGradient>
-  <linearGradient id="tc-beam-l" x1="0" x2="1"><stop offset="0" stop-color="#8b7cff" stop-opacity=".2"/><stop offset="1" stop-color="#8b7cff"/></linearGradient>
-  <linearGradient id="tc-beam-r" x1="0" x2="1"><stop offset="0" stop-color="#3fd0e0"/><stop offset="1" stop-color="#3fd0e0" stop-opacity=".2"/></linearGradient>
-  <linearGradient id="tc-doc" x1="0" y1="0" x2="1" y2="1">
-    <stop offset="0" stop-color="#2a2645"/><stop offset="1" stop-color="#14131f"/>
-  </linearGradient>
-  <linearGradient id="tc-doc-edge" x1="0" y1="0" x2="1" y2="1">
-    <stop offset="0" stop-color="#8b7cff"/><stop offset="1" stop-color="#3fd0e0"/>
-  </linearGradient>
-  <radialGradient id="tc-halo"><stop offset="0" stop-color="#8b7cff" stop-opacity=".42"/><stop offset=".55" stop-color="#6f8bff" stop-opacity=".12"/><stop offset="1" stop-color="#3fd0e0" stop-opacity="0"/></radialGradient>
-  <filter id="tc-glow" x="-200%" y="-200%" width="500%" height="500%"><feGaussianBlur stdDeviation="3.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-  <filter id="tc-soft" x="-20%" y="-40%" width="140%" height="180%"><feGaussianBlur stdDeviation="12"/></filter>
-  <radialGradient id="tc-burst"><stop offset="0" stop-color="#ffffff" stop-opacity=".95"/><stop offset=".18" stop-color="#c9c2ff" stop-opacity=".75"/><stop offset=".5" stop-color="#8b7cff" stop-opacity=".28"/><stop offset="1" stop-color="#3fd0e0" stop-opacity="0"/></radialGradient>
-</defs>
-<ellipse cx="600" cy="326" rx="420" ry="24" fill="#8b7cff" opacity=".08" filter="url(#tc-soft)"/>
-<path class="tc-signal" d="M600,186 L600,146" stroke="url(#tc-doc-edge)" stroke-width="1.6" stroke-linecap="round" pathLength="1"/>
-<g class="tc-doc">
-  <circle cx="600" cy="88" r="96" fill="url(#tc-halo)"/>
-  <g transform="rotate(-3 600 88)">
-    <rect x="556" y="34" width="88" height="108" rx="12" fill="url(#tc-doc)" stroke="url(#tc-doc-edge)" stroke-width="1.5"/>
-    <rect x="568" y="46" width="26" height="17" rx="4" fill="none" stroke="#a99fff" stroke-width="1.4"/>
-    <path d="M572.5,59 v-8.5 l4,4.5 l4,-4.5 v8.5 M587,50.5 v7.5 m-2.6,-2.6 l2.6,2.6 l2.6,-2.6" stroke="#a99fff" stroke-width="1.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-    <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="9" fill="#c9c6e6">
-      <text x="568" y="82"><tspan fill="#8b7cff"># </tspan>idea</text>
-      <text x="568" y="97"><tspan fill="#6f8bff">- </tspan>context</text>
-      <text x="568" y="112"><tspan fill="#3fd0e0">| </tspan>table <tspan fill="#3fd0e0">|</tspan></text>
-      <text x="568" y="127"><tspan fill="#8b7cff">&gt; </tspan>intent</text>
-    </g>
-  </g>
-</g>
-<g class="tc-move tc-move--l"><g class="tc-robot" transform="translate(40 54) scale(1.3)">
-<g stroke-linecap="round" fill="none">
-<line x1="-120" y1="118" x2="70" y2="118" stroke="#14131c" stroke-width="68"/>
-<line x1="-120" y1="118" x2="70" y2="118" stroke="url(#tc-metal)" stroke-width="64"/>
-<line x1="-60" y1="88" x2="-60" y2="148" stroke="#14131c" stroke-width="3"/>
-<line x1="-20" y1="88" x2="-20" y2="148" stroke="#14131c" stroke-width="3"/>
-<line x1="20" y1="88" x2="20" y2="148" stroke="#14131c" stroke-width="3"/>
-<line x1="176" y1="136" x2="206" y2="152" stroke="#14131c" stroke-width="26"/>
-<line x1="176" y1="136" x2="206" y2="152" stroke="url(#tc-metal)" stroke-width="22"/>
-<line x1="206" y1="152" x2="196" y2="172" stroke="#14131c" stroke-width="24"/>
-<line x1="206" y1="152" x2="196" y2="172" stroke="url(#tc-metal)" stroke-width="20"/>
-<line x1="196" y1="172" x2="178" y2="173" stroke="#14131c" stroke-width="22"/>
-<line x1="196" y1="172" x2="178" y2="173" stroke="url(#tc-metal)" stroke-width="18"/>
-<line x1="184" y1="124" x2="222" y2="140" stroke="#14131c" stroke-width="30"/>
-<line x1="184" y1="124" x2="222" y2="140" stroke="url(#tc-metal)" stroke-width="26"/>
-<line x1="222" y1="140" x2="210" y2="163" stroke="#14131c" stroke-width="28"/>
-<line x1="222" y1="140" x2="210" y2="163" stroke="url(#tc-metal)" stroke-width="24"/>
-<line x1="210" y1="163" x2="188" y2="165" stroke="#14131c" stroke-width="25"/>
-<line x1="210" y1="163" x2="188" y2="165" stroke="url(#tc-metal)" stroke-width="21"/>
-<line x1="190" y1="110" x2="232" y2="124" stroke="#14131c" stroke-width="31"/>
-<line x1="190" y1="110" x2="232" y2="124" stroke="url(#tc-metal)" stroke-width="27"/>
-<line x1="232" y1="124" x2="222" y2="150" stroke="#14131c" stroke-width="29"/>
-<line x1="232" y1="124" x2="222" y2="150" stroke="url(#tc-metal)" stroke-width="25"/>
-<line x1="222" y1="150" x2="198" y2="154" stroke="#14131c" stroke-width="26"/>
-<line x1="222" y1="150" x2="198" y2="154" stroke="url(#tc-metal)" stroke-width="22"/>
-<path d="M52,96 C52,82 64,76 80,76 L182,76 C200,76 208,88 206,104 L204,132 C202,146 190,152 176,152 L80,152 C62,152 52,140 52,124 Z" fill="url(#tc-metal)" stroke="#14131c" stroke-width="3"/>
-<path d="M84,96 L176,96 M84,132 L170,132" stroke="#14131c" stroke-width="1.6" opacity=".55"/>
-<circle cx="126" cy="114" r="9" fill="#14131c"/><circle cx="126" cy="114" r="4.5" fill="#8b7cff" filter="url(#tc-glow)"/>
-<line x1="188" y1="90" x2="248" y2="92" stroke="#14131c" stroke-width="32"/>
-<line x1="188" y1="90" x2="248" y2="92" stroke="url(#tc-metal)" stroke-width="28"/>
-<line x1="248" y1="92" x2="290" y2="95" stroke="#14131c" stroke-width="29"/>
-<line x1="248" y1="92" x2="290" y2="95" stroke="url(#tc-metal)" stroke-width="25"/>
-<line x1="290" y1="95" x2="322" y2="99" stroke="#14131c" stroke-width="26"/>
-<line x1="290" y1="95" x2="322" y2="99" stroke="url(#tc-metal)" stroke-width="22"/>
-<line x1="92" y1="140" x2="150" y2="152" stroke="#14131c" stroke-width="34"/>
-<line x1="92" y1="140" x2="150" y2="152" stroke="url(#tc-metal)" stroke-width="30"/>
-<line x1="150" y1="152" x2="190" y2="146" stroke="#14131c" stroke-width="28"/>
-<line x1="150" y1="152" x2="190" y2="146" stroke="url(#tc-metal)" stroke-width="24"/>
-<line x1="190" y1="146" x2="214" y2="136" stroke="#14131c" stroke-width="25"/>
-<line x1="190" y1="146" x2="214" y2="136" stroke="url(#tc-metal)" stroke-width="21"/>
-<circle cx="248" cy="92" r="3.4" fill="#14131c"/><circle cx="248" cy="92" r="1.7" fill="#a99fff"/>
-<circle cx="290" cy="95" r="3.4" fill="#14131c"/><circle cx="290" cy="95" r="1.7" fill="#a99fff"/>
-<circle cx="232" cy="124" r="3.4" fill="#14131c"/><circle cx="232" cy="124" r="1.7" fill="#a99fff"/>
-<circle cx="222" cy="150" r="3.4" fill="#14131c"/><circle cx="222" cy="150" r="1.7" fill="#a99fff"/>
-<circle cx="222" cy="140" r="3.4" fill="#14131c"/><circle cx="222" cy="140" r="1.7" fill="#a99fff"/>
-<circle cx="210" cy="163" r="3.4" fill="#14131c"/><circle cx="210" cy="163" r="1.7" fill="#a99fff"/>
-<circle cx="150" cy="152" r="3.4" fill="#14131c"/><circle cx="150" cy="152" r="1.7" fill="#a99fff"/>
-<circle cx="190" cy="146" r="3.4" fill="#14131c"/><circle cx="190" cy="146" r="1.7" fill="#a99fff"/>
-<circle cx="331" cy="100" r="4" fill="#8b7cff" filter="url(#tc-glow)" class="tc-tip"/>
-</g>
-</g></g>
-<g class="tc-move tc-move--r"><g class="tc-human" transform="translate(1160 84) scale(-1.3 1.3)">
-<g stroke-linecap="round" fill="none">
-<line x1="-130" y1="118" x2="12" y2="118" stroke="url(#tc-sleeve)" stroke-width="80"/>
-<line x1="6" y1="118" x2="76" y2="118" stroke="url(#tc-skin)" stroke-width="60"/>
-<line x1="8" y1="80" x2="8" y2="156" stroke="#1b1a24" stroke-width="4" opacity=".5"/>
-<line x1="176" y1="136" x2="206" y2="152" stroke="#6e4231" stroke-width="24.4"/>
-<line x1="206" y1="152" x2="196" y2="172" stroke="#6e4231" stroke-width="22.4"/>
-<line x1="196" y1="172" x2="178" y2="173" stroke="#6e4231" stroke-width="20.4"/>
-<line x1="176" y1="136" x2="206" y2="152" stroke="url(#tc-skin)" stroke-width="22"/>
-<line x1="206" y1="152" x2="196" y2="172" stroke="url(#tc-skin)" stroke-width="20"/>
-<line x1="196" y1="172" x2="178" y2="173" stroke="url(#tc-skin)" stroke-width="18"/>
-<line x1="184" y1="124" x2="222" y2="140" stroke="#6e4231" stroke-width="28.4"/>
-<line x1="222" y1="140" x2="210" y2="163" stroke="#6e4231" stroke-width="26.4"/>
-<line x1="210" y1="163" x2="188" y2="165" stroke="#6e4231" stroke-width="23.4"/>
-<line x1="184" y1="124" x2="222" y2="140" stroke="url(#tc-skin)" stroke-width="26"/>
-<line x1="222" y1="140" x2="210" y2="163" stroke="url(#tc-skin)" stroke-width="24"/>
-<line x1="210" y1="163" x2="188" y2="165" stroke="url(#tc-skin)" stroke-width="21"/>
-<line x1="190" y1="110" x2="232" y2="124" stroke="#6e4231" stroke-width="29.4"/>
-<line x1="232" y1="124" x2="222" y2="150" stroke="#6e4231" stroke-width="27.4"/>
-<line x1="222" y1="150" x2="198" y2="154" stroke="#6e4231" stroke-width="24.4"/>
-<line x1="190" y1="110" x2="232" y2="124" stroke="url(#tc-skin)" stroke-width="27"/>
-<line x1="232" y1="124" x2="222" y2="150" stroke="url(#tc-skin)" stroke-width="25"/>
-<line x1="222" y1="150" x2="198" y2="154" stroke="url(#tc-skin)" stroke-width="22"/>
-<path d="M52,96 C52,82 64,76 80,76 L182,76 C200,76 208,88 206,104 L204,132 C202,146 190,152 176,152 L80,152 C62,152 52,140 52,124 Z" fill="url(#tc-skin)"/>
-<line x1="188" y1="90" x2="248" y2="92" stroke="url(#tc-skin)" stroke-width="28"/>
-<line x1="248" y1="92" x2="290" y2="95" stroke="url(#tc-skin)" stroke-width="25"/>
-<line x1="290" y1="95" x2="322" y2="99" stroke="url(#tc-skin)" stroke-width="22"/>
-<line x1="92" y1="140" x2="150" y2="152" stroke="#6e4231" stroke-width="32.4"/>
-<line x1="150" y1="152" x2="190" y2="146" stroke="#6e4231" stroke-width="26.4"/>
-<line x1="190" y1="146" x2="214" y2="136" stroke="#6e4231" stroke-width="23.4"/>
-<line x1="92" y1="140" x2="150" y2="152" stroke="url(#tc-skin)" stroke-width="30"/>
-<line x1="150" y1="152" x2="190" y2="146" stroke="url(#tc-skin)" stroke-width="24"/>
-<line x1="190" y1="146" x2="214" y2="136" stroke="url(#tc-skin)" stroke-width="21"/>
-<path d="M247,84 q2,8 0,16 M289,88 q2,7 0,13" stroke="#a8705a" stroke-width="1.4" opacity=".6"/>
-<path d="M306,90 q12,-1 20,4" stroke="#f3d6c6" stroke-width="3" opacity=".55"/>
-<circle cx="331" cy="100" r="4" fill="#3fd0e0" filter="url(#tc-glow)" class="tc-tip"/>
-</g>
-</g></g>
-<circle class="tc-burst" cx="600" cy="196" r="70" fill="url(#tc-burst)"/>
-</svg>
+<div class="touch__stage">
+      <img class="tc-hand tc-hand--ai" src="/hand-ai.webp" width="966" height="522" alt="" decoding="async">
+      <img class="tc-hand tc-hand--you" src="/hand-human.webp" width="882" height="487" alt="" decoding="async">
+      <svg class="touch__fx" viewBox="0 0 1200 520" aria-hidden="true">
+        <defs>
+          <linearGradient id="tc-doc" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2a2645"/><stop offset="1" stop-color="#14131f"/></linearGradient>
+          <linearGradient id="tc-doc-edge" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8b7cff"/><stop offset="1" stop-color="#3fd0e0"/></linearGradient>
+          <radialGradient id="tc-halo"><stop offset="0" stop-color="#8b7cff" stop-opacity=".42"/><stop offset=".55" stop-color="#6f8bff" stop-opacity=".12"/><stop offset="1" stop-color="#3fd0e0" stop-opacity="0"/></radialGradient>
+          <radialGradient id="tc-burst"><stop offset="0" stop-color="#ffffff" stop-opacity=".95"/><stop offset=".18" stop-color="#c9c2ff" stop-opacity=".75"/><stop offset=".5" stop-color="#8b7cff" stop-opacity=".28"/><stop offset="1" stop-color="#3fd0e0" stop-opacity="0"/></radialGradient>
+        </defs>
+        <path class="tc-signal" d="M600,190 L600,154" stroke="url(#tc-doc-edge)" stroke-width="1.6" stroke-linecap="round" pathLength="1"/>
+        <g class="tc-doc">
+          <circle cx="600" cy="94" r="96" fill="url(#tc-halo)"/>
+          <g transform="rotate(-3 600 94)">
+            <rect x="556" y="40" width="88" height="108" rx="12" fill="url(#tc-doc)" stroke="url(#tc-doc-edge)" stroke-width="1.5"/>
+            <rect x="568" y="52" width="26" height="17" rx="4" fill="none" stroke="#a99fff" stroke-width="1.4"/>
+            <path d="M572.5,65 v-8.5 l4,4.5 l4,-4.5 v8.5 M587,56.5 v7.5 m-2.6,-2.6 l2.6,2.6 l2.6,-2.6" stroke="#a99fff" stroke-width="1.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="9" fill="#c9c6e6">
+              <text x="568" y="88"><tspan fill="#8b7cff"># </tspan>idea</text>
+              <text x="568" y="103"><tspan fill="#6f8bff">- </tspan>context</text>
+              <text x="568" y="118"><tspan fill="#3fd0e0">| </tspan>table <tspan fill="#3fd0e0">|</tspan></text>
+              <text x="568" y="133"><tspan fill="#8b7cff">&gt; </tspan>intent</text>
+            </g>
+          </g>
+        </g>
+        <circle class="tc-burst" cx="600" cy="200" r="70" fill="url(#tc-burst)"/>
+      </svg>
+    </div>
     <figcaption class="touch__cap">
       <span><b>AI</b> reads it</span>
       <span class="touch__mid">Markdown &mdash; the language you both speak</span>

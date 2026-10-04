@@ -165,13 +165,14 @@ const PUBLIC_FILES = new Set([
   'nav.css', 'nav.js',
   'home.html', 'shell.html', 'compare.html', 'login.html',
   'Menu.svg', 'Profile.svg', 'ilovemd logo.svg', 'favicon.svg',
+  'hand-ai.webp', 'hand-human.webp',
 ]);
 
 const MIME = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
   '.css': 'text/css; charset=utf-8', '.json': 'application/json; charset=utf-8',
   '.md': 'text/markdown; charset=utf-8', '.svg': 'image/svg+xml',
-  '.png': 'image/png', '.jpg': 'image/jpeg', '.woff2': 'font/woff2',
+  '.png': 'image/png', '.webp': 'image/webp', '.jpg': 'image/jpeg', '.woff2': 'font/woff2',
 };
 
 function sendJson(res, code, body) {
