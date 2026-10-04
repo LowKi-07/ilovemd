@@ -65,6 +65,27 @@
 .nav .sp { flex: 1 1 auto; min-width: 0; }
 .brand-logo { display: flex; align-items: center; flex-shrink: 0; }
 .brand-logo svg { height: 29px; width: auto; display: block; }
+
+/* The heart in the logo beats: twice on page load (nav.js adds .is-intro),
+   and for as long as the logo is hovered or focused. A lub-dub double pulse,
+   scaled about the heart's own centre. */
+.logo-heart { transform-box: fill-box; transform-origin: 50% 55%; }
+.logo-heart.is-intro { animation: logoBeat 1s ease-in-out 2; }
+.brand-logo:hover .logo-heart,
+.brand-logo:focus-visible .logo-heart { animation: logoBeat 1s ease-in-out infinite; }
+@keyframes logoBeat {
+  0%   { transform: scale(1); }
+  14%  { transform: scale(1.24); }
+  28%  { transform: scale(1); }
+  42%  { transform: scale(1.16); }
+  70%  { transform: scale(1); }
+  100% { transform: scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .logo-heart.is-intro,
+  .brand-logo:hover .logo-heart,
+  .brand-logo:focus-visible .logo-heart { animation: none; }
+}
 .brandname {
   font: 660 14.5px var(--nv-font); letter-spacing: -.015em;
   color: var(--nv-text); text-decoration: none;
