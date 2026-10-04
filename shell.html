@@ -1251,7 +1251,7 @@
     }
     if (!S.md && MODE === 'convert' && !S.busy) {
       wrap.innerHTML =
-        '<div class="placeholder"><div class="dropbox" style="width:min(440px,90%)">' +
+        '<div class="placeholder"><div class="dropbox dropbox--beam" style="width:min(440px,90%)">' + BEAM +
         '<div class="fpair">' +
         '<span class="ftile" style="--tb:' + CT.tint + ';--tl:' + CT.line + '">' + CT.svg + '</span>' +
         '<span class="arr">&rarr;</span>' +
@@ -1275,7 +1275,7 @@
             ? 'this template’s source and documents its regions, layout rules and allowed content'
             : 'this component’s source and writes structured documentation - anatomy, variants, states, tokens';
         wrap.innerHTML =
-          '<div class="placeholder"><div class="dropbox">' +
+          '<div class="placeholder"><div class="dropbox dropbox--beam">' + BEAM +
           '<h3>' + esc(cap(S.curName)) + '</h3>' +
           '<p>' + aiName() + ' reads ' + what + '. Nothing is sent until you generate.</p>' +
           '<div class="dropbox__actions">' +
