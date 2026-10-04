@@ -347,6 +347,13 @@
   }
   .dropbox h3 { margin: 0 0 6px; font-size: 15px; font-weight: 620; color: var(--text); }
   .dropbox p { margin: 0 0 16px; font-size: 12.5px; color: var(--text-2); line-height: 1.55; }
+  /* A failure shown on the landing card itself (the chat is hidden there). */
+  .carderr {
+    margin: 0 0 14px; padding: 10px 12px; text-align: left;
+    border: 1px solid rgba(251,113,133,.4); border-radius: var(--r-md);
+    background: rgba(251,113,133,.08); font-size: 12px; line-height: 1.5; color: var(--text-2);
+  }
+  .carderr b { display: block; color: var(--text); font-weight: 600; margin-bottom: 2px; }
   .figtok-help { margin: -4px 0 14px; text-align: left; font-size: 11.5px; color: var(--text-3); }
   .figtok-help summary { cursor: pointer; width: max-content; }
   .figtok-help summary:hover { color: var(--text-2); }
@@ -736,7 +743,7 @@
     // folder upload in progress (public mode): { name, done, total, failed, ctrl }
     upload: null,
     // public Figma: the visitor's token (this tab's memory only) and link draft
-    figmaToken: '', figUrlDraft: '',
+    figmaToken: '', figUrlDraft: '', figError: null,
     // text
     docs: [], docName: null, mtime: 0, dirty: false, filter: '',
     // ui
@@ -1316,6 +1323,7 @@
         '<li>Give it <b>File content: Read-only</b> access, then copy it.</li></ol>' +
         '<p>ilovemd uses it only to read this file, for this one request. It is never saved; closing the tab forgets it.</p>' +
         '</details>' +
+        figErrorHTML() +
         '<button class="btn btn--primary" id="btn-fig">Generate Documentation</button>' +
         (S.figmaDemo ? '<div style="margin-top:10px"><button class="btn btn--ghost btn--sm" id="btn-fig-demo">Or try the demo file</button></div>' : '') +
         '</div></div>';
@@ -1341,6 +1349,7 @@
         '<h3>Figma &rarr; Markdown</h3>' +
         '<p>Paste a link to a Figma frame or component. ilovemd retrieves it from the Figma desktop app and ' + aiName() + ' writes structured documentation.</p>' +
         '<input id="figurl" type="text" spellcheck="false" placeholder="https://www.figma.com/design/…?node-id=…">' +
+        figErrorHTML() +
         '<button class="btn btn--primary" id="btn-fig">Generate Documentation</button>' +
         '</div></div>';
       $('btn-fig').onclick = function () { figGenerate($('figurl').value.trim()); };
@@ -1669,6 +1678,12 @@
     document.body.appendChild(inp);
     inp.click();
   }
+  function figErrorHTML() {
+    var f = S.figError;
+    if (!f) return '';
+    return '<div class="carderr" role="alert"><b>' + esc(f.title) + '</b>' +
+      (f.explain ? '<span>' + esc(f.explain) + '</span>' : '') + '</div>';
+  }
   function uploadProgressHTML() {
     var u = S.upload;
     if (!u) return '';
@@ -1823,6 +1838,8 @@
       } else {
         var p = e.payload || {};
         say('a', '<b>We couldn’t generate your Markdown.</b> ' + esc(p.explain || e.message), true);
+        // The chat panel is hidden until a document exists - say it where it shows.
+        if (!S.md) notify('error', p.error || 'We couldn’t generate your Markdown.', p.explain || '');
       }
       $('valid').innerHTML = '';
     }
@@ -1843,6 +1860,7 @@
       $('valid').innerHTML = '<span style="color:var(--accent)">&#9679;</span> Retrieving from Figma & writing… ' + Math.round((Date.now() - t0) / 1000) + 's';
     }, 500);
     var prevDoc = S.md;
+    S.figError = null;
     try {
       var r = await post('/api/figma-doc', {}, true);
       clearInterval(tick);
@@ -1857,6 +1875,7 @@
       if (!isAbort(e)) {
         var p = e.payload || {};
         say('a', '<b>We couldn’t generate your Markdown.</b> ' + esc(p.explain || e.message), true);
+        S.figError = { title: p.error || e.message, explain: p.explain || '' };
       }
       $('valid').innerHTML = '';
     }
@@ -1893,6 +1912,7 @@
     }, 500);
 
     var prevDoc = S.md;
+    S.figError = null;
     try {
       var r = await post('/api/figma-doc', S.siteMode === 'public' ? { url: url, token: S.figmaToken } : { url: url }, true);
       clearInterval(tick);
@@ -1915,6 +1935,8 @@
       } else {
         var p = e.payload || {};
         say('a', '<b>' + esc(p.error || "We couldn’t connect to Figma.") + '</b> ' + esc(p.explain || ''), true);
+        // The chat is hidden on the landing card, so the card shows it too.
+        S.figError = { title: p.error || e.message || "We couldn’t connect to Figma.", explain: p.explain || '' };
       }
       $('valid').innerHTML = '';
     }

@@ -950,7 +950,10 @@ async function figmaGet(pathAndQuery, token) {
   }
   if (!r.ok) {
     const body = await r.text().catch(() => '');
-    console.error(`Figma API ${r.status}: ${body.slice(0, 200)}`);
+    // Figma's own rate-limit headers say which allowance ran out - log them
+    // (never the token) so a failure can be diagnosed from the host's logs.
+    const fx = [...r.headers].filter(([k]) => /^x-figma|^retry-after$/i.test(k)).map(([k, v]) => `${k}=${v}`).join(' ');
+    console.error(`Figma API ${r.status}: ${body.slice(0, 200)}${fx ? '  [' + fx + ']' : ''}`);
     const err = new Error(
       r.status === 403 ? 'Figma did not accept this token for this file.'
         : r.status === 404 ? 'Figma could not find that file or frame.'
@@ -959,12 +962,24 @@ async function figmaGet(pathAndQuery, token) {
     err.explain =
       r.status === 403 ? 'Check that the token was copied whole, has not expired, has "File content: read" access, and that your Figma account can open this file.'
         : r.status === 404 ? 'Check the link - copy it from Figma with Share → Copy link, or right-click a frame → Copy link to selection.'
-          : r.status === 429 ? 'Wait a minute and try again.'
+          : r.status === 429 ? figmaWait(r.headers.get('retry-after'))
             : 'Try again in a moment.';
     err.figma = true;
     throw err;
   }
   return r.json();
+}
+
+// Figma's API allowance depends on the token owner's plan and seat; on some
+// it is a handful of calls before a wait of days, so say the real wait.
+function figmaWait(retryAfter) {
+  const secs = Number(retryAfter);
+  if (!secs) return 'Wait a little and try again.';
+  if (secs < 120) return `Try again in ${Math.ceil(secs)} seconds.`;
+  if (secs < 7200) return `Try again in about ${Math.ceil(secs / 60)} minutes.`;
+  const when = new Date(Date.now() + secs * 1000).toUTCString().replace(/:\d\d GMT$/, ' UTC');
+  return `Figma's API allowance for this token's plan or seat is used up until about ${when}. ` +
+    'A token from an account with a Full or Dev seat on a paid Figma plan gets far more calls.';
 }
 
 const fetchFigmaFile = (key, token) => figmaGet(`files/${encodeURIComponent(key)}`, token);
