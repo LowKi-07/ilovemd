@@ -11,6 +11,9 @@ documents/
 # native folder picker) and any custom data root
 workspace/
 
+# Public mode: one private folder per visitor
+users/
+
 # Optional API key escape hatch (never commit real keys)
 .anthropic-key
 .env

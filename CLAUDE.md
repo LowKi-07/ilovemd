@@ -7,7 +7,7 @@
 It runs in one of two modes from the same codebase, controlled by `ILOVEMD_MODE`:
 
 - **`local`** (default) — the original single-developer tool. Runs on `localhost:7777` only, no login wall, no cloud backend: all AI calls shell out to the **Claude CLI** (`claude -p`), reusing whatever OAuth session the user already has from `claude` in their terminal. Started by double-clicking `ilovemd.command` on macOS.
-- **`public`** — a password-gated demo instance meant to be reachable from the internet (Render or GoDaddy cPanel hosting behind a custom domain — see `DEPLOY.md`). No CLI dependency: AI calls go straight to a vendor HTTPS API (Gemini by default) with a server-side key. See **Public mode** below for the full picture — env vars, guardrails, what's different.
+- **`public`** — the internet-facing instance, open to everyone by default (optional shared password), with per-visitor private storage (Render or GoDaddy cPanel hosting behind a custom domain — see `DEPLOY.md`). No CLI dependency: AI calls go straight to a vendor HTTPS API (Gemini by default) with a server-side key. See **Public mode** below for the full picture — env vars, guardrails, what's different.
 
 ## Architecture
 
@@ -34,12 +34,13 @@ It runs in one of two modes from the same codebase, controlled by `ILOVEMD_MODE`
 | `fix-ai.command` | Helper script the user runs if the AI stops working (re-runs `claude /login`) |
 | `.claude/launch.json` | Claude Code dev-server config — tells Claude Code how to start the server for the Browser panel |
 | `.claude/settings.json` | Project-level Claude Code permissions (grants the Figma MCP tools). Committed |
-| `login.html` | Public-mode-only password gate page (`/login`) |
+| `login.html` | Public-mode password gate page (`/login`) — only used when `ILOVEMD_GATE_PASSWORD` is set |
+| `platform/` | Public-mode infrastructure: `identity.mjs` (anonymous visitor id cookie), `userdata.mjs` (per-visitor folders + idle sweep), `limits.mjs` (rate limiter + concurrency cap) |
 | `package.json` | Declares `mammoth`/`pdf-parse` (public-mode doc conversion only) and the `build`/`start` scripts GoDaddy Node.js Hosting requires |
 | `.ilovemd-state.json` | Local runtime state: persists which design-system kit/folder the user last had open. **Gitignored.** |
 | `.uploads/` | Temporary directory for file uploads (PDF, DOCX, etc.). **Gitignored.** |
 | `documents/` | User's saved Markdown output files, organized in subdirectories per kit. **Gitignored.** |
-| `workspace/` | Public-mode-only: confined root for component-kit folders uploaded via `/api/kit-upload`, replacing local mode's native folder picker. **Gitignored.** |
+| `users/` | Public-mode-only: one folder per visitor (`users/<id>/documents`, `workspace`, `uploads`, `state.json`) under `ILOVEMD_DATA_DIR`. **Gitignored.** |
 
 ## Routes
 
@@ -49,13 +50,14 @@ It runs in one of two modes from the same codebase, controlled by `ILOVEMD_MODE`
 | `/text`, `/ui`, `/figma`, `/convert` | `shell.html` — main workspace |
 | `/compare` | `compare.html` — file comparison |
 | `/app` | `app.html` — legacy editor (redirects to `/text`) |
-| `/login` | `login.html` — public-mode-only password gate |
+| `/login` | `login.html` — public-mode password gate (redirects to `/` when no password is set) |
+| `/healthz` | `{ok}` for host health checks — never gated |
 
 ## API endpoints
 
 | Endpoint | Method | Purpose |
 |---|---|---|
-| `/api/state` | GET/PUT | Persist/restore last-used kit and folder path. `importDir` is confined under `workspace/` in public mode |
+| `/api/state` | GET/PUT | Persist/restore last-used kit and folder path. `importDir` is confined to the visitor's own `workspace/` in public mode |
 | `/api/kits` | GET | List available design-system kits from the configured folder |
 | `/api/components` | GET | List components for a given kit |
 | `/api/component` | GET | Get a single component's source details |
@@ -63,7 +65,7 @@ It runs in one of two modes from the same codebase, controlled by `ILOVEMD_MODE`
 | `/api/figma-doc` | POST | **AI call** — local mode: retrieves the frame from the **Figma desktop app's own MCP server** on `127.0.0.1:3845` (see **Figma retrieval** below), then has the model write the doc. Falls back to the CLI's Figma MCP if that server is unreachable. Public mode: ignores any URL and always documents one fixed, server-configured Figma file via Figma's REST API (`FIGMA_TOKEN` + `ILOVEMD_DEMO_FIGMA_KEY`) — never a visitor-supplied design |
 | `/api/frame` | POST | Save a Figma URL into the "recent frames" list (`.ilovemd-state.json`). Local mode only — despite the name, this does not extract anything via `osascript` |
 | `/api/pick-folder` | POST | Open a native macOS folder picker (via `osascript`). Local mode only — `404` in public mode |
-| `/api/kit-upload` | POST | Public-mode-only. Receives one file at a time (from a `webkitdirectory` picker) with `?kit=&relpath=`, reconstructing the folder tree under `workspace/<kit>/` — the public-mode replacement for `/api/pick-folder` |
+| `/api/kit-upload` | POST | Public-mode-only. Receives one file at a time (from a `webkitdirectory` picker) with `?kit=&relpath=`, reconstructing the folder tree under the visitor's `workspace/<kit>/` — the public-mode replacement for `/api/pick-folder` |
 | `/api/upload` | POST | Accept a file upload, save to `.uploads/`, extract text |
 | `/api/convert` | POST | **AI call** — convert an uploaded file to Markdown. Local mode: DOCX/DOC/RTF/ODT via `textutil`, PDF handed to the CLI's own Read tool. Public mode: DOCX via `mammoth`, PDF via `pdf-parse` (both dynamically imported so local mode never needs them installed); DOC/RTF/RTFD/ODT are not supported in public mode. XLSX/PPTX extraction is a hand-rolled pure-JS ZIP+XML reader in both modes (no `unzip` shell-out) |
 | `/api/save-out` | POST | Save a generated Markdown file to `documents/`. **No longer called by the frontend** — the UI downloads through the browser instead. Route kept, and `/api/docs` still reads whatever is already in `documents/` |
@@ -72,9 +74,9 @@ It runs in one of two modes from the same codebase, controlled by `ILOVEMD_MODE`
 | `/api/rename` | POST | Rename a saved document |
 | `/api/ai` | POST | **AI call** — general "generate/improve Markdown" endpoint used by shell.html |
 | `/api/compare-ai` | POST | **AI call** — compare two Markdown files; AI can return updated versions |
-| `/api/setup` | GET | Report current AI strategy status, plus `mode` and (public mode) `figmaDemo` availability, for the frontend to adapt its UI |
+| `/api/setup` | GET | Report AI provider status, plus `mode`, `gate` and (public mode) `figmaDemo` availability, for the frontend to adapt its UI |
 | `/api/ai/diagnose` | GET | Probe the active provider (for `claude-cli`, every invocation strategy) and report what works. `404` in public mode, since probes cost money |
-| `/api/login` | POST | Public-mode-only. Checks `{password}` against `ILOVEMD_GATE_PASSWORD`, sets a signed session cookie |
+| `/api/login` | POST | Public mode with a gate password only. Checks `{password}` against `ILOVEMD_GATE_PASSWORD`, sets a signed session cookie |
 | `/api/logout` | POST | Public-mode-only. Clears the session cookie (the token itself remains valid until it expires — see **Public mode**) |
 
 `/api/pick-file` (native macOS file picker) was removed entirely — it was dead code, unused by any page; the working upload pattern (`<input type=file>` + `/api/upload`) already covered its purpose.
@@ -134,28 +136,39 @@ The "← Change component" back button in the component detail card calls `paint
 
 ## Public mode
 
-Set `ILOVEMD_MODE=public` to run the password-gated public deployment instead of the local single-developer tool. Everything below is inert in local mode.
+Set `ILOVEMD_MODE=public` to run the internet-facing deployment instead of the local single-developer tool. It is **open to everyone by default**; a shared password is optional. Everything below is inert in local mode. Deployment steps and the scaling path: `DEPLOY.md`.
 
-**Required env vars** (the server refuses to start in public mode without the first two):
-- `ILOVEMD_GATE_PASSWORD` — the one shared password protecting the whole site
-- `ILOVEMD_SESSION_SECRET` — random secret used to HMAC-sign session cookies
+**Required env vars**:
+- `ILOVEMD_SESSION_SECRET` (16+ chars; the server refuses to start without it) — HMAC-signs the anonymous visitor cookie, and login cookies when the gate is on
 - One AI key: `GEMINI_API_KEY` (default), `XAI_API_KEY`, `OPENAI_API_KEY` or `ANTHROPIC_API_KEY` — optionally with `ILOVEMD_AI_PROVIDER` to choose explicitly and `ILOVEMD_AI_MODEL` to override the provider's default model
 
-**Optional env vars**:
+**Optional env vars** (all listed with defaults in `.env.example`; numeric ones go through `numEnv()`, which refuses to start on a non-number rather than letting `NaN` switch a limit off):
+- `ILOVEMD_GATE_PASSWORD` — set it to put the whole site behind one shared password
 - `HOST=0.0.0.0` — public hosting must set this explicitly; the default stays `127.0.0.1`
+- `ILOVEMD_DATA_DIR` — root for `users/` (and, in local mode, `documents/`, `.anthropic-key`). Point it at a persistent disk (Render: `/var/data`)
+- `ILOVEMD_USER_DATA_DAYS` (30) — visitor folders with no write activity this long are swept every 6 hours
+- AI limits, checked in `runAI()` before every call whichever route asked: `ILOVEMD_RATE_LIMIT_PER_HOUR` (20, per visitor), `ILOVEMD_IP_RATE_LIMIT_PER_HOUR` (3x that, per address), `ILOVEMD_MAX_CALLS_PER_DAY` (200, site-wide, UTC day), `ILOVEMD_MAX_CONCURRENT_AI` (8 in flight; extra calls get an immediate "busy", never a queue). Upload limits: `ILOVEMD_UPLOADS_PER_HOUR` (60), `ILOVEMD_KIT_FILES_PER_HOUR` (3000). All in-memory per process — **not** a substitute for a budget cap on the AI key
+- `ILOVEMD_TRUSTED_PROXIES` (1) — how many proxies append to `X-Forwarded-For`; `clientIp()` reads that many hops from the right, because left-hand entries are client-supplied
 - `ILOVEMD_FIGMA_MCP_URL` — override the local Figma MCP endpoint (default `http://127.0.0.1:3845/mcp`)
-- `ILOVEMD_DATA_DIR` — root for `documents/`, `.uploads/`, `workspace/`, `.ilovemd-state.json`, `.anthropic-key` when they shouldn't live next to `server.mjs` (e.g. GoDaddy requires persistent writes under `/public/assets/`)
-- `ILOVEMD_RATE_LIMIT_PER_HOUR` (default 20) and `ILOVEMD_MAX_CALLS_PER_DAY` (default 200) — in-memory, per-process courtesy limits on AI calls, checked inside `runAI()` before every call regardless of which route triggered it. These are **not** a substitute for a spending limit set on the Anthropic API key itself in the Anthropic console — a leaked password could still burn calls fast within the caps
 - `FIGMA_TOKEN` + `ILOVEMD_DEMO_FIGMA_KEY` — enables the fixed Figma demo (see the `/api/figma-doc` row above)
+
+**Per-visitor isolation** (the part to keep intact when changing routes):
+- `platform/identity.mjs` gives every visitor a random id in a signed `ilovemd_vid` cookie (1 year). Real accounts later = `identify()` returning a user id; nothing downstream changes
+- `platform/userdata.mjs` maps an id to `<data>/users/<id>/{documents,workspace,uploads,state.json}`
+- The HTTP handler runs each public request inside `requestScope` (`AsyncLocalStorage`). File helpers call `space()` for the current visitor's paths and `visitor()` for their id — **never use a module-level path for per-user data**; local mode's `space()` returns the original paths next to `server.mjs`
+- `/api/convert` accepts only paths inside the visitor's own `uploads/`; `realDir()` confines every client `dir` to the visitor's own `workspace/`
+- `/api/setup` reports `gate` (whether a password is required — the pages show Sign out only then) and hides server paths
 
 **What's different from local mode**:
 - AI calls go straight to the chosen vendor's HTTPS API, never the CLI (`claude-cli` is refused at startup in public mode)
-- Every route is behind the password gate except `/login` and `/api/login`; unauthenticated `/api/*` requests get `401`, unauthenticated pages redirect to `/login`
-- Sessions are stateless signed cookies (7-day expiry) with no server-side revocation list — `/api/logout` clears the browser's cookie, but a copied cookie string stays valid until it expires. Acceptable for a single shared-password demo; would need a real session store to do better
-- `realDir()` confines every `dir` a client can pass (`/api/kits`, `/api/components`, `/api/component`, `/api/component-doc`) to under `workspace/` — a client can never make the server read an arbitrary path on its own disk, unlike local mode where that's the entire point
+- With a gate password: every route except `/login`, `/api/login` and `/healthz` needs the session cookie (`401` for `/api/*`, redirect for pages). Sessions are stateless signed cookies (7-day expiry) with no revocation list — rotating `ILOVEMD_SESSION_SECRET` ends them all (and also resets every visitor id). Without a gate, `/login` redirects to `/`
+- `/healthz` — unauthenticated, no disk; for the host's health check
+- SIGTERM/SIGINT close the server gracefully (in-flight AI calls get up to 25 s)
 - No native macOS pickers: `/api/pick-folder` is disabled, replaced by `/api/kit-upload` + a `webkitdirectory` file input in `shell.html`
-- Figma import is a single fixed demo file the server operator configures, not a visitor-supplied URL — this is a deliberate choice so the public demo never pulls in a stranger's Figma design
+- Figma import is a single fixed demo file the server operator configures, not a visitor-supplied URL — this is a deliberate choice so the public site never pulls in a stranger's Figma design
 - DOCX/PDF conversion uses `mammoth`/`pdf-parse` (the project's only two npm dependencies, dynamically imported so local mode's zero-dependency story is untouched); DOC/RTF/RTFD/ODT aren't supported publicly
+
+**Scaling seams**: `platform/limits.mjs` (async `take()` — swap the memory map for Redis when running 2+ processes), `platform/userdata.mjs` (swap disk for object storage), `ai/` (provider). Routes don't change for any of these.
 
 ## Development conventions
 

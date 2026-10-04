@@ -460,7 +460,7 @@
     document.querySelectorAll('.hdrop__btn').forEach(function (b) { b.setAttribute('aria-expanded', 'false'); });
   });
   fetch('/api/setup', { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (s) {
-    if (s.mode !== 'public') return;
+    if (!s.gate) return;
     var lo = document.getElementById('menu-logout');
     if (lo) lo.addEventListener('click', function (e) {
       e.preventDefault();

@@ -2077,8 +2077,9 @@
       S.siteMode = setup.mode;
       S.figmaDemo = setup.figmaDemo;
       S.aiLabel = setup.ai && setup.ai.label;
+      S.gate = !!setup.gate;
     } catch (e) { S.siteMode = 'local'; }
-    if (S.siteMode === 'public') {
+    if (S.gate) {
       var lo = $('menu-logout');
       if (lo) lo.addEventListener('click', function (e) {
         e.preventDefault();

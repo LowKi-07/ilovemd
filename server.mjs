@@ -29,7 +29,11 @@ import zlib from 'node:zlib';
 import crypto from 'node:crypto';
 import { spawn, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { createAIService } from './ai/index.mjs';
+import { createIdentity, addCookie } from './platform/identity.mjs';
+import { createLimiter, createConcurrencyGate } from './platform/limits.mjs';
+import { createUserData } from './platform/userdata.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 
@@ -46,9 +50,6 @@ const MODE = process.env.ILOVEMD_MODE === 'public' ? 'public' : 'local';
 // file (e.g. GoDaddy Node.js Hosting requires persistent writes under
 // /public/assets/). Local mode leaves this unset and keeps today's paths.
 const DATA_DIR = process.env.ILOVEMD_DATA_DIR ? path.resolve(process.env.ILOVEMD_DATA_DIR) : null;
-// In public mode, component/kit source folders must live under here - never an
-// arbitrary path on the host's disk. Populated via /api/kit-upload.
-const WORKSPACE_DIR = MODE === 'public' ? path.join(DATA_DIR || HERE, 'workspace') : null;
 
 /* Documentation rules loaded from prompts/ at startup.
    These travel with the repo and are injected into every doc-generation prompt,
@@ -76,25 +77,73 @@ const PORT = Number(process.env.PORT || 7777);
 const HOST = process.env.HOST || '127.0.0.1';
 const BUILD = 'ilovemd-1';
 
+// A numeric setting. A typo must not quietly become NaN - that would switch a
+// limit off entirely, since nothing compares as >= NaN.
+function numEnv(name, fallback) {
+  const raw = process.env[name];
+  if (raw === undefined || raw === '') return fallback;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n < 0) {
+    console.error(`${name}="${raw}" is not a number.`);
+    process.exit(1);
+  }
+  return n;
+}
+
 /* ---- public-mode-only configuration ----
    None of this is read or used when MODE is 'local'. */
+// Optional. Unset, the public site is open to everyone; set, every visitor
+// needs this one shared password first.
 const GATE_PASSWORD = process.env.ILOVEMD_GATE_PASSWORD || '';
 const SESSION_SECRET = process.env.ILOVEMD_SESSION_SECRET || '';
 const SESSION_COOKIE = 'ilovemd_session';
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
-const RATE_LIMIT_PER_HOUR = Number(process.env.ILOVEMD_RATE_LIMIT_PER_HOUR || 20);
-const MAX_CALLS_PER_DAY = Number(process.env.ILOVEMD_MAX_CALLS_PER_DAY || 200);
+const RATE_LIMIT_PER_HOUR = numEnv('ILOVEMD_RATE_LIMIT_PER_HOUR', 20);
+// Per network address: higher than per visitor, since an office or school
+// shares one, but it stops a single client that keeps clearing its cookie.
+const IP_RATE_LIMIT_PER_HOUR = numEnv('ILOVEMD_IP_RATE_LIMIT_PER_HOUR', RATE_LIMIT_PER_HOUR * 3);
+const MAX_CALLS_PER_DAY = numEnv('ILOVEMD_MAX_CALLS_PER_DAY', 200);
+// AI calls in flight at once in this process; past it visitors are told to retry.
+const MAX_CONCURRENT_AI = numEnv('ILOVEMD_MAX_CONCURRENT_AI', 8);
+const USER_DATA_DAYS = numEnv('ILOVEMD_USER_DATA_DAYS', 30);
+const UPLOADS_PER_HOUR = numEnv('ILOVEMD_UPLOADS_PER_HOUR', 60);
+const KIT_FILES_PER_HOUR = numEnv('ILOVEMD_KIT_FILES_PER_HOUR', 3000);
+// How many reverse proxies sit in front of this server (Render, cPanel's
+// Apache: 1). The client's real address is that many entries from the right
+// of X-Forwarded-For - entries further left are whatever the client sent.
+const TRUSTED_PROXIES = numEnv('ILOVEMD_TRUSTED_PROXIES', 1);
 
 // One fixed Figma file the owner controls - never a visitor-supplied URL. Keeps
 // the public demo from being used to pull a stranger's Figma design.
 const FIGMA_TOKEN = process.env.FIGMA_TOKEN || '';
 const DEMO_FIGMA_KEY = process.env.ILOVEMD_DEMO_FIGMA_KEY || '';
 
-if (MODE === 'public' && (!GATE_PASSWORD || !SESSION_SECRET)) {
-  console.error('ILOVEMD_MODE=public requires ILOVEMD_GATE_PASSWORD and ILOVEMD_SESSION_SECRET to be set.');
+if (MODE === 'public' && SESSION_SECRET.length < 16) {
+  console.error('ILOVEMD_MODE=public requires ILOVEMD_SESSION_SECRET (16+ characters; try `openssl rand -hex 32`).');
   process.exit(1);
 }
+
+/* ---- where a request's files live ----
+   Local mode: one developer, the paths next to this file, as always.
+   Public mode: each visitor gets their own folder (platform/userdata.mjs), and
+   every request runs inside requestScope so the helpers below - space(),
+   listDocs(), readState() ... - see that visitor's folder without every
+   function needing it passed in. */
+const requestScope = new AsyncLocalStorage();
+const LOCAL_SPACE = {
+  docsDir: DOCS,
+  workspaceDir: null,
+  uploadsDir: path.join(HERE, '.uploads'),
+  stateFile: path.join(HERE, '.ilovemd-state.json'),
+};
+const space = () => (requestScope.getStore() || {}).space || LOCAL_SPACE;
+const visitor = () => (requestScope.getStore() || {}).visitor || null;
+
+const identity = MODE === 'public' ? createIdentity({ secret: SESSION_SECRET }) : null;
+const userData = MODE === 'public' ? createUserData({ root: DATA_DIR || HERE, ttlDays: USER_DATA_DAYS }) : null;
+const limiter = createLimiter();
+const aiGate = createConcurrencyGate(MAX_CONCURRENT_AI);
 
 const SYSTEM_PROMPT = [
   'You write clear, well-structured Markdown documents.',
@@ -174,33 +223,9 @@ function verifySessionToken(tok) {
 }
 
 function clientIp(req) {
-  const xf = req.headers['x-forwarded-for'];
-  if (xf) return String(xf).split(',')[0].trim();
+  const hops = String(req.headers['x-forwarded-for'] || '').split(',').map((s) => s.trim()).filter(Boolean);
+  if (TRUSTED_PROXIES > 0 && hops.length) return hops[Math.max(0, hops.length - TRUSTED_PROXIES)];
   return req.socket.remoteAddress || 'unknown';
-}
-
-/* Per-IP hourly cap plus a global daily cap. This is a courtesy limiter on top
-   of the shared password, not a substitute for a spending limit set on the
-   Anthropic API key itself - a leaked password could still be reused fast. */
-const ipHits = new Map();
-let dailyCalls = { day: new Date().toDateString(), count: 0 };
-
-function checkRateLimit(ip) {
-  const now = Date.now();
-  const hourAgo = now - 3600000;
-  const hits = (ipHits.get(ip) || []).filter((t) => t > hourAgo);
-  if (hits.length >= RATE_LIMIT_PER_HOUR) return false;
-  hits.push(now);
-  ipHits.set(ip, hits);
-  return true;
-}
-
-function checkDailyCap() {
-  const today = new Date().toDateString();
-  if (dailyCalls.day !== today) dailyCalls = { day: today, count: 0 };
-  if (dailyCalls.count >= MAX_CALLS_PER_DAY) return false;
-  dailyCalls.count++;
-  return true;
 }
 
 /* ------------------------------------------------- public-mode: zip reader
@@ -273,10 +298,11 @@ function safeName(raw) {
   return withExt;
 }
 
-const docPath = (name) => path.join(DOCS, name);
+const docPath = (name) => path.join(space().docsDir, name);
 
 function listDocs() {
-  fs.mkdirSync(DOCS, { recursive: true });
+  const DOCS = space().docsDir;
+  if (!fs.existsSync(DOCS)) return [];
   return fs.readdirSync(DOCS, { withFileTypes: true })
     .filter((d) => d.isFile() && d.name.toLowerCase().endsWith('.md') && !d.name.startsWith('.'))
     .map((d) => {
@@ -295,7 +321,7 @@ function listDocs() {
 }
 
 function writeDoc(name, text) {
-  fs.mkdirSync(DOCS, { recursive: true });
+  fs.mkdirSync(space().docsDir, { recursive: true });
   const file = docPath(name);
   // Temp file then rename, so an interrupted write cannot destroy a good document.
   const tmp = file + '.tmp-' + process.pid;
@@ -325,14 +351,14 @@ function nameFromMarkdown(md, fallback) {
 /* Remembered folders (component import folder, markdown output folder) live
    in a tiny JSON file next to the server, so "save everything there going
    forward" survives a restart. */
-const STATE_FILE = path.join(HERE, '.ilovemd-state.json');
 function readState() {
-  try { return JSON.parse(fs.readFileSync(STATE_FILE, 'utf8')) || {}; }
+  try { return JSON.parse(fs.readFileSync(space().stateFile, 'utf8')) || {}; }
   catch (e) { return {}; }
 }
 function writeState(patch) {
   const s = { ...readState(), ...patch };
-  fs.writeFileSync(STATE_FILE, JSON.stringify(s, null, 2));
+  fs.mkdirSync(path.dirname(space().stateFile), { recursive: true });
+  fs.writeFileSync(space().stateFile, JSON.stringify(s, null, 2));
   return s;
 }
 
@@ -374,8 +400,9 @@ function realDir(raw) {
   // Public mode never trusts a client-supplied path outside the upload
   // workspace - local mode's whole point is browsing the developer's own disk.
   if (MODE === 'public') {
-    if (!WORKSPACE_DIR) return null;
-    if (dir !== WORKSPACE_DIR && !dir.startsWith(WORKSPACE_DIR + path.sep)) return null;
+    const ws = space().workspaceDir;
+    if (!ws) return null;
+    if (dir !== ws && !dir.startsWith(ws + path.sep)) return null;
   }
   try { if (fs.statSync(dir).isDirectory()) return dir; } catch (e) { /* fall through */ }
   return null;
@@ -978,8 +1005,6 @@ function extractQuestions(md) {
    file-to-markdown skill) cleans junk and repairs structure - never rewriting
    or summarizing the author's words. */
 
-const UPLOADS = path.join(HERE, '.uploads');
-
 function readRawBody(req, cap) {
   return new Promise((done, fail) => {
     const chunks = [];
@@ -1181,37 +1206,74 @@ async function ensureAI(res) {
   return false;
 }
 
-// The public demo's courtesy limits apply before any provider is called,
-// whichever route asked.
+function limitError(message, explain, retryAfterSec) {
+  const err = new Error(message);
+  err.explain = explain;
+  err.limited = true;
+  err.retryAfterSec = retryAfterSec;
+  return err;
+}
+
+// Public mode's limits apply before any provider is called, whichever route
+// asked: per visitor, per network address, a site-wide daily cap, and a cap
+// on calls in flight at once.
 async function runAI(prompt, req) {
-  if (MODE === 'public') {
-    if (!checkDailyCap()) {
-      const err = new Error('This public demo has reached its daily AI usage limit.');
-      err.explain = 'It resets at midnight server time - please try again tomorrow.';
-      err.limited = true;
-      throw err;
-    }
-    if (!checkRateLimit(clientIp(req))) {
-      const err = new Error('Rate limit reached - please slow down.');
-      err.explain = `This demo allows ${RATE_LIMIT_PER_HOUR} AI calls per hour per visitor.`;
-      err.limited = true;
-      throw err;
+  if (MODE !== 'public') return ai.generate(prompt);
+
+  const checks = [
+    ['ai:v:' + visitor().id, RATE_LIMIT_PER_HOUR, 36e5,
+      'You have reached the hourly limit for AI requests.', `Each visitor can make ${RATE_LIMIT_PER_HOUR} AI requests an hour.`],
+    ['ai:ip:' + clientIp(req), IP_RATE_LIMIT_PER_HOUR, 36e5,
+      'Too many AI requests from this network.', 'Several people on your network are using ilovemd at once.'],
+    ['ai:day', MAX_CALLS_PER_DAY, 864e5,
+      'ilovemd has reached its AI limit for today.', 'It resets at midnight UTC - please try again tomorrow.'],
+  ];
+  for (const [key, limit, windowMs, message, explain] of checks) {
+    const r = await limiter.take(key, limit, windowMs);
+    if (!r.ok) {
+      const mins = Math.ceil(r.retryAfterSec / 60);
+      throw limitError(message, explain + (windowMs < 864e5 ? ` Try again in about ${mins} minute${mins === 1 ? '' : 's'}.` : ''), r.retryAfterSec);
     }
   }
-  return ai.generate(prompt);
+
+  const release = aiGate.tryEnter();
+  if (!release) throw limitError('ilovemd is busy right now.', 'Too many documents are being written at once - try again in a few seconds.', 5);
+  try { return await ai.generate(prompt); }
+  finally { release(); }
 }
 
 /* --------------------------------------------------------------- routing */
 
-const server = http.createServer(async (req, res) => {
+/* Public mode: work out who is asking, then handle the request inside their
+   scope so every file helper sees only their folder. */
+const server = http.createServer((req, res) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  if (MODE !== 'public') return handle(req, res);
+  const secure = req.headers['x-forwarded-proto'] === 'https';
+  const who = identity.identify(req, res, parseCookies(req), { secure });
+  // Only requests that write anything mark a visitor as active, so a page
+  // view (or a crawler) never keeps a folder alive on its own.
+  if (req.method !== 'GET' && req.method !== 'HEAD') userData.touch(who.id);
+  return requestScope.run({ visitor: who, space: userData.spaceFor(who.id) }, () => handle(req, res));
+});
+
+async function handle(req, res) {
   const url = new URL(req.url, 'http://localhost');
   const route = url.pathname;
 
   try {
-    /* ---- public-mode password gate ----
-       Local mode never runs this - it has no login wall at all. */
+    // For the host's health checks: no gate, no scope, no disk.
+    if (route === '/healthz') return sendJson(res, 200, { ok: true, build: BUILD });
+
+    /* ---- optional public-mode password gate ----
+       Only when ILOVEMD_GATE_PASSWORD is set. Local mode never has one. */
     const isLoginRoute = route === '/login' || route === '/login.html' || route === '/api/login';
-    if (MODE === 'public' && !isLoginRoute) {
+    if (MODE === 'public' && !GATE_PASSWORD && isLoginRoute) {
+      if (route === '/api/login') return sendJson(res, 404, { error: 'this site has no password' });
+      res.writeHead(302, { Location: '/' });
+      return res.end();
+    }
+    if (MODE === 'public' && GATE_PASSWORD && !isLoginRoute) {
       const authed = verifySessionToken(parseCookies(req)[SESSION_COOKIE]);
       if (!authed) {
         if (route.startsWith('/api/')) return sendJson(res, 401, { error: 'sign in required' });
@@ -1235,12 +1297,12 @@ const server = http.createServer(async (req, res) => {
       const token = makeSessionToken();
       // Behind the host's HTTPS proxy, keep the cookie off plain-HTTP requests.
       const secure = req.headers['x-forwarded-proto'] === 'https' ? '; Secure' : '';
-      res.setHeader('Set-Cookie', `${SESSION_COOKIE}=${token}; HttpOnly; Path=/; Max-Age=${Math.floor(SESSION_TTL_MS / 1000)}; SameSite=Lax${secure}`);
+      addCookie(res, `${SESSION_COOKIE}=${token}; HttpOnly; Path=/; Max-Age=${Math.floor(SESSION_TTL_MS / 1000)}; SameSite=Lax${secure}`);
       return sendJson(res, 200, { ok: true });
     }
 
     if (route === '/api/logout' && req.method === 'POST') {
-      res.setHeader('Set-Cookie', `${SESSION_COOKIE}=; HttpOnly; Path=/; Max-Age=0`);
+      addCookie(res, `${SESSION_COOKIE}=; HttpOnly; Path=/; Max-Age=0`);
       return sendJson(res, 200, { ok: true });
     }
 
@@ -1337,6 +1399,11 @@ const server = http.createServer(async (req, res) => {
       try { buf = await readRawBody(req, 30e6); }
       catch (e) { return sendJson(res, 413, { error: 'File is too large (30 MB max).' }); }
       if (!buf.length) return sendJson(res, 400, { error: 'empty upload' });
+      if (MODE === 'public') {
+        const r = await limiter.take('upload:' + visitor().id, UPLOADS_PER_HOUR, 36e5);
+        if (!r.ok) return sendJson(res, 429, { error: 'Too many uploads - please wait a little and try again.' });
+      }
+      const UPLOADS = space().uploadsDir;
       fs.mkdirSync(UPLOADS, { recursive: true });
       // Best-effort sweep of stale uploads.
       try {
@@ -1363,10 +1430,12 @@ const server = http.createServer(async (req, res) => {
       if (!relParts.length) return sendJson(res, 400, { error: 'bad relative path' });
       const ext = path.extname(relParts[relParts.length - 1]).toLowerCase();
       if (!SRC_EXT.has(ext)) return sendJson(res, 400, { error: 'only .html/.htm/.css files are accepted' });
+      const lim = await limiter.take('kitfile:' + visitor().id, KIT_FILES_PER_HOUR, 36e5);
+      if (!lim.ok) return sendJson(res, 429, { error: `Kit uploads are limited to ${KIT_FILES_PER_HOUR} files an hour.` });
       let buf;
       try { buf = await readRawBody(req, 5e6); }
       catch (e) { return sendJson(res, 413, { error: 'file too large (5 MB max)' }); }
-      const kitDir = path.join(WORKSPACE_DIR, kit);
+      const kitDir = path.join(space().workspaceDir, kit);
       const dest = path.join(kitDir, ...relParts);
       if (dest !== kitDir && !dest.startsWith(kitDir + path.sep)) {
         return sendJson(res, 400, { error: 'bad path' });
@@ -1379,6 +1448,12 @@ const server = http.createServer(async (req, res) => {
     if (route === '/api/convert' && req.method === 'POST') {
       const body = await readBody(req);
       const file = path.resolve(String(body.path || ''));
+      // Public mode converts only what this visitor uploaded - never any other
+      // path on the server's disk.
+      if (MODE === 'public') {
+        const up = space().uploadsDir;
+        if (!file.startsWith(up + path.sep)) return sendJson(res, 400, { error: 'file not found' });
+      }
       let st;
       try { st = fs.statSync(file); } catch (e) { return sendJson(res, 400, { error: 'file not found' }); }
       if (!st.isFile()) return sendJson(res, 400, { error: 'not a file' });
@@ -1675,6 +1750,7 @@ const server = http.createServer(async (req, res) => {
       if (typeof body.markdown !== 'string' || !body.markdown.trim()) {
         return sendJson(res, 400, { error: 'nothing to save' });
       }
+      const DOCS = space().docsDir;
       let dir = DOCS;
       const sub = String(body.subdir || '').trim();
       if (sub) {
@@ -1699,7 +1775,10 @@ const server = http.createServer(async (req, res) => {
         build: BUILD,
         mode: MODE,
         figmaDemo: MODE === 'public' ? !!(FIGMA_TOKEN && DEMO_FIGMA_KEY) : null,
-        documentsDir: DOCS,
+        // Whether visitors must type a password before using the site.
+        gate: MODE === 'public' && !!GATE_PASSWORD,
+        // Server paths are the local developer's business, not a visitor's.
+        documentsDir: MODE === 'public' ? null : space().docsDir,
         documents: listDocs().length,
         ai: { ...aiStatus, ...ai.describe() },
       });
@@ -1715,7 +1794,7 @@ const server = http.createServer(async (req, res) => {
 
     /* ---- documents ---- */
     if (route === '/api/docs' && req.method === 'GET') {
-      return sendJson(res, 200, { dir: DOCS, docs: listDocs() });
+      return sendJson(res, 200, { dir: MODE === 'public' ? null : space().docsDir, docs: listDocs() });
     }
 
     if (route === '/api/doc' && req.method === 'GET') {
@@ -1921,12 +2000,22 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(500, { 'Content-Type': 'text/plain' });
     res.end('500 ' + e.message);
   }
-});
+}
 
 /* ------------------------------------------------------------------ boot */
 
-fs.mkdirSync(DOCS, { recursive: true });
-if (WORKSPACE_DIR) fs.mkdirSync(WORKSPACE_DIR, { recursive: true });
+if (MODE === 'public') {
+  fs.mkdirSync(userData.usersDir, { recursive: true });
+  // Drop visitor folders idle past ILOVEMD_USER_DATA_DAYS, now and every 6 hours.
+  const sweep = () => {
+    const n = userData.sweep();
+    if (n) console.log(`swept ${n} idle visitor folder${n === 1 ? '' : 's'}`);
+  };
+  sweep();
+  setInterval(sweep, 6 * 3600e3).unref();
+} else {
+  fs.mkdirSync(DOCS, { recursive: true });
+}
 aiStatus = await ai.check();
 
 server.listen(PORT, HOST, () => {
@@ -1936,11 +2025,14 @@ server.listen(PORT, HOST, () => {
   console.log('  http://' + HOST + ':' + PORT + '/text      workspace');
   console.log('');
   console.log('  build      ' + BUILD);
-  console.log('  documents  ' + DOCS + '   (' + listDocs().length + ' files)');
+  if (MODE === 'local') console.log('  documents  ' + DOCS + '   (' + listDocs().length + ' files)');
   const d = ai.describe();
   console.log('  ai         ' + d.label + ' via ' + ai.id + ' - ' + d.model + (aiStatus.available ? '' : '  (unavailable: ' + aiStatus.detail + ')'));
   if (MODE === 'public') {
-    console.log('  workspace  ' + WORKSPACE_DIR);
+    console.log('  access     ' + (GATE_PASSWORD ? 'password-gated' : 'open to everyone'));
+    console.log('  user data  ' + userData.usersDir + '   (idle folders kept ' + USER_DATA_DAYS + ' days)');
+    console.log('  limits     ' + RATE_LIMIT_PER_HOUR + '/hour per visitor, ' + IP_RATE_LIMIT_PER_HOUR + '/hour per address, ' +
+      MAX_CALLS_PER_DAY + '/day site-wide, ' + MAX_CONCURRENT_AI + ' at once');
     console.log('  figma demo ' + (FIGMA_TOKEN && DEMO_FIGMA_KEY ? 'configured' : 'not configured'));
   } else if (ai.id === 'claude-cli' && !aiStatus.available) {
     for (const line of aiStatus.searched || []) console.log('             tried ' + line);
@@ -1953,6 +2045,16 @@ server.listen(PORT, HOST, () => {
   console.log('  Stop the server with Control-C.');
   console.log('');
 });
+
+// Hosts stop the old process on every deploy with SIGTERM: finish the requests
+// in flight (an AI call can take a while), then exit.
+for (const sig of ['SIGTERM', 'SIGINT']) {
+  process.once(sig, () => {
+    console.log(`${sig}: finishing open requests, then exiting`);
+    server.close(() => process.exit(0));
+    setTimeout(() => process.exit(0), 25000).unref();
+  });
+}
 
 server.on('error', (e) => {
   if (e.code === 'EADDRINUSE') {
