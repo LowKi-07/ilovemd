@@ -490,33 +490,27 @@
     align-self: center; color: var(--text-3); font-size: 16px; flex: none;
   }
 
-  /* trust: monochrome badges, a row of icon + two-line label */
-  .trust {
-    margin-top: 40px; text-align: center;
-    border: 1px solid var(--hairline); border-radius: var(--r-lg);
-    background:
-      radial-gradient(40em 18em at 50% -40%, rgba(139,124,255,.16), transparent 70%),
-      var(--panel);
-    padding: 64px 28px 58px;
-  }
+  /* trust: no container, just the heading and a grid of small monochrome
+     badges (icon + two-line label) */
+  .trust { text-align: center; }
   .trust h2 { margin: 0 0 12px; font-size: clamp(26px, 3.6vw, 36px); font-weight: 680; letter-spacing: -.025em; }
   .trust > p { margin: 0 auto; max-width: 60ch; color: var(--text-2); }
   .badges {
-    list-style: none; margin: 46px auto 0; padding: 0; max-width: 980px;
-    display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px 24px;
+    list-style: none; margin: 40px auto 0; padding: 0; max-width: 760px;
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px 20px;
   }
   .badge {
-    display: flex; align-items: center; justify-content: center; gap: 11px;
+    display: flex; align-items: center; justify-content: center; gap: 7px;
     color: #8e8e9f; transition: color .2s var(--ease); cursor: default; border-radius: var(--r-sm);
   }
   .badge:hover, .badge:focus-visible { color: #d6d5e2; }
-  .badge svg { width: 38px; height: 38px; flex: none; }
+  .badge svg { width: 23px; height: 23px; flex: none; }
   .badge__t { display: flex; flex-direction: column; align-items: flex-start; line-height: 1.05; text-align: left; }
-  .badge__t b { font: 800 17px var(--font); letter-spacing: -.01em; text-transform: uppercase; }
-  .badge__t small { font: 700 9.5px var(--font); letter-spacing: .06em; text-transform: uppercase; margin-top: 3px; }
+  .badge__t b { font: 800 10.2px var(--font); letter-spacing: .01em; text-transform: uppercase; }
+  /* 60% of the old 9.5px would be 5.7px - kept at a readable 8px instead */
+  .badge__t small { font: 700 8px var(--font); letter-spacing: .06em; text-transform: uppercase; margin-top: 2px; }
   .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-  @media (max-width: 760px) { .badges { grid-template-columns: repeat(2, 1fr); gap: 26px 12px; } }
-  @media (max-width: 380px) { .badge__t b { font-size: 15px; } }
+  @media (max-width: 760px) { .badges { grid-template-columns: repeat(2, 1fr); gap: 20px 12px; } }
 
   /* footer */
   footer { border-top: 1px solid var(--hairline); padding: 26px 0; margin-top: 40px; }
