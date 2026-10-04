@@ -590,6 +590,8 @@
   .valid { font: 400 10.5px var(--mono); color: var(--text-3); min-height: 14px; }
   .valid .v-ok { color: var(--ok); }
   .valid .v-warn { color: var(--warn); }
+  .valid .v-err { color: var(--danger, #fb7185); }
+  .valid [title] { cursor: help; }
 
   /* ---------------------------------------------------------------- misc */
   .notice { position: fixed; top: 60px; left: 50%; transform: translateX(-50%); z-index: 40; width: min(560px, 92vw); }
@@ -725,6 +727,8 @@
 <div class="notice" id="notice"></div>
 <div class="toast" id="toast"></div>
 
+<script src="/vendor/markdown-it.min.js"></script>
+<script src="/mdcheck.js"></script>
 <script src="/md.js"></script>
 <script>
 (function () {
@@ -1381,15 +1385,26 @@
       : '<div class="placeholder"><div><div class="big">&#10022;</div>Nothing to preview yet.</div></div>';
   }
 
+  /* Live CommonMark check (mdcheck.js on markdown-it, the same parser the
+     server checks every generated document with). Hover the bar for the
+     full list. If the parser failed to load, it says so rather than
+     claiming a check that did not run. */
+  var mdIt = window.markdownit && window.ilovemdCheck ? window.markdownit({ html: true }) : null;
   function validate() {
     var el = $('valid');
     if (!S.md) { el.innerHTML = ''; return; }
-    var fences = (S.md.match(/^\s*```/gm) || []).length;
-    var ok = /^#\s+.+/m.test(S.md) && fences % 2 === 0 &&
-             !/^(here is|here's|sure|certainly|i cannot|i can't)/i.test(S.md.trim());
-    el.innerHTML = ok
-      ? '<span class="v-ok">&#10003; Markdown · &#10003; structure validated</span>'
-      : '<span class="v-warn">&#9888; Markdown needs review</span>';
+    if (!mdIt) { el.innerHTML = '<span>Markdown · structure check unavailable</span>'; return; }
+    var r = window.ilovemdCheck.check(mdIt, S.md);
+    if (!r.issues.length) {
+      el.innerHTML = '<span class="v-ok" title="Parsed with a CommonMark-compliant parser: fences closed, tables consistent, headings in order.">' +
+        '&#10003; CommonMark checked · structure OK</span>';
+      return;
+    }
+    var errs = r.issues.filter(function (x) { return x.level === 'error'; }).length;
+    var list = r.issues.map(function (x) { return (x.level === 'error' ? '✕ ' : '⚠ ') + x.msg; }).join('\n');
+    el.innerHTML = '<span class="' + (errs ? 'v-err' : 'v-warn') + '" title="' + esc(list) + '">' +
+      (errs ? '&#10005; ' : '&#9888; ') + r.issues.length + (r.issues.length === 1 ? ' issue' : ' issues') +
+      ' · ' + esc(r.issues[0].msg) + '</span>';
   }
 
   function setStatus(kind, text) { $('status').dataset.s = kind || ''; $('status').textContent = text; }

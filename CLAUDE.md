@@ -32,6 +32,7 @@ It runs in one of two modes from the same codebase, controlled by `ILOVEMD_MODE`
 | `nav.css`, `nav.js` | The site nav bar, shared by `home.html`, `shell.html` and `compare.html`. Injected into `<div id="site-nav"></div>` by `nav.js`; self-contained (its own `--nv-*` tokens) because the pages' own design tokens differ. Edit here, not per page |
 | `templates.html` | Templates page (`/templates`): search, category pills, cards and a preview dialog (rendered/raw, Copy, Download, Use template → `/text?template=<slug>`) |
 | `templates/` | The template `.md` files the templates page lists - one file per template, file name = slug. Optional front matter (`title`, `description`, `category`, `icon`, `tags`, `order`) feeds the cards and is stripped from what visitors copy. `ILOVEMD_TEMPLATES_DIR` overrides the folder |
+| `mdcheck.js` | The CommonMark output check (`globalThis.ilovemdCheck.check(markdownIt, src)` / `.fix(src)`), shared by the server and the editor. Parses with markdown-it and flags what breaks a document: unclosed fence, uneven table rows, empty (errors); no/multiple `#` titles, skipped heading levels, raw HTML, chat preamble (warnings). `fix` closes an unclosed fence. Every string is valid CommonMark, so this is a structure check, not a validity test |
 | `md.js` | The shared Markdown renderer (`window.ilovemdMarkdown`), used by `shell.html` and `templates.html`. Escapes first, so its output is innerHTML-safe |
 | `compare.html` | Side-by-side Markdown diff page with AI chat panel |
 | `app.html` | **Legacy** single-page editor, superseded by `shell.html`. Can be deleted. |
@@ -41,7 +42,7 @@ It runs in one of two modes from the same codebase, controlled by `ILOVEMD_MODE`
 | `.claude/settings.json` | Project-level Claude Code permissions (grants the Figma MCP tools). Committed |
 | `login.html` | Public-mode password gate page (`/login`) — only used when `ILOVEMD_GATE_PASSWORD` is set |
 | `platform/` | Public-mode infrastructure: `identity.mjs` (anonymous visitor id cookie), `userdata.mjs` (per-visitor folders + idle sweep), `limits.mjs` (rate limiter + concurrency cap) |
-| `package.json` | Declares `mammoth`/`pdf-parse` (public-mode doc conversion only) and the `build`/`start` scripts GoDaddy Node.js Hosting requires |
+| `package.json` | Declares `mammoth`/`pdf-parse` (public-mode doc conversion only) and `markdown-it` (the output check) and the `build`/`start` scripts GoDaddy Node.js Hosting requires |
 | `.ilovemd-state.json` | Local runtime state: persists which design-system kit/folder the user last had open. **Gitignored.** |
 | `.uploads/` | Temporary directory for file uploads (PDF, DOCX, etc.). **Gitignored.** |
 | `documents/` | User's saved Markdown output files, organized in subdirectories per kit. **Gitignored.** |
@@ -180,7 +181,9 @@ Set `ILOVEMD_MODE=public` to run the internet-facing deployment instead of the l
 
 ## Development conventions
 
-- Local mode: zero npm dependencies — if you need a library, inline it or implement it from scratch. Public mode's doc conversion is the one deliberate exception (`mammoth`, `pdf-parse`) — see **Public mode**
+- Local mode: zero npm dependencies — if you need a library, inline it or implement it from scratch. The deliberate exceptions are public mode's doc conversion (`mammoth`, `pdf-parse`) and the output check (`markdown-it`), all loaded with dynamic `import()` so the server still runs without them (the check is then skipped and the editor says so)
+- Every generated document passes through `extractQuestions()`, which runs the `mdcheck.js` fix + check and returns `check: {ok, issues, fixed}` alongside `markdown`. Keep new generation routes going through it. The editor loads the same parser from `/vendor/markdown-it.min.js` (served from `node_modules`) for its live check in the validation bar
+- The homepage trust badges (`#trust`) must each describe something the deployment actually does. Do not add third-party certification names or marks (SOC 2, ISO …) unless that certification has been awarded
 - No build step for the frontend — edit HTML/JS/CSS files directly
 - Static files are served from an **allowlist** (`PUBLIC_FILES` in `server.mjs`), never "any file in the folder" — that folder holds server code, `.git`, possible key files and `users/`. A new front-end asset must be added there or it 404s
 - AI keys are read only in `ai/providers/*` and sent only in server-to-vendor request headers (never a URL). The browser talks to `/api/*`; it never sees a key, a vendor URL or a raw vendor error (those go to the server log)

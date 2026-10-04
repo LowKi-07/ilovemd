@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "mammoth": "^1.8.0",
+    "markdown-it": "^14.3.2",
     "pdf-parse": "^1.1.1"
   },
   "main": "app.cjs",

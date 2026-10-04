@@ -34,6 +34,7 @@ import { createAIService } from './ai/index.mjs';
 import { createIdentity, addCookie } from './platform/identity.mjs';
 import { createLimiter, createConcurrencyGate } from './platform/limits.mjs';
 import { createUserData } from './platform/userdata.mjs';
+import './mdcheck.js';   // sets globalThis.ilovemdCheck
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 
@@ -162,7 +163,7 @@ const SYSTEM_PROMPT = [
 
 // The only files the static handler will serve. Add new front-end assets here.
 const PUBLIC_FILES = new Set([
-  'nav.css', 'nav.js', 'md.js',
+  'nav.css', 'nav.js', 'md.js', 'mdcheck.js',
   'home.html', 'shell.html', 'compare.html', 'login.html',
   'Menu.svg', 'Profile.svg', 'ilovemd logo.svg', 'favicon.svg',
   'hand-ai.webp', 'hand-human.webp',
@@ -1086,7 +1087,7 @@ function figmaDemoPrompt(summary, fileName) {
 /* The generator is asked to END with an "## Open questions" section so the
    clarification flow has material - but questions never belong in the saved
    document. This splits them out and cleans the markdown. */
-function extractQuestions(md) {
+function splitQuestions(md) {
   const lines = String(md || '').split('\n');
   let start = -1, end = lines.length;
   for (let i = 0; i < lines.length; i++) {
@@ -1110,6 +1111,18 @@ function extractQuestions(md) {
   const markdown = lines.slice(0, start).concat(lines.slice(end)).join('\n')
     .replace(/\n{3,}/g, '\n\n').replace(/\s+$/, '') + '\n';
   return { markdown, questions };
+}
+
+/* Every generated document leaves through here: open questions split out,
+   then the CommonMark check (mdcheck.js) - an unclosed code fence is closed,
+   and the remaining findings travel with the response as `check`. */
+function extractQuestions(md) {
+  const out = splitQuestions(md);
+  if (!markdownIt) return { ...out, check: null };
+  const repaired = globalThis.ilovemdCheck.fix(out.markdown);
+  const check = globalThis.ilovemdCheck.check(markdownIt, repaired.text);
+  if (repaired.fixed.length) console.log('    mdcheck fixed: ' + repaired.fixed.join(' '));
+  return { ...out, markdown: repaired.text, check: { ...check, fixed: repaired.fixed } };
 }
 
 /* ----------------------------------------------------- file conversion
@@ -1295,6 +1308,16 @@ function convertPrompt(filename, extracted, filePath) {
       : '=== EXTRACTED CONTENT ===\n\n' + extracted.content,
   ].join('\n');
 }
+
+/* ------------------------------------------------------------ mdcheck
+   markdown-it (CommonMark + GFM tables) powers the output check. Loaded
+   dynamically, like mammoth and pdf-parse: without it installed, documents
+   simply go out unchecked. */
+let markdownIt = null;
+try {
+  const { default: MarkdownIt } = await import('markdown-it');
+  markdownIt = new MarkdownIt({ html: true });
+} catch (e) { /* not installed - check skipped */ }
 
 /* -------------------------------------------------------------------- ai */
 
@@ -1683,7 +1706,7 @@ async function handle(req, res) {
         let md = split.markdown;
         if (truncated) md += '\n\n> **Note:** the source file was larger than this converter\'s limit; the tail was not converted.\n';
         return sendJson(res, 200, {
-          markdown: md, ms,
+          markdown: md, ms, check: split.check,
           suggestedName: nameFromMarkdown(md, path.basename(file, ext)).replace(/ \d+\.md$/, '.md'),
         });
       } catch (e) {
@@ -1758,7 +1781,7 @@ async function handle(req, res) {
         console.log(`${(ms / 1000).toFixed(1)}s  ${r.text.length} chars  via ${r.strategy}`);
         const split = extractQuestions(r.text);
         return sendJson(res, 200, {
-          markdown: split.markdown, questions: split.questions, ms,
+          markdown: split.markdown, questions: split.questions, check: split.check, ms,
           suggestedName: nameFromMarkdown(split.markdown, src.name).replace(/ \d+\.md$/, '.md'),
         });
       } catch (e) {
@@ -1822,7 +1845,7 @@ async function handle(req, res) {
         }
         const split = extractQuestions(r.text);
         return sendJson(res, 200, {
-          markdown: split.markdown, questions: split.questions, ms,
+          markdown: split.markdown, questions: split.questions, check: split.check, ms,
           suggestedName: nameFromMarkdown(split.markdown, name).replace(/ \d+\.md$/, '.md'),
         });
       } catch (e) {
@@ -1861,7 +1884,7 @@ async function handle(req, res) {
         }
         const split = extractQuestions(r.text);
         return sendJson(res, 200, {
-          markdown: split.markdown, questions: split.questions, ms,
+          markdown: split.markdown, questions: split.questions, check: split.check, ms,
           suggestedName: nameFromMarkdown(split.markdown, 'Figma component').replace(/ \d+\.md$/, '.md'),
         });
       } catch (e) {
@@ -1956,7 +1979,7 @@ async function handle(req, res) {
         }
         const split = extractQuestions(r.text);
         return sendJson(res, 200, {
-          markdown: split.markdown, questions: split.questions, ms,
+          markdown: split.markdown, questions: split.questions, check: split.check, ms,
           suggestedName: nameFromMarkdown(split.markdown, 'Figma component').replace(/ \d+\.md$/, '.md'),
         });
       } catch (e) {
@@ -2130,7 +2153,7 @@ async function handle(req, res) {
         // A new document gets a filename from its own H1.
         const suggested = editing ? null : nameFromMarkdown(r.text, instruction);
         const split = extractQuestions(r.text);
-        return sendJson(res, 200, { markdown: split.markdown, questions: split.questions, ms, strategy: r.strategy, suggestedName: suggested });
+        return sendJson(res, 200, { markdown: split.markdown, questions: split.questions, check: split.check, ms, strategy: r.strategy, suggestedName: suggested });
       } catch (e) {
         console.log('failed');
         if (e.tried) for (const t of e.tried) console.log(`      ${t.form}: ${t.why}`);
@@ -2203,6 +2226,15 @@ async function handle(req, res) {
     }
 
     if (route.startsWith('/api/')) return sendJson(res, 404, { error: 'no such route' });
+
+    // The editor's live CommonMark check runs the same parser as the server.
+    if (route === '/vendor/markdown-it.min.js') {
+      try {
+        const buf = fs.readFileSync(path.join(HERE, 'node_modules', 'markdown-it', 'dist', 'markdown-it.min.js'));
+        res.writeHead(200, { 'Content-Type': MIME['.js'], 'Content-Length': buf.length, 'Cache-Control': 'public, max-age=86400' });
+        return res.end(buf);
+      } catch (e) { return sendJson(res, 404, { error: 'markdown-it is not installed' }); }
+    }
 
     // Some clients ask for /favicon.ico regardless of <link rel="icon">.
     if (route === '/favicon.ico') {
