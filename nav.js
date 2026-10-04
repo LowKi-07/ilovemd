@@ -17,6 +17,7 @@
       </svg>
     </a>
     <div class="nav__links">
+      <a href="/">Home</a>
       <div class="navdrop">
         <button class="navdrop__btn" id="nd-btn-convert" aria-haspopup="true" aria-expanded="false" aria-controls="nd-convert">
           Convert MD
@@ -73,7 +74,6 @@
         </div>
       </div>
 
-      <a href="/compare">Compare MD</a>
       <a href="/templates">Templates</a>
     </div>
     <span class="sp"></span>
