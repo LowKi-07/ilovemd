@@ -381,19 +381,11 @@
 
   /* bridge — the one non-card section on the page, so it breaks the rhythm */
   .bridge { text-align: center; }
-  /* Glyph matrix behind the section, after Magic UI's: a 14px grid of
-     Markdown's own symbols, a few flickering each tick (script at the end).
-     Full viewport width, faded out at the top and bottom edges. */
-  .glyphs {
-    position: absolute; z-index: -1; pointer-events: none;
-    top: 0; left: 50%; width: 100vw; height: 100%; transform: translateX(-50%);
-    opacity: .26;
-    -webkit-mask-image: linear-gradient(to bottom, transparent, #000 18%, #000 72%, transparent);
-            mask-image: linear-gradient(to bottom, transparent, #000 18%, #000 72%, transparent);
-  }
-
-  /* The touch: AI and a person reaching for the same Markdown file. */
-  .touch { margin: 34px auto 0; max-width: 1040px; }
+  /* The touch: AI and a person reaching for each other; as the section
+     scrolls in, the hands close the gap and their fingertips meet under the
+     Markdown file (script at the end sets --p, 0 → 1, and --touch, the last
+     stretch of it). */
+  .touch { --p: 0; --touch: 0; margin: 34px auto 0; max-width: 1040px; }
   .touch__art {
     display: block; width: 100%; height: auto; overflow: visible;
     /* forearms dissolve into the page instead of stopping at the frame */
@@ -402,19 +394,32 @@
   }
   .tc-robot { filter: drop-shadow(0 0 14px rgba(139,124,255,.28)); }
   .tc-human { filter: drop-shadow(0 0 14px rgba(63,208,224,.16)); }
-  .tc-beam { stroke-dasharray: 3 7; animation: tcFlow 1.6s linear infinite; }
-  .tc-beam--r { animation-direction: reverse; }
-  @keyframes tcFlow { to { stroke-dashoffset: -20; } }
-  .tc-doc { transform-box: fill-box; transform-origin: center; animation: tcBob 5s ease-in-out infinite; }
-  @keyframes tcBob { 50% { transform: translateY(-5px); } }
-  .tc-tip { animation: tcPulse 2.4s ease-in-out infinite; }
-  @keyframes tcPulse { 50% { opacity: .35; } }
-  .tc-float { opacity: 0; animation: tcFloat 5.2s ease-in-out infinite; }
-  @keyframes tcFloat {
-    0% { opacity: 0; transform: translateY(8px); }
-    30%, 60% { opacity: .9; }
-    100% { opacity: 0; transform: translateY(-16px); }
+  /* Each hand starts 130 units out and travels 257 in, settling 15 units
+     toward the shared fingertip line; a few degrees of wrist tilt unwind
+     on the way so the approach reads as a reach, not a slide. */
+  .tc-move { transform-box: fill-box; will-change: transform; }
+  .tc-move--l {
+    transform-origin: 0% 50%;
+    transform: translate(calc(var(--p) * 257px - 130px), calc(var(--p) * 15px)) rotate(calc((1 - var(--p)) * -4deg));
   }
+  .tc-move--r {
+    transform-origin: 100% 50%;
+    transform: translate(calc(130px - var(--p) * 257px), calc(var(--p) * -15px)) rotate(calc((1 - var(--p)) * 4deg));
+  }
+  .tc-doc {
+    transform-box: fill-box; transform-origin: 50% 100%;
+    opacity: calc(.32 + var(--touch) * .68);
+    transform: translateY(calc((1 - var(--touch)) * 10px)) scale(calc(.94 + var(--touch) * .06));
+    filter: drop-shadow(0 0 calc(var(--touch) * 18px) rgba(139,124,255,.55));
+  }
+  .tc-signal { fill: none; stroke-dasharray: 1; stroke-dashoffset: calc(1 - var(--touch)); opacity: var(--touch); }
+  .tc-burst {
+    transform-box: fill-box; transform-origin: center;
+    opacity: var(--touch); transform: scale(calc(.35 + var(--touch) * .65));
+    mix-blend-mode: screen; pointer-events: none;
+  }
+  .touch.is-touching .tc-burst { animation: tcBreathe 2.8s ease-in-out infinite; }
+  @keyframes tcBreathe { 50% { transform: scale(1.12); opacity: .8; } }
   .touch__cap {
     display: grid; grid-template-columns: 1fr auto 1fr; align-items: baseline; gap: 16px;
     margin: 6px auto 0; max-width: 760px;
@@ -429,9 +434,9 @@
     -webkit-text-fill-color: transparent; color: transparent;
   }
   @media (prefers-reduced-motion: reduce) {
-    .tc-beam, .tc-doc, .tc-tip { animation: none; }
-    .tc-float { animation: none; opacity: .7; }
+    .touch.is-touching .tc-burst { animation: none; }
   }
+
   .bridge h2 {
     margin: 0 auto 16px; max-width: 24ch;
     font-size: clamp(28px, 4.4vw, 44px); font-weight: 680;
@@ -753,7 +758,6 @@
 
 <!-- ----------------------------------------------------------- bridge -->
 <section id="future" class="wrap bridge">
-  <canvas class="glyphs" id="bridge-glyphs" aria-hidden="true"></canvas>
   <div class="kicker" style="font:600 11px var(--font);letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin-bottom:14px">
     The future of talking to AI
   </div>
@@ -761,8 +765,8 @@
   <p>Turn anything &mdash; from a thought to a Figma component &mdash; into structured context AI can understand.</p>
 
   <figure class="touch">
-<svg class="touch__art" viewBox="0 0 1200 340" role="img" aria-labelledby="touch-title">
-<title id="touch-title">A robot hand and a human hand reaching toward a glowing Markdown document between them</title>
+<svg class="touch__art" viewBox="0 0 1200 360" role="img" aria-labelledby="touch-title">
+<title id="touch-title">A robot hand and a human hand reaching toward each other until their fingertips touch beneath a glowing Markdown document</title>
 <defs>
   <linearGradient id="tc-metal" gradientUnits="userSpaceOnUse" x1="0" y1="70" x2="0" y2="180">
     <stop offset="0" stop-color="#e4e2f0"/><stop offset=".45" stop-color="#b3b0c8"/><stop offset="1" stop-color="#5e5a76"/>
@@ -784,9 +788,25 @@
   <radialGradient id="tc-halo"><stop offset="0" stop-color="#8b7cff" stop-opacity=".42"/><stop offset=".55" stop-color="#6f8bff" stop-opacity=".12"/><stop offset="1" stop-color="#3fd0e0" stop-opacity="0"/></radialGradient>
   <filter id="tc-glow" x="-200%" y="-200%" width="500%" height="500%"><feGaussianBlur stdDeviation="3.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
   <filter id="tc-soft" x="-20%" y="-40%" width="140%" height="180%"><feGaussianBlur stdDeviation="12"/></filter>
+  <radialGradient id="tc-burst"><stop offset="0" stop-color="#ffffff" stop-opacity=".95"/><stop offset=".18" stop-color="#c9c2ff" stop-opacity=".75"/><stop offset=".5" stop-color="#8b7cff" stop-opacity=".28"/><stop offset="1" stop-color="#3fd0e0" stop-opacity="0"/></radialGradient>
 </defs>
-<ellipse cx="600" cy="300" rx="420" ry="26" fill="#8b7cff" opacity=".08" filter="url(#tc-soft)"/>
-<g class="tc-robot" transform="translate(40 32) scale(1.3)">
+<ellipse cx="600" cy="326" rx="420" ry="24" fill="#8b7cff" opacity=".08" filter="url(#tc-soft)"/>
+<path class="tc-signal" d="M600,186 L600,146" stroke="url(#tc-doc-edge)" stroke-width="1.6" stroke-linecap="round" pathLength="1"/>
+<g class="tc-doc">
+  <circle cx="600" cy="88" r="96" fill="url(#tc-halo)"/>
+  <g transform="rotate(-3 600 88)">
+    <rect x="556" y="34" width="88" height="108" rx="12" fill="url(#tc-doc)" stroke="url(#tc-doc-edge)" stroke-width="1.5"/>
+    <rect x="568" y="46" width="26" height="17" rx="4" fill="none" stroke="#a99fff" stroke-width="1.4"/>
+    <path d="M572.5,59 v-8.5 l4,4.5 l4,-4.5 v8.5 M587,50.5 v7.5 m-2.6,-2.6 l2.6,2.6 l2.6,-2.6" stroke="#a99fff" stroke-width="1.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="9" fill="#c9c6e6">
+      <text x="568" y="82"><tspan fill="#8b7cff"># </tspan>idea</text>
+      <text x="568" y="97"><tspan fill="#6f8bff">- </tspan>context</text>
+      <text x="568" y="112"><tspan fill="#3fd0e0">| </tspan>table <tspan fill="#3fd0e0">|</tspan></text>
+      <text x="568" y="127"><tspan fill="#8b7cff">&gt; </tspan>intent</text>
+    </g>
+  </g>
+</g>
+<g class="tc-move tc-move--l"><g class="tc-robot" transform="translate(40 54) scale(1.3)">
 <g stroke-linecap="round" fill="none">
 <line x1="-120" y1="118" x2="70" y2="118" stroke="#14131c" stroke-width="68"/>
 <line x1="-120" y1="118" x2="70" y2="118" stroke="url(#tc-metal)" stroke-width="64"/>
@@ -836,8 +856,8 @@
 <circle cx="190" cy="146" r="3.4" fill="#14131c"/><circle cx="190" cy="146" r="1.7" fill="#a99fff"/>
 <circle cx="331" cy="100" r="4" fill="#8b7cff" filter="url(#tc-glow)" class="tc-tip"/>
 </g>
-</g>
-<g class="tc-human" transform="translate(1160 62) scale(-1.3 1.3)">
+</g></g>
+<g class="tc-move tc-move--r"><g class="tc-human" transform="translate(1160 84) scale(-1.3 1.3)">
 <g stroke-linecap="round" fill="none">
 <line x1="-130" y1="118" x2="12" y2="118" stroke="url(#tc-sleeve)" stroke-width="80"/>
 <line x1="6" y1="118" x2="76" y2="118" stroke="url(#tc-skin)" stroke-width="60"/>
@@ -874,31 +894,8 @@
 <path d="M306,90 q12,-1 20,4" stroke="#f3d6c6" stroke-width="3" opacity=".55"/>
 <circle cx="331" cy="100" r="4" fill="#3fd0e0" filter="url(#tc-glow)" class="tc-tip"/>
 </g>
-</g>
-<g fill="none" stroke-linecap="round">
-  <path class="tc-beam" d="M478,160 C505,158 522,162 546,170" stroke="url(#tc-beam-l)" stroke-width="2"/>
-  <path class="tc-beam tc-beam--r" d="M654,178 C680,184 700,190 722,190" stroke="url(#tc-beam-r)" stroke-width="2"/>
-</g>
-<g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="13" text-anchor="middle">
-  <text class="tc-float" x="520" y="132" fill="#8b7cff">#</text>
-  <text class="tc-float" x="684" y="146" fill="#3fd0e0" style="animation-delay:-1.4s">*</text>
-  <text class="tc-float" x="508" y="214" fill="#6f8bff" style="animation-delay:-2.6s">&gt;</text>
-  <text class="tc-float" x="694" y="226" fill="#8b7cff" style="animation-delay:-3.8s">`</text>
-</g>
-<g class="tc-doc">
-  <circle cx="600" cy="176" r="150" fill="url(#tc-halo)"/>
-  <g transform="rotate(-4 600 176)">
-    <rect x="546" y="108" width="108" height="136" rx="14" fill="url(#tc-doc)" stroke="url(#tc-doc-edge)" stroke-width="1.6"/>
-    <rect x="562" y="124" width="30" height="20" rx="5" fill="none" stroke="#a99fff" stroke-width="1.6"/>
-    <path d="M567,139 v-10 l4.5,5 l4.5,-5 v10 M584,129 v9 m-3,-3 l3,3 l3,-3" stroke="#a99fff" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-    <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10.5" fill="#c9c6e6">
-      <text x="562" y="166"><tspan fill="#8b7cff"># </tspan>idea</text>
-      <text x="562" y="184"><tspan fill="#6f8bff">- </tspan>context</text>
-      <text x="562" y="202"><tspan fill="#3fd0e0">| </tspan>table <tspan fill="#3fd0e0">|</tspan></text>
-      <text x="562" y="220"><tspan fill="#8b7cff">&gt; </tspan>intent</text>
-    </g>
-  </g>
-</g>
+</g></g>
+<circle class="tc-burst" cx="600" cy="196" r="70" fill="url(#tc-burst)"/>
 </svg>
     <figcaption class="touch__cap">
       <span><b>AI</b> reads it</span>
@@ -1086,55 +1083,46 @@
 
 </script>
 <script>
-/* Glyph matrix (after Magic UI): a 14px grid of Markdown symbols where each
-   cell has a 4% chance per 90ms tick of turning into another one, fading
-   toward the bottom. Only changed cells are redrawn; it pauses while the
-   section is off screen or the tab is hidden, and stays still for reduced
-   motion. */
+/* The touch, driven by scroll: the hands start apart and meet as the art
+   moves from the bottom of the viewport to just above its middle. The
+   scroll position sets a target; the drawn value eases toward it each frame
+   (a little inertia, so it feels like a reach and not a scrubbed slider),
+   on a smoothstep curve that slows into contact. --touch is the last 12%,
+   for the burst and the Markdown file lighting up. Reduced motion shows the
+   touch already made. */
 (function () {
-  var cv = document.getElementById('bridge-glyphs');
-  if (!cv || !cv.getContext) return;
-  var ctx = cv.getContext('2d');
-  var GLYPHS = '#*-_>`[]()|=+01·';
-  var CELL = 14, RATE = 0.04, TICK = 90, FADE = 0.6, COLOR = '#6B7280';
+  var fig = document.querySelector('.touch');
+  if (!fig) return;
   var still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  var cols = 0, rows = 0, grid = [], timer = null, onScreen = false;
+  function set(p) {
+    var e = p * p * (3 - 2 * p);                          // smoothstep
+    var t = Math.max(0, Math.min(1, (e - 0.88) / 0.12));
+    fig.style.setProperty('--p', e.toFixed(4));
+    fig.style.setProperty('--touch', t.toFixed(4));
+    fig.classList.toggle('is-touching', t > 0.995);
+  }
+  if (still) { set(1); return; }
 
-  function pick() { return GLYPHS.charAt(Math.random() * GLYPHS.length | 0); }
-  function draw(i) {
-    var c = i % cols, r = (i / cols) | 0, x = c * CELL, y = r * CELL;
-    ctx.clearRect(x, y, CELL, CELL);
-    ctx.globalAlpha = 1 - FADE * (r / rows);
-    ctx.fillText(grid[i], x + CELL / 2, y + CELL / 2 + 0.5);
+  var target = 0, cur = 0, raf = 0, near = false;
+  function measure() {
+    var r = fig.getBoundingClientRect(), vh = window.innerHeight || 1;
+    // 0 when the art's centre is at the bottom edge, 1 once it reaches 40% down.
+    target = Math.max(0, Math.min(1, (vh - (r.top + r.height / 2)) / (vh * 0.6)));
   }
-  function size() {
-    var b = cv.getBoundingClientRect(), dpr = Math.min(window.devicePixelRatio || 1, 2);
-    if (!b.width || !b.height) return;
-    cv.width = Math.round(b.width * dpr); cv.height = Math.round(b.height * dpr);
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.font = (CELL - 3) + 'px ui-monospace, SFMono-Regular, Menlo, monospace';
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = COLOR;
-    cols = Math.ceil(b.width / CELL); rows = Math.ceil(b.height / CELL);
-    grid = new Array(cols * rows);
-    for (var i = 0; i < grid.length; i++) { grid[i] = pick(); draw(i); }
+  function frame() {
+    raf = 0;
+    cur += (target - cur) * 0.09;
+    if (Math.abs(target - cur) < 0.0005) cur = target;
+    set(cur);
+    if (cur !== target) raf = requestAnimationFrame(frame);
   }
-  function tick() {
-    for (var i = 0; i < grid.length; i++) {
-      if (Math.random() < RATE) { grid[i] = pick(); draw(i); }
-    }
-  }
-  function run() {
-    var go = onScreen && !document.hidden && !still;
-    if (go && !timer) timer = setInterval(tick, TICK);
-    if (!go && timer) { clearInterval(timer); timer = null; }
-  }
-  size();
-  var t;
-  window.addEventListener('resize', function () { clearTimeout(t); t = setTimeout(size, 150); });
-  document.addEventListener('visibilitychange', run);
+  function kick() { if (!near) return; measure(); if (!raf) raf = requestAnimationFrame(frame); }
+  window.addEventListener('scroll', kick, { passive: true });
+  window.addEventListener('resize', kick);
   if ('IntersectionObserver' in window) {
-    new IntersectionObserver(function (es) { onScreen = es[0].isIntersecting; run(); }).observe(cv);
-  } else { onScreen = true; run(); }
+    new IntersectionObserver(function (es) { near = es[0].isIntersecting; kick(); }, { rootMargin: '25% 0px' }).observe(fig);
+  } else { near = true; }
+  measure(); cur = target; set(cur);
 })();
 </script>
 <script src="/nav.js"></script>
