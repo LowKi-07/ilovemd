@@ -40,6 +40,9 @@
   body {
     background: var(--canvas); color: var(--text);
     font: 400 15px/1.6 var(--font);
+    /* The hero's full-bleed dot pattern is 100vw wide, which counts the
+       scrollbar where one takes space - never let that scroll sideways. */
+    overflow-x: clip;
     -webkit-font-smoothing: antialiased;
   }
   @keyframes bgDrift {
@@ -90,6 +93,17 @@
   /* --------------------------------------------------------------- hero
      The nav is fixed, so it reserves no flow space - clear it with --navh. */
   .hero { padding: calc(var(--navh) + 56px) 0 30px; text-align: center; }
+  /* Dot pattern behind the hero, after Magic UI's: a 16px grid of 1px dots,
+     faded out from the headline by a radial mask. Full viewport width,
+     although the hero itself is a centred .wrap. */
+  .hero::before {
+    content: ''; position: absolute; z-index: -1; pointer-events: none;
+    top: 0; bottom: -40px; left: 50%; width: 100vw; transform: translateX(-50%);
+    background-image: radial-gradient(circle at 1px 1px, rgba(163,163,180,.42) 1px, transparent 1.25px);
+    background-size: 16px 16px;
+    -webkit-mask-image: radial-gradient(ellipse 58% 62% at 50% 46%, #000 18%, transparent 72%);
+            mask-image: radial-gradient(ellipse 58% 62% at 50% 46%, #000 18%, transparent 72%);
+  }
   .hero__badge {
     display: inline-flex; align-items: center; gap: 9px;
     border: 1px solid var(--hairline-strong); background: var(--panel);
