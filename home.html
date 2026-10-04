@@ -347,13 +347,15 @@
     border-radius: var(--r-pill); padding: 2px 8px; white-space: nowrap;
   }
 
-  /* Templates marquee, after Magic UI's: the row of cards is repeated and
-     every copy slides left by its own width plus the gap, so the loop has no
-     seam. Full viewport width with faded edges; pauses on hover or focus. */
+  /* Templates marquee, after Magic UI's: two rows, the second running the
+     other way. In each row the cards are repeated and every copy slides by
+     its own width plus the gap, so the loop has no seam. Faded edges; a row
+     pauses on hover or focus. */
+  .marquees { display: flex; flex-direction: column; gap: 14px; }
   .marquee {
-    --gap: 16px; --duration: 40s;
+    --gap: 14px; --duration: 40s;
     position: relative; z-index: 1;
-    display: flex; gap: var(--gap); overflow: hidden; padding: 6px 0;
+    display: flex; gap: var(--gap); overflow: hidden; padding: 4px 0;
     -webkit-mask-image: linear-gradient(to right, transparent, #000 12%, #000 88%, transparent);
             mask-image: linear-gradient(to right, transparent, #000 12%, #000 88%, transparent);
   }
@@ -361,11 +363,12 @@
     flex-shrink: 0; display: flex; gap: var(--gap);
     animation: marquee var(--duration) linear infinite;
   }
+  .marquee--reverse .marquee__group { animation-direction: reverse; }
   .marquee:hover .marquee__group,
   .marquee:focus-within .marquee__group { animation-play-state: paused; }
   @keyframes marquee { to { transform: translateX(calc(-100% - var(--gap))); } }
   .tcard {
-    flex: none; width: 300px; display: flex; flex-direction: column; gap: 12px;
+    flex: none; width: 280px; display: flex; flex-direction: column; gap: 12px;
     border: 1px solid var(--hairline); border-radius: var(--r-lg); padding: 18px 18px 16px;
     background: linear-gradient(135deg, rgba(139,124,255,.05) 0%, rgba(111,139,255,.015) 40%, rgba(8,8,16,.5) 100%);
     color: var(--text); text-decoration: none;
@@ -389,7 +392,7 @@
   .tpl-cta { display: flex; justify-content: center; margin-top: 34px; }
   @media (prefers-reduced-motion: reduce) {
     /* still: one copy, scrolled by hand */
-    .marquee { overflow-x: auto; -webkit-mask-image: none; mask-image: none; padding-inline: 24px; }
+    .marquee { overflow-x: auto; -webkit-mask-image: none; mask-image: none; }
     .marquee__group { animation: none; }
     .marquee__group[aria-hidden="true"] { display: none; }
     .tcard:hover { transform: none; }
@@ -729,16 +732,15 @@
 </section>
 
 <!-- --------------------------------------------------------- templates -->
-<!-- Not a .wrap itself: the marquee runs the full page width, and only the
-     heading and button sit in the centred column. -->
 <section id="templates" class="tpl-sec">
   <div class="wrap sec-h">
     <div class="kicker">Templates</div>
     <h2>Never start from a blank page.</h2>
     <p>Ready-made Markdown for the documents you write every week &mdash; pick one, then let AI fill in the rest.</p>
   </div>
-  <!-- Cards come from /api/templates (script below). -->
-  <div class="marquee" id="tpl-marquee" hidden></div>
+  <!-- Two rows of cards from /api/templates (script below), in the same
+       column as the header and the other sections. -->
+  <div class="wrap"><div class="marquees" id="tpl-marquee" hidden></div></div>
   <div class="wrap tpl-cta">
     <a class="btn btn--stroke" href="/templates">View Templates <span aria-hidden="true">&rarr;</span></a>
   </div>
@@ -1023,13 +1025,19 @@
         '<div class="tcard__top"><span class="tcard__ico">' + esc(t.icon || t.title.charAt(0).toUpperCase()) + '</span>' +
         '<div><h3>' + esc(t.title) + '</h3><div class="tcard__meta">' + esc(t.category) + ' · ' + t.sections + ' sections</div></div></div>' +
         '<p>' + esc(t.description) + '</p></a>';
+    });
+    // Like Magic UI's demo: first half on top, second half underneath running
+    // the other way. Under four templates a second row would only repeat.
+    var half = list.length >= 4 ? Math.ceil(list.length / 2) : list.length;
+    var rows = [cards.slice(0, half), cards.slice(half)].filter(function (r) { return r.length; });
+    box.innerHTML = rows.map(function (row, n) {
+      var group = row.join(''), html = '';
+      for (var i = 0; i < 4; i++) {
+        html += '<div class="marquee__group"' + (i ? ' aria-hidden="true" inert' : '') + '>' + group + '</div>';
+      }
+      return '<div class="marquee' + (n ? ' marquee--reverse' : '') + '" style="--duration:' +
+        Math.max(20, row.length * 8) + 's">' + html + '</div>';
     }).join('');
-    var copies = 4, html = '';
-    for (var i = 0; i < copies; i++) {
-      html += '<div class="marquee__group"' + (i ? ' aria-hidden="true" inert' : '') + '>' + cards + '</div>';
-    }
-    box.style.setProperty('--duration', Math.max(24, list.length * 6.5) + 's');
-    box.innerHTML = html;
     box.hidden = false;
   }).catch(function () { /* the View Templates button still works */ });
 })();
