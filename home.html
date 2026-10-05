@@ -479,8 +479,11 @@
     .snap .touch, .tpl-sec.snap > .wrap { width: 100%; }
     /* sized so the bridge screen - heading plus the hands - fits one screen */
     .snap .touch { max-width: min(940px, calc((100svh - var(--navh) - 260px) * 1200 / 520)); margin-top: 22px; }
-    /* the hero's badge, title and button are centred blocks, not stretched */
-    .hero.snap { min-height: 100svh; padding-bottom: 40px; align-items: center; }
+    /* The landing view is the hero plus a peek of the tools below it (tabs
+       and the first row of cards), so the hero keeps its natural height and
+       the tools screen starts at its top rather than centring. */
+    .hero.snap { min-height: 0; display: block; padding-bottom: 30px; }
+    #converters.snap { justify-content: flex-start; padding-top: 18px; }
     footer { scroll-snap-align: end; }
   }
   .js .sec-in { opacity: 0; transform: translateY(28px); transition: opacity .7s var(--ease), transform .7s var(--ease); }
@@ -488,6 +491,9 @@
   @media (prefers-reduced-motion: reduce) {
     .js .sec-in { transform: none; transition: opacity .3s linear; }
   }
+
+  /* the tools sit close under the hero, so both show on landing */
+  #converters { padding-top: 48px; }
 
   /* trust: no container, just the heading and a grid of small monochrome
      badges (icon + two-line label) */
@@ -652,7 +658,7 @@
 </header>
 
 <!-- ------------------------------------------------------- converters -->
-<section id="converters" class="wrap snap sec-in">
+<section id="converters" class="wrap snap">
   <div class="filter-bar-wrap reveal" style="animation-delay:.5s">
     <div class="filter-bar" id="filter-bar">
       <button class="fpill active" data-filter="all">All</button>
