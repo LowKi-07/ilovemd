@@ -663,6 +663,40 @@
     .top #viewmode { margin-left: auto; }
   }
 
+  /* Tablet and phone: the assistant is a bottom sheet, collapsed until the
+     toolbar's ✦ opens it; the scrim, × or Escape close it. It sits on top
+     of the page rather than in the layout, so the editor keeps the screen. */
+  .sheet-scrim, .sheet-grip, .sheet-x { display: none; }
+  @media (max-width: 940px) {
+    .shell .chat, .shell[data-islands="1"] .chat, .shell[data-chat="closed"] .chat {
+      position: fixed; left: 0; right: 0; top: auto; bottom: 0; z-index: 70;
+      width: 100%; height: min(82svh, 680px); opacity: 1;
+      border: 1px solid var(--hairline-strong); border-bottom: 0;
+      border-radius: 20px 20px 0 0;
+      background: var(--panel-solid); backdrop-filter: none; -webkit-backdrop-filter: none;
+      box-shadow: 0 -24px 60px rgba(0,0,0,.55);
+      transform: translateY(100%); transition: transform .3s var(--ease);
+      pointer-events: none;
+    }
+    .shell[data-chat="open"] .chat { transform: none; pointer-events: auto; }
+    .shell .chat .inner { width: 100%; }
+    .sheet-grip { display: block; width: 38px; height: 4px; border-radius: 4px; background: var(--hairline-strong); margin: 8px auto 0; flex: none; }
+    .sheet-x {
+      display: grid; place-items: center; flex: none; width: 30px; height: 30px; margin-left: 8px;
+      border: 1px solid var(--hairline); border-radius: 50%; background: var(--panel);
+      color: var(--text-2); font-size: 18px; line-height: 1; cursor: pointer;
+    }
+    .sheet-x:hover { color: var(--text); background: var(--panel-raised); }
+    .sheet-scrim {
+      display: block; position: fixed; inset: 0; z-index: 65;
+      background: rgba(4,4,8,.55); opacity: 0; pointer-events: none; transition: opacity .3s var(--ease);
+    }
+    .shell[data-chat="open"]:not([data-nochat="1"]) .sheet-scrim { opacity: 1; pointer-events: auto; }
+  }
+  @media (max-width: 940px) and (prefers-reduced-motion: reduce) {
+    .shell .chat, .sheet-scrim { transition: none; }
+  }
+
   /* ---------------------------------------------------------------- subtop */
   .subtop {
     position: fixed; top: calc(var(--navh) + 52px); left: 0; right: 0; height: 48px; z-index: 9;
@@ -732,8 +766,11 @@
   </div>
 
   <!-- --------------------------------------------------------------- chat -->
-  <aside class="chat"><div class="inner">
-    <div class="phead"><span class="lbl">AI Assistant</span><span class="sp"></span><span class="status" id="engine"></span></div>
+  <div class="sheet-scrim" id="sheet-scrim" aria-hidden="true"></div>
+  <aside class="chat" aria-label="AI assistant"><div class="inner">
+    <span class="sheet-grip" aria-hidden="true"></span>
+    <div class="phead"><span class="lbl">AI Assistant</span><span class="sp"></span><span class="status" id="engine"></span>
+      <button class="sheet-x" id="btn-chat-x" aria-label="Close the assistant">&times;</button></div>
     <div class="msgs" id="msgs"></div>
     <div class="chatfoot">
       <div class="attach" id="attach" hidden></div>
@@ -808,7 +845,9 @@
   function aiName() { return S.aiLabel || 'AI'; }
 
   var S = {
-    view: 'split', side: false, chat: true,
+    // The assistant starts open beside the editor on desktop, and collapsed
+    // (a bottom sheet waiting for ✦) on tablet and phone.
+    view: 'split', side: false, chat: !(window.matchMedia && window.matchMedia('(max-width: 940px)').matches),
     md: '', before: null, pending: false, busy: false, last: null, q: null,
     // folder upload in progress (public mode): { name, done, total, failed, ctrl }
     upload: null,
@@ -2231,6 +2270,12 @@
 
   /* ============================================================== events */
   $('btn-chat').onclick = function () { S.chat = !S.chat; paintTop(); };
+  function closeSheet() { S.chat = false; paintTop(); $('btn-chat').focus(); }
+  $('btn-chat-x').onclick = closeSheet;
+  $('sheet-scrim').onclick = closeSheet;
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && S.chat && window.matchMedia('(max-width: 940px)').matches) closeSheet();
+  });
   $('viewmode').addEventListener('click', function (e) {
     var b = e.target.closest('[data-v]');
     if (!b || b.hidden) return;
