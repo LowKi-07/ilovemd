@@ -77,29 +77,36 @@
       <a href="/templates">Templates</a>
     </div>
     <span class="sp"></span>
-    <!-- Profile dropdown -->
-    <div class="hdrop">
-      <button class="hdrop__btn" id="btn-profile" aria-label="My profile" aria-haspopup="true" aria-expanded="false">
-        <svg width="20" height="20" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#cp-p1)"><path d="M1 16C1 7.16344 8.16344 0 17 0C25.8366 0 33 7.16344 33 16C33 24.8366 25.8366 32 17 32C8.16344 32 1 24.8366 1 16Z" fill="none"/><path d="M0.997559 16C0.997559 13.9375 1.39339 11.9896 2.18506 10.1562C2.95589 8.34375 4.01839 6.76042 5.37256 5.40625C6.74756 4.03125 8.34131 2.95833 10.1538 2.1875C11.9871 1.39583 13.9351 1 15.9976 1C18.0809 1 20.0288 1.39583 21.8413 2.1875C23.6538 2.95833 25.2371 4.03125 26.5913 5.40625C27.9663 6.76042 29.0496 8.34375 29.8413 10.1562C30.6121 11.9896 30.9976 13.9375 30.9976 16C30.9976 18.0833 30.6121 20.0312 29.8413 21.8438C29.0496 23.6562 27.9663 25.25 26.5913 26.625C25.2371 27.9792 23.6538 29.0521 21.8413 29.8438C20.0288 30.6146 18.0809 31 15.9976 31C13.9351 31 11.9871 30.6146 10.1538 29.8438C8.34131 29.0521 6.74756 27.9792 5.37256 26.625C4.01839 25.25 2.95589 23.6562 2.18506 21.8438C1.39339 20.0312 0.997559 18.0833 0.997559 16ZM15.9976 3C12.3726 3 9.24756 4.46875 7.02881 6.8125C5.61214 7.97917 4.69548 9.35417 4.02881 10.9375C3.34131 12.5208 2.99756 14.2083 2.99756 16C2.99756 17.7917 3.34131 19.4792 4.02881 21.0625C4.69548 22.6458 5.61214 24.0312 6.77881 25.2188C7.96631 26.3854 9.35173 27.3125 10.9351 28C12.5184 28.6667 14.2059 29 15.9976 29C17.7892 29 19.4767 28.6667 21.0601 28C22.6434 27.3125 24.0184 26.3854 25.1851 25.2188C26.3726 24.0312 27.3101 22.6458 27.9976 21.0625C28.6642 19.4792 28.9976 17.7917 28.9976 16C28.9976 14.2083 28.6642 12.5208 27.9976 10.9375C27.3101 9.35417 26.3726 7.97917 25.1851 6.8125C24.0184 5.625 22.6434 4.69792 21.0601 4.03125C19.4767 3.34375 17.7892 3 15.9976 3ZM16 10C17.3807 10 18.5 11.1193 18.5 12.5C18.5 13.8807 17.3807 15 16 15C14.6193 15 13.5 13.8807 13.5 12.5C13.5 11.1193 14.6193 10 16 10ZM10.34 19.28C10.34 17.34 12.93 16 16 16C19.07 16 21.66 17.34 21.66 19.28V21.5C21.66 21.78 21.44 22 21.16 22H10.84C10.56 22 10.34 21.78 10.34 21.5V19.28Z" fill="currentColor"/></g><defs><clipPath id="cp-p1"><rect width="32" height="32" fill="white"/></clipPath></defs></svg>
-      </button>
-      <div class="hdrop__menu" id="menu-profile" role="menu">
-        <a href="#" class="hdrop__item" role="menuitem">My Profile</a>
-        <hr class="hdrop__sep">
-        <a href="#" class="hdrop__item" id="menu-logout" role="menuitem">Log Out</a>
-      </div>
-    </div>
     <!-- Menu dropdown -->
     <div class="hdrop">
       <button class="hdrop__btn" id="btn-hamb" aria-label="Main menu" aria-haspopup="true" aria-expanded="false">
         <svg width="20" height="20" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7.6 4.8C7.6 6.3464 6.3464 7.6 4.8 7.6C3.2536 7.6 2 6.3464 2 4.8C2 3.2536 3.2536 2 4.8 2C6.3464 2 7.6 3.2536 7.6 4.8Z" fill="currentColor"/><path d="M18.8 4.8C18.8 6.3464 17.5464 7.6 16 7.6C14.4536 7.6 13.2 6.3464 13.2 4.8C13.2 3.2536 14.4536 2 16 2C17.5464 2 18.8 3.2536 18.8 4.8Z" fill="currentColor"/><path d="M30 4.8C30 6.3464 28.7464 7.6 27.2 7.6C25.6536 7.6 24.4 6.3464 24.4 4.8C24.4 3.2536 25.6536 2 27.2 2C28.7464 2 30 3.2536 30 4.8Z" fill="currentColor"/><path d="M7.6 16C7.6 17.5464 6.3464 18.8 4.8 18.8C3.2536 18.8 2 17.5464 2 16C2 14.4536 3.2536 13.2 4.8 13.2C6.3464 13.2 7.6 14.4536 7.6 16Z" fill="currentColor"/><path d="M18.8 16C18.8 17.5464 17.5464 18.8 16 18.8C14.4536 18.8 13.2 17.5464 13.2 16C13.2 14.4536 14.4536 13.2 16 13.2C17.5464 13.2 18.8 14.4536 18.8 16Z" fill="currentColor"/><path d="M30 16C30 17.5464 28.7464 18.8 27.2 18.8C25.6536 18.8 24.4 17.5464 24.4 16C24.4 14.4536 25.6536 13.2 27.2 13.2C28.7464 13.2 30 14.4536 30 16Z" fill="currentColor"/><path d="M7.6 27.2C7.6 28.7464 6.3464 30 4.8 30C3.2536 30 2 28.7464 2 27.2C2 25.6536 3.2536 24.4 4.8 24.4C6.3464 24.4 7.6 25.6536 7.6 27.2Z" fill="currentColor"/><path d="M18.8 27.2C18.8 28.7464 17.5464 30 16 30C14.4536 30 13.2 28.7464 13.2 27.2C13.2 25.6536 14.4536 24.4 16 24.4C17.5464 24.4 18.8 25.6536 18.8 27.2Z" fill="currentColor"/><path d="M30 27.2C30 28.7464 28.7464 30 27.2 30C25.6536 30 24.4 28.7464 24.4 27.2C24.4 25.6536 25.6536 24.4 27.2 24.4C28.7464 24.4 30 25.6536 30 27.2Z" fill="currentColor"/></svg>
       </button>
       <div class="hdrop__menu" id="menu-main" role="menu">
+        <!-- Tablet and phone only: the header links live here once they no
+             longer fit the bar. The tool lists are filled from the desktop
+             dropdowns below, so they never drift apart. -->
+        <div class="hdrop__mob">
+          <a href="/" class="hdrop__item" role="menuitem">Home</a>
+          <div class="hdrop__group">Convert MD</div>
+          <div data-mob-from="nd-convert"></div>
+          <div class="hdrop__group">Generate MD</div>
+          <div data-mob-from="nd-generate"></div>
+          <a href="/templates" class="hdrop__item" role="menuitem">Templates</a>
+          <hr class="hdrop__sep">
+        </div>
+        <a href="#" class="hdrop__item" role="menuitem">Profile</a>
         <a href="#" class="hdrop__item" role="menuitem">About Us</a>
         <a href="#" class="hdrop__item" role="menuitem">Pricing</a>
         <a href="#" class="hdrop__item" role="menuitem">Contact Us</a>
         <a href="#" class="hdrop__item" role="menuitem">Help &amp; Support</a>
         <hr class="hdrop__sep">
         <a href="#" class="hdrop__item" role="menuitem">Language</a>
+        <!-- Shown only on a password-gated site (pages call ilovemdNav.showLogout) -->
+        <div id="menu-logout-wrap" hidden>
+          <hr class="hdrop__sep">
+          <a href="#" class="hdrop__item" id="menu-logout" role="menuitem">Log Out</a>
+        </div>
       </div>
     </div>
   </div>
@@ -144,8 +151,30 @@
     d.panel.addEventListener('click', function (e) { e.stopPropagation(); });
   });
 
-  /* ---- profile / main menus ---- */
-  var menus = [['btn-profile', 'menu-profile'], ['btn-hamb', 'menu-main']]
+  /* ---- the main menu ---- */
+  // Tablet/phone copies of the Convert and Generate tool lists: one plain
+  // link per tool (coming-soon entries stay desktop-only).
+  Array.prototype.forEach.call(mount.querySelectorAll('[data-mob-from]'), function (slot) {
+    var panel = document.getElementById(slot.getAttribute('data-mob-from'));
+    if (!panel) return;
+    slot.outerHTML = Array.prototype.map.call(panel.querySelectorAll('a.navitem'), function (a) {
+      var title = a.querySelector('.navitem__tx b');
+      return '<a href="' + a.getAttribute('href') + '" class="hdrop__item hdrop__item--sub" role="menuitem">' +
+        (title ? title.textContent : a.textContent.trim()) + '</a>';
+    }).join('');
+  });
+
+  // Password-gated pages reveal "Log Out" and say what it does.
+  window.ilovemdNav = {
+    showLogout: function (onClick) {
+      var wrap = document.getElementById('menu-logout-wrap'), lo = document.getElementById('menu-logout');
+      if (!wrap || !lo) return;
+      wrap.hidden = false;
+      lo.addEventListener('click', function (e) { e.preventDefault(); onClick(); });
+    },
+  };
+
+  var menus = [['btn-hamb', 'menu-main']]
     .map(function (p) {
       return { btn: document.getElementById(p[0]), menu: document.getElementById(p[1]) };
     })

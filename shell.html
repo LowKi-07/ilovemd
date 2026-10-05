@@ -654,6 +654,14 @@
     .editor, .preview, .source { border-right: 0; border-bottom: 1px solid var(--hairline); }
     #ed { min-height: 44vh; }
   }
+  /* Phones: the toolbar (name, view switch, Copy, Download, assistant) is
+     wider than the screen in one row - and a row that cannot shrink widens
+     the whole page, pushing the site menu off the right edge. Let it wrap. */
+  @media (max-width: 560px) {
+    .top { flex-wrap: wrap; height: auto; row-gap: 8px; padding-top: 8px; padding-bottom: 8px; }
+    .top .sp { display: none; }
+    .top #viewmode { margin-left: auto; }
+  }
 
   /* ---------------------------------------------------------------- subtop */
   .subtop {
@@ -2287,9 +2295,7 @@
       S.gate = !!setup.gate;
     } catch (e) { S.siteMode = 'local'; }
     if (S.gate) {
-      var lo = $('menu-logout');
-      if (lo) lo.addEventListener('click', function (e) {
-        e.preventDefault();
+      if (window.ilovemdNav) window.ilovemdNav.showLogout(function () {
         api('/api/logout', { method: 'POST' }).catch(function () {}).then(function () { location.href = '/login'; });
       });
     }

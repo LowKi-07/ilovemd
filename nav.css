@@ -191,7 +191,18 @@
 .hdrop__item:hover { background: var(--nv-hover); color: var(--nv-text); }
 .hdrop__sep { border: 0; border-top: 1px solid var(--nv-edge); margin: 3px 0; }
 
-@media (max-width: 860px) { .nav__links { display: none; } }
+/* Tablet and phone: the header links move into the menu dropdown. */
+.hdrop__mob { display: none; }
+.hdrop__group {
+  padding: 9px 13px 3px; color: var(--nv-text-3, #6d6d7e);
+  font: 600 10px var(--nv-font); letter-spacing: .1em; text-transform: uppercase;
+}
+.hdrop__item--sub { padding-left: 22px; }
+@media (max-width: 940px) {
+  .nav__links { display: none; }
+  .hdrop__mob { display: block; }
+  .hdrop__menu { min-width: 210px; max-height: calc(100svh - var(--navh, 80px) - 16px); overflow-y: auto; }
+}
 @media (max-width: 620px) { .navdrop__panel { grid-template-columns: 1fr; } }
 @media (prefers-reduced-motion: reduce) {
   .navdrop__panel, .hdrop__menu { transition: none; }

@@ -611,9 +611,7 @@
   });
   fetch('/api/setup', { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (s) {
     if (!s.gate) return;
-    var lo = document.getElementById('menu-logout');
-    if (lo) lo.addEventListener('click', function (e) {
-      e.preventDefault();
+    if (window.ilovemdNav) window.ilovemdNav.showLogout(function () {
       fetch('/api/logout', { method: 'POST' }).catch(function () {}).then(function () { location.href = '/login'; });
     });
   }).catch(function () {});
