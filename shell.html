@@ -293,10 +293,6 @@
      even when it wraps. The textarea starts after the gutter, so markers
      there stay hoverable. */
   .edbox { --gut: 50px; position: relative; flex: 1; min-height: 0; }
-  .edbox::before {
-    content: ''; position: absolute; top: 0; bottom: 0; left: 0; width: var(--gut);
-    border-right: 1px solid var(--hairline); pointer-events: none;
-  }
   .edbox #ed {
     position: absolute; top: 0; bottom: 0; right: 0; left: var(--gut);
     width: auto; height: 100%; padding-left: 14px;
@@ -334,6 +330,26 @@
   .chk--ok { color: var(--ok); border-color: rgba(52,211,153,.3); cursor: help; }
   .chk--warn { color: var(--warn); border-color: rgba(251,191,36,.35); }
   .chk--err { color: var(--danger, #fb7185); border-color: rgba(251,113,133,.4); }
+  /* ▲ ▼ beside the badge, like a find bar */
+  .chknav { display: inline-flex; gap: 2px; margin-left: 4px; }
+  .chknav[hidden] { display: none; }
+  .chknav__b {
+    display: grid; place-items: center; width: 22px; height: 22px; padding: 0;
+    border: 1px solid var(--hairline); border-radius: 50%; background: var(--panel);
+    color: var(--text-2); cursor: pointer;
+  }
+  .chknav__b:hover { color: var(--text); background: var(--panel-raised); }
+  .chknav__b svg { width: 13px; height: 13px; }
+  /* "Fix it" at the right end of a flagged line, on hover */
+  .fixit {
+    position: absolute; z-index: 3; right: calc(14px + var(--sbw, 0px));
+    display: none; align-items: center; gap: 5px;
+    border: 1px solid rgba(139,124,255,.5); border-radius: 999px; background: #1b1830;
+    color: #d9d4ff; font: 600 11px var(--font); padding: 3px 10px; cursor: pointer;
+    box-shadow: 0 4px 14px rgba(0,0,0,.4);
+  }
+  .fixit.on { display: inline-flex; }
+  .fixit:hover { background: #262143; color: #fff; }
   #ed::placeholder { color: var(--text-3); }
   #ed::selection { background: rgba(139,124,255,.32); }
 
@@ -806,7 +822,13 @@
   <div class="main">
     <section class="panel editor">
       <div class="phead"><span class="lbl">Markdown</span><span class="sp"></span>
-        <button class="chk" id="chk" hidden></button></div>
+        <button class="chk" id="chk" hidden></button>
+        <span class="chknav" id="chknav" hidden>
+          <button class="chknav__b" id="chk-prev" aria-label="Previous issue" title="Previous issue">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 15 6-6 6 6"/></svg></button>
+          <button class="chknav__b" id="chk-next" aria-label="Next issue" title="Next issue">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
+        </span></div>
       <div class="pbody" id="edwrap" style="display:flex;flex-direction:column"></div>
     </section>
 
@@ -1483,6 +1505,29 @@
     ta.addEventListener('scroll', function () { bk.scrollTop = ta.scrollTop; });
     // The gutter is outside the textarea: scrolling over it scrolls the text.
     box.addEventListener('wheel', function (e) { if (e.target !== ta) ta.scrollTop += e.deltaY; }, { passive: true });
+    var fx = document.createElement('button');
+    fx.className = 'fixit'; fx.id = 'fixit'; fx.type = 'button';
+    fx.innerHTML = '&#10022; Fix it';
+    box.appendChild(fx);
+    // Hovering a flagged line offers "Fix it" at its right end.
+    box.addEventListener('mousemove', function (e) {
+      if (e.target === fx) return;
+      var hit = null;
+      Array.prototype.some.call(bk.querySelectorAll('.ln--warn, .ln--err'), function (row) {
+        var r = row.getBoundingClientRect();
+        if (e.clientY >= r.top && e.clientY < r.bottom) { hit = row; return true; }
+        return false;
+      });
+      if (!hit) { fx.classList.remove('on'); return; }
+      fx.dataset.line = hit.getAttribute('data-n');
+      fx.style.top = Math.max(0, hit.offsetTop - bk.scrollTop - 2) + 'px';
+      fx.title = 'Fix: ' + (S.issues || []).filter(function (x) { return String(x.line) === fx.dataset.line; })
+        .map(function (x) { return x.msg; }).join(' / ');
+      fx.classList.add('on');
+    });
+    box.addEventListener('mouseleave', function () { fx.classList.remove('on'); });
+    ta.addEventListener('scroll', function () { fx.classList.remove('on'); });
+    fx.addEventListener('click', function () { fixLine(Number(fx.dataset.line)); fx.classList.remove('on'); });
     wrap.innerHTML = '';
     wrap.appendChild(box);
     paintGutter();
@@ -1533,6 +1578,7 @@
   function validate() {
     var el = $('chk');
     if (!S.busy) $('valid').innerHTML = '';   // that line is the "writing…" progress now
+    $('chknav').hidden = true;
     if (!S.md) { el.hidden = true; S.issues = []; paintGutter(); return; }
     el.hidden = false;
     if (!mdIt) { el.className = 'chk'; el.textContent = 'check unavailable'; el.title = 'The CommonMark parser did not load.'; return; }
@@ -1547,7 +1593,9 @@
     }
     var errs = r.issues.filter(function (x) { return x.level === 'error'; }).length;
     el.className = 'chk ' + (errs ? 'chk--err' : 'chk--warn');
-    el.innerHTML = (errs ? '&#10005; ' : '&#9888; ') + r.issues.length + (r.issues.length === 1 ? ' issue' : ' issues');
+    el.dataset.icon = errs ? '&#10005; ' : '&#9888; ';
+    el.innerHTML = el.dataset.icon + r.issues.length + (r.issues.length === 1 ? ' issue' : ' issues');
+    $('chknav').hidden = !r.issues.some(function (x) { return x.line > 0; });
     el.title = r.issues.map(function (x) {
       return (x.level === 'error' ? '✕ ' : '⚠ ') + (x.line ? 'Line ' + x.line + ': ' : '') + x.msg;
     }).join('\n') + '\n\nClick to jump to the next one.';
@@ -1571,13 +1619,16 @@
     bk.style.setProperty('--sbw', (ta.offsetWidth - ta.clientWidth) + 'px');
     bk.scrollTop = ta.scrollTop;
   }
-  // Header badge click: select the next problem line and scroll it into view.
-  $('chk').onclick = function () {
+  // ▲ ▼ (and a click on the badge): select the previous / next problem line,
+  // top to bottom, and show where we are - "3 / 12" - like a find bar.
+  function jumpIssue(step) {
     var withLine = (S.issues || []).filter(function (x) { return x.line > 0; })
-      .sort(function (a, b) { return a.line - b.line; });   // top to bottom
+      .sort(function (a, b) { return a.line - b.line; });
     var ta = $('ed');
     if (!withLine.length || !ta) return;
-    S.issueAt = (S.issueAt + 1) % withLine.length;
+    S.issueAt = S.issueAt < 0 ? (step > 0 ? 0 : withLine.length - 1) : (S.issueAt + step + withLine.length) % withLine.length;
+    var el = $('chk');
+    el.innerHTML = (el.dataset.icon || '') + (S.issueAt + 1) + ' / ' + withLine.length;
     var n = withLine[S.issueAt].line, lines = ta.value.split('\n'), start = 0;
     for (var i = 0; i < n - 1 && i < lines.length; i++) start += lines[i].length + 1;
     ta.focus();
@@ -1585,7 +1636,36 @@
     var row = $('edbk').querySelector('.ln[data-n="' + n + '"]');
     if (row) ta.scrollTop = Math.max(0, row.offsetTop - 60);
     $('edbk').scrollTop = ta.scrollTop;   // don't wait for the scroll event
-  };
+  }
+  $('chk').onclick = function () { jumpIssue(1); };
+  $('chk-next').onclick = function () { jumpIssue(1); };
+  $('chk-prev').onclick = function () { jumpIssue(-1); };
+
+  /* "Fix it": a deterministic repair when the problem has exactly one right
+     answer (mdcheck fixIssue), applied as a normal edit so Cmd+Z undoes it;
+     otherwise the assistant is asked to fix just that line. */
+  function fixLine(n) {
+    var ta = $('ed');
+    if (!ta || !mdIt) return;
+    var here = (S.issues || []).filter(function (x) { return x.line === n; });
+    for (var i = 0; i < here.length; i++) {
+      var e = window.ilovemdCheck.fixIssue(ta.value, here[i]);
+      if (!e) continue;
+      ta.focus();
+      ta.setSelectionRange(e.start, e.end);
+      var done = e.text ? document.execCommand('insertText', false, e.text) : document.execCommand('delete');
+      if (!done) { ta.setRangeText(e.text, e.start, e.end, 'end'); ta.dispatchEvent(new Event('input')); }
+      S.md = ta.value;
+      validate();
+      toast('Fixed: ' + here[i].msg.replace(/ on line \d+/, ''));
+      return;
+    }
+    if (!here.length || S.busy) return;
+    S.chat = true; paintTop();
+    $('prompt').value = 'Fix only line ' + n + ' of the document: ' + here.map(function (x) { return x.msg; }).join(' ') +
+      ' Change nothing else - keep every other line exactly as it is.';
+    send(false);
+  }
 
   function setStatus(kind, text) { $('status').dataset.s = kind || ''; $('status').textContent = text; }
 
