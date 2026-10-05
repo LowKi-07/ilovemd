@@ -4,11 +4,13 @@
 
    Provider interface:
      id, label                 'gemini', 'Gemini' ...
-     capabilities              { readsLocalFiles, mcpTools } - what only some
+     capabilities              { readsLocalFiles, mcpTools, images } - what only some
                                backends can do (the Claude CLI reads PDFs and
                                reaches Figma through MCP; HTTP APIs cannot)
      check()       -> Promise<{ available, detail, model, ... }>
-     generate(prompt) -> Promise<{ text, strategy }>; throws an Error carrying
+     generate(prompt, { images }) -> Promise<{ text, strategy }>; images are
+                               [{ name, path, mime, data(base64) }], only sent
+                               when capabilities.images; throws an Error carrying
                                a plain-English `explain` (and `tried` for the CLI)
      explain(text) -> string   plain-English cause for a failure blob
      diagnose()    -> Promise<{ working, results, explain }>

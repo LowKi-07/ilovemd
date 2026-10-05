@@ -1149,6 +1149,53 @@ const CONVERT_EXT = new Set([
   '.docx', '.doc', '.rtf', '.rtfd', '.odt', '.html', '.htm', '.txt', '.md',
   '.csv', '.tsv', '.xlsx', '.pptx', '.pdf',
 ]);
+// Photos the Text → MD assistant can be handed as attachments.
+const IMAGE_TYPES = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.gif': 'image/gif' };
+const IMAGE_MAX = 10e6;
+const ATTACH_MAX = 5;            // files per message
+const ATTACH_TEXT_MAX = 60000;   // characters taken from each document
+
+/* Attachments sent with a Text → MD prompt: paths returned by /api/upload,
+   accepted only from this visitor's own uploads folder. Documents become
+   text context (the converters' extractors); photos are handed to the AI
+   as images, if the provider can see them. Returns { context, images }
+   or throws an Error with .status/.explain for the response. */
+async function readAttachments(list) {
+  const fail = (msg, explain) => Object.assign(new Error(msg), { status: 400, explain: explain || '' });
+  if (!Array.isArray(list) || !list.length) return { context: '', images: [] };
+  if (list.length > ATTACH_MAX) throw fail(`Attach at most ${ATTACH_MAX} files per message.`);
+  const up = space().uploadsDir;
+  const parts = [], images = [];
+  for (const raw of list) {
+    const file = path.resolve(String(raw || ''));
+    if (!file.startsWith(up + path.sep) || !fs.existsSync(file)) throw fail('An attached file is no longer available.', 'Attach it again.');
+    const ext = path.extname(file).toLowerCase();
+    const name = path.basename(file).replace(/^\d+-/, '');
+    if (IMAGE_TYPES[ext]) {
+      if (!ai.capabilities.images) {
+        throw fail(`${ai.label} cannot read images with the current settings.`, 'Remove the photo, or switch ILOVEMD_AI_PROVIDER / ILOVEMD_AI_MODEL to a vision-capable model.');
+      }
+      if (fs.statSync(file).size > IMAGE_MAX) throw fail(`${name} is too large (10 MB max for photos).`);
+      images.push({ name, path: file, mime: IMAGE_TYPES[ext], data: fs.readFileSync(file).toString('base64') });
+    } else if (CONVERT_EXT.has(ext)) {
+      let ex;
+      try { ex = await extractFile(file, ext); } catch (e) { throw fail(`Could not read ${name}.`, e.message); }
+      const text = ex.selfRead
+        ? `(Read this file yourself at: ${path.relative(HERE, file) || file})`
+        : String(ex.content || '').slice(0, ATTACH_TEXT_MAX);
+      parts.push(`=== ATTACHED FILE: ${name} ===\n${text}`);
+    } else {
+      throw fail(`${name} is not a supported attachment.`);
+    }
+  }
+  const context = parts.length
+    ? ['', 'ATTACHED FILES (use them as source material for the request):', '', parts.join('\n\n')].join('\n')
+    : '';
+  const note = images.length
+    ? `\n\nATTACHED IMAGES: ${images.map((i) => i.name).join(', ')} - use what they show as source material.`
+    : '';
+  return { context: context + note, images };
+}
 
 function run(cmd, args, opts) {
   const r = spawnSync(cmd, args, { encoding: 'utf8', maxBuffer: 64e6, ...opts });
@@ -1353,8 +1400,8 @@ function limitError(message, explain, retryAfterSec) {
 // Public mode's limits apply before any provider is called, whichever route
 // asked: per visitor, per network address, a site-wide daily cap, and a cap
 // on calls in flight at once.
-async function runAI(prompt, req) {
-  if (MODE !== 'public') return ai.generate(prompt);
+async function runAI(prompt, req, opts) {
+  if (MODE !== 'public') return ai.generate(prompt, opts);
 
   const checks = [
     ['ai:v:' + visitor().id, RATE_LIMIT_PER_HOUR, 36e5,
@@ -1374,7 +1421,7 @@ async function runAI(prompt, req) {
 
   const release = aiGate.tryEnter();
   if (!release) throw limitError('ilovemd is busy right now.', 'Too many documents are being written at once - try again in a few seconds.', 5);
-  try { return await ai.generate(prompt); }
+  try { return await ai.generate(prompt, opts); }
   finally { release(); }
 }
 
@@ -1610,11 +1657,11 @@ async function handle(req, res) {
     if (route === '/api/upload' && req.method === 'POST') {
       const raw = path.basename(String(url.searchParams.get('name') || 'upload'));
       const ext = path.extname(raw).toLowerCase();
-      if (!CONVERT_EXT.has(ext)) {
+      if (!CONVERT_EXT.has(ext) && !IMAGE_TYPES[ext]) {
         return sendJson(res, 400, { error: "This file type isn't supported for this workflow." });
       }
       let buf;
-      try { buf = await readRawBody(req, 30e6); }
+      try { buf = await readRawBody(req, IMAGE_TYPES[ext] ? IMAGE_MAX : 30e6); }
       catch (e) { return sendJson(res, 413, { error: 'File is too large (30 MB max).' }); }
       if (!buf.length) return sendJson(res, 400, { error: 'empty upload' });
       if (MODE === 'public') {
@@ -2104,6 +2151,11 @@ async function handle(req, res) {
 
       const current = typeof body.markdown === 'string' ? body.markdown : '';
 
+      let attached;
+      try { attached = await readAttachments(body.attachments); }
+      catch (e) { return sendJson(res, e.status || 400, { error: e.message, explain: e.explain || '' }); }
+      const aiOpts = { images: attached.images };
+
       /* mode "ask": a question ABOUT the document. The answer goes to the chat,
          not into the editor, so the document-shaped system rules are overridden
          for this one reply. */
@@ -2115,11 +2167,11 @@ async function handle(req, res) {
           '',
           'QUESTION:', '"""', instruction.slice(0, 6000), '"""', '',
           'THE DOCUMENT BEING DISCUSSED:', '"""', current.slice(0, 200000), '"""',
-        ].join('\n');
+        ].join('\n') + attached.context;
         const t0 = Date.now();
         process.stdout.write(`ai  ask: ${instruction.slice(0, 48)} ... `);
         try {
-          const r = await runAI(askPrompt, req);
+          const r = await runAI(askPrompt, req, aiOpts);
           console.log(`${((Date.now() - t0) / 1000).toFixed(1)}s`);
           return sendJson(res, 200, { answer: r.text, ms: Date.now() - t0 });
         } catch (e) {
@@ -2138,16 +2190,16 @@ async function handle(req, res) {
             'CURRENT DOCUMENT:', '"""', current.slice(0, 200000), '"""', '',
             'Return the COMPLETE revised document. Preserve everything the instruction does not',
             'ask you to change, including wording you were not asked to touch.',
-          ].join('\n')
+          ].join('\n') + attached.context
         : [
             'Write a new Markdown document for this request:',
             '', '"""', instruction.slice(0, 6000), '"""',
-          ].join('\n');
+          ].join('\n') + attached.context;
 
       const started = Date.now();
-      process.stdout.write(`ai  ${editing ? 'edit' : 'new'}: ${instruction.slice(0, 48)} ... `);
+      process.stdout.write(`ai  ${editing ? 'edit' : 'new'}: ${instruction.slice(0, 48)}${body.attachments && body.attachments.length ? ` +${body.attachments.length} file(s)` : ''} ... `);
       try {
-        const r = await runAI(prompt, req);
+        const r = await runAI(prompt, req, aiOpts);
         const ms = Date.now() - started;
         console.log(`${(ms / 1000).toFixed(1)}s  ${r.text.length} chars  via ${r.strategy}`);
         // A new document gets a filename from its own H1.

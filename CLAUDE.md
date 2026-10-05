@@ -75,13 +75,13 @@ It runs in one of two modes from the same codebase, controlled by `ILOVEMD_MODE`
 | `/api/frame` | POST | Save a Figma URL into the "recent frames" list (`.ilovemd-state.json`). Local mode only — despite the name, this does not extract anything via `osascript` |
 | `/api/pick-folder` | POST | Open a native macOS folder picker (via `osascript`). Local mode only — `404` in public mode |
 | `/api/kit-upload` | POST | Public-mode-only. Receives one file at a time (from a `webkitdirectory` picker) with `?kit=&relpath=`, reconstructing the folder tree under the visitor's `workspace/<kit>/` — the public-mode replacement for `/api/pick-folder` |
-| `/api/upload` | POST | Accept a file upload, save to `.uploads/`, extract text |
+| `/api/upload` | POST | Accept a file upload (documents, and PNG/JPG/WebP/GIF photos up to 10 MB), save to the visitor's uploads folder |
 | `/api/convert` | POST | **AI call** — convert an uploaded file to Markdown. Local mode: DOCX/DOC/RTF/ODT via `textutil`, PDF handed to the CLI's own Read tool. Public mode: DOCX via `mammoth`, PDF via `pdf-parse` (both dynamically imported so local mode never needs them installed); DOC/RTF/RTFD/ODT are not supported in public mode. XLSX/PPTX extraction is a hand-rolled pure-JS ZIP+XML reader in both modes (no `unzip` shell-out) |
 | `/api/save-out` | POST | Save a generated Markdown file to `documents/`. **No longer called by the frontend** — the UI downloads through the browser instead. Route kept, and `/api/docs` still reads whatever is already in `documents/` |
 | `/api/docs` | GET | List saved documents |
 | `/api/doc` | GET/PUT/DELETE | Read, update, or delete a saved document |
 | `/api/rename` | POST | Rename a saved document |
-| `/api/ai` | POST | **AI call** — general "generate/improve Markdown" endpoint used by shell.html |
+| `/api/ai` | POST | **AI call** — general "generate/improve Markdown" endpoint used by shell.html. Optional `attachments` (≤5 paths from `/api/upload`, confined to the visitor's uploads): documents are extracted to text context, photos go to the provider as images when `ai.capabilities.images` (Text → MD's **+ Add** pill) |
 | `/api/compare-ai` | POST | **AI call** — compare two Markdown files; AI can return updated versions |
 | `/api/setup` | GET | Report AI provider status, plus `mode`, `gate` and (public mode) `figmaDemo` availability, for the frontend to adapt its UI |
 | `/api/ai/diagnose` | GET | Probe the active provider (for `claude-cli`, every invocation strategy) and report what works. `404` in public mode, since probes cost money |

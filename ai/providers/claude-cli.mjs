@@ -319,9 +319,15 @@ export function createClaudeCliProvider({ env, here, systemPrompt, timeoutMs, ap
   return {
     id: 'claude-cli',
     label: 'Claude',
-    capabilities: { readsLocalFiles: true, mcpTools: true },
+    capabilities: { readsLocalFiles: true, mcpTools: true, images: true },
     check: checkCli,
-    generate: runCli,
+    // The CLI has no image upload; its Read tool opens image files instead.
+    generate: (prompt, opts) => {
+      const pics = (opts && opts.images) || [];
+      if (!pics.length) return runCli(prompt);
+      return runCli(prompt + '\n\nRead each attached image with your Read tool before answering:\n' +
+        pics.map((i) => '- ' + (path.relative(HERE, i.path) || i.path)).join('\n'));
+    },
     explain,
     diagnose: diagnoseCli,
     describe: () => ({

@@ -36,13 +36,13 @@ export function createGeminiProvider({ env, systemPrompt, timeoutMs }) {
   let model = configured || DEFAULT_MODEL;
   const maxTokens = Number(env.ILOVEMD_AI_MAX_TOKENS || 16000);
 
-  function call(prompt) {
+  function call(prompt, images) {
     return postJson({
       url: `${API}/models/${encodeURIComponent(model)}:generateContent`,
       headers: { 'x-goog-api-key': apiKey },
       body: {
         systemInstruction: { parts: [{ text: systemPrompt }] },
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        contents: [{ role: 'user', parts: [{ text: prompt }].concat((images || []).map((i) => ({ inlineData: { mimeType: i.mime, data: i.data } }))) }],
         generationConfig: { maxOutputTokens: maxTokens },
       },
       timeoutMs, label: 'Gemini', host: 'generativelanguage.googleapis.com', keyEnv: 'GEMINI_API_KEY',
@@ -60,7 +60,7 @@ export function createGeminiProvider({ env, systemPrompt, timeoutMs }) {
   const provider = {
     id: 'gemini',
     label: 'Gemini',
-    capabilities: { readsLocalFiles: false, mcpTools: false },
+    capabilities: { readsLocalFiles: false, mcpTools: false, images: true },
 
     async check() {
       return {
@@ -70,11 +70,12 @@ export function createGeminiProvider({ env, systemPrompt, timeoutMs }) {
       };
     },
 
-    async generate(prompt) {
+    async generate(prompt, opts) {
+      const images = (opts && opts.images) || [];
       if (!apiKey) throw aiError('No Gemini API key is configured on this server.', 'Set GEMINI_API_KEY in the environment.');
       let data;
       try {
-        data = await call(prompt);
+        data = await call(prompt, images);
       } catch (e) {
         if (e.status !== 404) throw e;
         // The model is gone or not offered to this key: see what is.
@@ -87,7 +88,7 @@ export function createGeminiProvider({ env, systemPrompt, timeoutMs }) {
         }
         console.log(`gemini: ${model} is not available, switching to ${pick}`);
         model = pick;
-        data = await call(prompt);
+        data = await call(prompt, images);
       }
       const cand = (data.candidates || [])[0];
       const text = stripFence(((cand && cand.content && cand.content.parts) || []).map((p) => p.text || '').join(''));

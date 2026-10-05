@@ -474,6 +474,7 @@
   .msgs { flex: 1; min-height: 0; overflow: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 10px; }
   .msg { max-width: 92%; border-radius: 12px; padding: 8px 12px; font-size: 13px; line-height: 1.55; }
   .msg--u { align-self: flex-end; background: var(--accent-soft); border: 1px solid rgba(139,124,255,.3); }
+  .msg--u { white-space: pre-wrap; }   /* keeps a typed line break and the attachment line */
   .msg--a { align-self: flex-start; background: var(--panel); border: 1px solid var(--hairline); color: var(--text-2); }
   .msg--a b { color: var(--text); font-weight: 620; }
   .msg--err { border-color: rgba(251,113,133,.4); background: rgba(251,113,133,.08); }
@@ -557,6 +558,22 @@
   }
   .chip:hover:not(:disabled) { color: var(--text); border-color: rgba(139,124,255,.55); background: var(--accent-soft); }
   .chip:disabled { opacity: .4; cursor: default; }
+  /* "+ Add": attach photos or files to the next message */
+  .chip--add { border-style: dashed; border-color: rgba(139,124,255,.45); color: #cfc8ff; }
+  .attach { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 6px; }
+  .afile {
+    display: inline-flex; align-items: center; gap: 6px; max-width: 100%;
+    border: 1px solid rgba(139,124,255,.35); background: var(--accent-soft); color: var(--text);
+    border-radius: var(--r-pill); padding: 3px 4px 3px 9px; font: 500 11px var(--font);
+  }
+  .afile__n { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 150px; }
+  .afile__s { color: var(--text-3); font: 400 10px var(--mono); }
+  .afile button {
+    flex: none; width: 16px; height: 16px; border: 0; border-radius: 50%; padding: 0;
+    background: rgba(255,255,255,.08); color: var(--text-2); cursor: pointer; line-height: 16px; font-size: 11px;
+  }
+  .afile button:hover { background: rgba(255,255,255,.16); color: var(--text); }
+  .afile.is-up { opacity: .7; }
   .prow {
     display: flex; align-items: center; gap: 8px;
     border: 1px solid var(--hairline-strong); background: rgba(255,255,255,.05);
@@ -711,7 +728,10 @@
     <div class="phead"><span class="lbl">AI Assistant</span><span class="sp"></span><span class="status" id="engine"></span></div>
     <div class="msgs" id="msgs"></div>
     <div class="chatfoot">
+      <div class="attach" id="attach" hidden></div>
       <div class="chips" id="chips"></div>
+      <input type="file" id="attach-input" multiple hidden
+        accept=".pdf,.docx,.doc,.rtf,.odt,.txt,.md,.csv,.tsv,.xlsx,.pptx,.html,.htm,.png,.jpg,.jpeg,.webp,.gif">
       <div class="prow">
         <span class="spark">&#10022;</span>
         <textarea id="prompt" rows="1" spellcheck="false"
@@ -786,6 +806,8 @@
     upload: null,
     // public Figma: the visitor's token (this tab's memory only) and link draft
     figmaToken: '', figUrlDraft: '', figError: null,
+    // Text mode: files attached to the next message - { id, name, size, image, path, up }
+    attach: [],
     // text
     docs: [], docName: null, mtime: 0, dirty: false, filter: '',
     // ui
@@ -1102,13 +1124,17 @@
         ]);
       }
     }
+    if (MODE === 'text' && !S.busy) {
+      defs.unshift({ label: '+ Add', add: true, text: 'Attach photos or files (PDF, Word, Excel, PowerPoint, text) for the assistant to work from' });
+    }
     $('chips').innerHTML = defs.map(function (c, i) {
-      return '<button class="chip" data-c="' + i + '" title="' + esc(c.text || c.label) + '">' + esc(c.label) + '</button>';
+      return '<button class="chip' + (c.add ? ' chip--add' : '') + '" data-c="' + i + '" title="' + esc(c.text || c.label) + '">' + esc(c.label) + '</button>';
     }).join('');
     Array.prototype.forEach.call($('chips').querySelectorAll('[data-c]'), function (b) {
       b.disabled = S.busy;
       b.onclick = function () {
         var c = defs[Number(b.getAttribute('data-c'))];
+        if (c.add) return $('attach-input').click();
         if (c.gen) return generate();
         if (c.qflow) return startQuestions();
         $('prompt').value = c.text;
@@ -2027,10 +2053,61 @@
   }
 
   /* ============================================================ chat send */
+  /* ------------------------------------------------------- attachments
+     "+ Add" uploads photos and files straight away (POST /api/upload) and
+     lists them above the pills; the next message sends their paths, and the
+     server turns documents into text context and hands photos to the AI. */
+  var ATTACH_MAX = 5, ATTACH_IMG = /\.(png|jpe?g|webp|gif)$/i;
+  function fmtSize(n) { return n < 1024 * 1024 ? Math.max(1, Math.round(n / 1024)) + ' KB' : (n / 1048576).toFixed(1) + ' MB'; }
+  function paintAttach() {
+    var el = $('attach');
+    el.hidden = !S.attach.length;
+    el.innerHTML = S.attach.map(function (a) {
+      return '<span class="afile' + (a.up ? ' is-up' : '') + '" title="' + esc(a.name) + '">' +
+        '<span aria-hidden="true">' + (a.image ? '&#128444;' : '&#128206;') + '</span>' +
+        '<span class="afile__n">' + esc(a.name) + '</span>' +
+        '<span class="afile__s">' + (a.up ? 'uploading…' : fmtSize(a.size)) + '</span>' +
+        '<button data-rm="' + a.id + '" aria-label="Remove ' + esc(a.name) + '"' + (S.busy ? ' disabled' : '') + '>&times;</button></span>';
+    }).join('');
+    Array.prototype.forEach.call(el.querySelectorAll('[data-rm]'), function (b) {
+      b.onclick = function () {
+        var id = Number(b.getAttribute('data-rm'));
+        S.attach = S.attach.filter(function (a) { return a.id !== id; });
+        paintAttach();
+      };
+    });
+  }
+  $('attach-input').addEventListener('change', async function () {
+    var files = Array.prototype.slice.call(this.files || []);
+    this.value = '';
+    for (var i = 0; i < files.length; i++) {
+      var f = files[i];
+      if (S.attach.length >= ATTACH_MAX) { notify('warn', 'Up to ' + ATTACH_MAX + ' files per message.', 'Remove one to add another.'); break; }
+      var image = ATTACH_IMG.test(f.name);
+      if (f.size > (image ? 10e6 : 30e6)) { notify('warn', f.name + ' is too large.', image ? 'Photos can be up to 10 MB.' : 'Files can be up to 30 MB.'); continue; }
+      var item = { id: Date.now() + i, name: f.name, size: f.size, image: image, path: '', up: true };
+      S.attach.push(item);
+      paintAttach();
+      try {
+        var res = await fetch('/api/upload?name=' + encodeURIComponent(f.name), { method: 'POST', body: f });
+        var j = await res.json().catch(function () { return {}; });
+        if (!res.ok) throw new Error(j.error || 'upload failed');
+        item.path = j.path; item.up = false;
+      } catch (e) {
+        S.attach = S.attach.filter(function (a) { return a !== item; });
+        notify('error', 'Could not attach ' + f.name + '.', e.message);
+      }
+      paintAttach();
+    }
+    $('prompt').focus();
+  });
+
   async function send(asking) {
     if (S.busy) return;
     var instruction = $('prompt').value.trim();
     if (!instruction) return;
+    if (S.attach.some(function (a) { return a.up; })) { toast('Wait for the attachments to finish uploading'); return; }
+    var sent = MODE === 'text' ? S.attach.slice() : [];
     $('prompt').value = '';
     $('prompt').style.height = 'auto';
 
@@ -2044,7 +2121,11 @@
     }
 
     S.busy = true; S.last = { instruction: instruction, asking: !!asking };
-    say('u', instruction);
+    // User messages are shown as plain text, so the attachments ride along as text too.
+    say('u', instruction + (sent.length
+      ? '\n' + sent.map(function (a) { return (a.image ? '\uD83D\uDDBC ' : '\uD83D\uDCCE ') + a.name; }).join('  ·  ')
+      : ''));
+    paintAttach();
     if (!S.pending) S.before = S.md;
     paintTop(); paintChips();
 
@@ -2059,9 +2140,12 @@
         instruction: instruction,
         mode: asking ? 'ask' : (S.md ? 'edit' : 'new'),
         markdown: S.md,
+        attachments: sent.map(function (a) { return a.path; }),
       };
       var r = await post('/api/ai', body, true);
       clearInterval(tick);
+      // Delivered: the files belonged to that message.
+      if (sent.length) S.attach = S.attach.filter(function (a) { return sent.indexOf(a) === -1; });
 
       if (asking) {
         say('a', md(r.answer || '(no answer)'));
@@ -2095,7 +2179,7 @@
       S.pending = false;
     }
     S.busy = false;
-    validate(); paintTop(); paintChat();
+    validate(); paintTop(); paintChat(); paintAttach();
   }
 
   function keep() {

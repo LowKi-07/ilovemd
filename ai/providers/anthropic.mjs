@@ -11,7 +11,7 @@ export function createAnthropicProvider({ env, systemPrompt, timeoutMs, apiKey }
   const provider = {
     id: 'anthropic',
     label: 'Claude',
-    capabilities: { readsLocalFiles: false, mcpTools: false },
+    capabilities: { readsLocalFiles: false, mcpTools: false, images: true },
 
     async check() {
       return {
@@ -21,12 +21,16 @@ export function createAnthropicProvider({ env, systemPrompt, timeoutMs, apiKey }
       };
     },
 
-    async generate(prompt) {
+    async generate(prompt, opts) {
+      const pics = (opts && opts.images) || [];
+      const content = pics.length
+        ? pics.map((i) => ({ type: 'image', source: { type: 'base64', media_type: i.mime, data: i.data } })).concat([{ type: 'text', text: prompt }])
+        : prompt;
       if (!apiKey) throw aiError('No Anthropic API key is configured on this server.', 'Set ANTHROPIC_API_KEY in the environment.');
       const data = await postJson({
         url: 'https://api.anthropic.com/v1/messages',
         headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-        body: { model, max_tokens: maxTokens, system: systemPrompt, messages: [{ role: 'user', content: prompt }] },
+        body: { model, max_tokens: maxTokens, system: systemPrompt, messages: [{ role: 'user', content }] },
         timeoutMs, label: 'Anthropic', host: 'api.anthropic.com', keyEnv: 'ANTHROPIC_API_KEY',
       });
       const text = stripFence((data.content || []).map((b) => b.text || '').join(''));
