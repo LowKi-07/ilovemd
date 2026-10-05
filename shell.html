@@ -81,6 +81,7 @@
   .btn--primary { background: var(--primary); color: #fff; font-weight: 620; }
   .btn--primary:hover:not(:disabled) { background: var(--primary-hov); }
   .btn--sm { padding: 5px 10px; font-size: 12.5px; }
+  .btn svg { width: 14px; height: 14px; flex: none; }
 
   .mode {
     display: inline-flex; border: 1px solid var(--hairline);
@@ -741,8 +742,8 @@
     <button data-v="split">Split</button>
     <button data-v="preview">Preview</button>
   </span>
-  <button class="btn btn--ghost btn--sm" id="btn-copy">Copy</button>
-  <button class="btn btn--primary btn--sm" id="btn-save">Save</button>
+  <button class="btn btn--ghost btn--sm" id="btn-copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>Copy</button>
+  <button class="btn btn--primary btn--sm" id="btn-save"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0-4.5-4.5M12 15l4.5-4.5M4 19h16"/></svg>Download</button>
   <button class="burger" id="btn-chat" title="Show or hide the assistant" aria-pressed="true">&#10022;</button>
 </header>
 <div class="subtop" id="subtop"></div>
@@ -1223,13 +1224,12 @@
       b.setAttribute('aria-pressed', String(b.getAttribute('data-v') === S.view));
     });
     document.body.classList.toggle('subtop-on', MODE === 'ui' && !!S.md);
+    // Copy and Download appear once there is Markdown to copy or download.
     var none = !S.md;
-    var hideActions = none && MODE !== 'text';
     $('btn-copy').disabled = none;
-    $('btn-copy').style.display = hideActions ? 'none' : '';
+    $('btn-copy').style.display = none ? 'none' : '';
     $('btn-save').disabled = none || S.busy;
-    $('btn-save').style.display = hideActions ? 'none' : '';
-    $('btn-save').textContent = 'Download';
+    $('btn-save').style.display = none ? 'none' : '';
     var sb = $('btn-send');
     sb.classList.toggle('sendbtn--stop', S.busy);
     sb.title = S.busy ? 'Stop generating' : 'Send';
