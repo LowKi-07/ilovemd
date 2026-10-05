@@ -285,6 +285,55 @@
     tab-size: 2; caret-color: var(--accent-2);
   }
   #ed:focus { outline: none; }
+
+  /* Editor with a line-number gutter and CommonMark markers. A textarea
+     cannot number its own lines, so a backdrop behind it holds the same
+     text, one block per line, laid out identically but invisible: each
+     line's number and marker sit in the gutter beside its first visual row,
+     even when it wraps. The textarea starts after the gutter, so markers
+     there stay hoverable. */
+  .edbox { --gut: 50px; position: relative; flex: 1; min-height: 0; }
+  .edbox::before {
+    content: ''; position: absolute; top: 0; bottom: 0; left: 0; width: var(--gut);
+    border-right: 1px solid var(--hairline); pointer-events: none;
+  }
+  .edbox #ed {
+    position: absolute; top: 0; bottom: 0; right: 0; left: var(--gut);
+    width: auto; height: 100%; padding-left: 14px;
+    white-space: pre-wrap; overflow-wrap: break-word;
+  }
+  .edbk {
+    position: absolute; inset: 0; overflow: hidden; pointer-events: none;
+    font: 400 13px/1.75 var(--mono); color: transparent; tab-size: 2;
+    white-space: pre-wrap; overflow-wrap: break-word;
+    padding: 18px calc(20px + var(--sbw, 0px)) 40px calc(var(--gut) + 14px);
+  }
+  .ln { position: relative; border-radius: 3px; }
+  .ln::before {
+    content: attr(data-n); position: absolute; right: calc(100% + 22px);
+    font: 400 11px/inherit var(--mono); line-height: inherit; color: #555566; text-align: right;
+  }
+  .ln--warn { background: rgba(251,191,36,.07); }
+  .ln--err { background: rgba(251,113,133,.09); }
+  .ln--warn::before { color: var(--warn); }
+  .ln--err::before { color: var(--danger, #fb7185); }
+  .ln__mk {
+    position: absolute; left: calc(-1 * (var(--gut) + 14px) + 6px); top: 0;
+    font: 700 11px/inherit var(--font); line-height: inherit; pointer-events: auto; cursor: help;
+  }
+  .ln__mk--warn { color: var(--warn); }
+  .ln__mk--err { color: var(--danger, #fb7185); }
+
+  /* CommonMark result in the editor header: hover lists it, click jumps. */
+  .chk {
+    margin-left: auto; border: 1px solid var(--hairline); border-radius: 999px; background: var(--panel);
+    font: 500 10.5px var(--mono); padding: 2px 9px; cursor: pointer; color: var(--text-3);
+    white-space: nowrap; transition: border-color .15s var(--ease), background-color .15s var(--ease);
+  }
+  .chk:hover { background: var(--panel-raised); }
+  .chk--ok { color: var(--ok); border-color: rgba(52,211,153,.3); cursor: help; }
+  .chk--warn { color: var(--warn); border-color: rgba(251,191,36,.35); }
+  .chk--err { color: var(--danger, #fb7185); border-color: rgba(251,113,133,.4); }
   #ed::placeholder { color: var(--text-3); }
   #ed::selection { background: rgba(139,124,255,.32); }
 
@@ -653,7 +702,7 @@
     .shell { position: static; flex-direction: column; }
     .main { flex-direction: column; }
     .editor, .preview, .source { border-right: 0; border-bottom: 1px solid var(--hairline); }
-    #ed { min-height: 44vh; }
+    .edbox { min-height: 44vh; }
   }
   /* Phones: the toolbar (name, view switch, Copy, Download, assistant) is
      wider than the screen in one row - and a row that cannot shrink widens
@@ -756,7 +805,8 @@
   <!-- --------------------------------------------------------------- main -->
   <div class="main">
     <section class="panel editor">
-      <div class="phead"><span class="lbl">Markdown</span></div>
+      <div class="phead"><span class="lbl">Markdown</span><span class="sp"></span>
+        <button class="chk" id="chk" hidden></button></div>
       <div class="pbody" id="edwrap" style="display:flex;flex-direction:column"></div>
     </section>
 
@@ -1406,6 +1456,7 @@
     ta.setAttribute('aria-label', 'Markdown editor');
     ta.value = S.md;
     ta.addEventListener('input', function () {
+      paintGutter();   // numbers follow every keystroke; markers refresh with validate()
       S.md = ta.value;
       stash();
       S.dirty = true;
@@ -1420,10 +1471,22 @@
       if (e.key === 'Tab') {
         e.preventDefault();
         ta.setRangeText('  ', ta.selectionStart, ta.selectionEnd, 'end');
+        ta.dispatchEvent(new Event('input'));
       }
     });
+    var box = document.createElement('div');
+    box.className = 'edbox';
+    var bk = document.createElement('div');
+    bk.className = 'edbk'; bk.id = 'edbk'; bk.setAttribute('aria-hidden', 'true');
+    box.appendChild(bk);
+    box.appendChild(ta);
+    ta.addEventListener('scroll', function () { bk.scrollTop = ta.scrollTop; });
+    // The gutter is outside the textarea: scrolling over it scrolls the text.
+    box.addEventListener('wheel', function (e) { if (e.target !== ta) ta.scrollTop += e.deltaY; }, { passive: true });
     wrap.innerHTML = '';
-    wrap.appendChild(ta);
+    wrap.appendChild(box);
+    paintGutter();
+    if (window.ResizeObserver) new ResizeObserver(function () { paintGutter(); }).observe(ta);
     if (MODE === 'text') typePlaceholder(ta);
   }
 
@@ -1461,26 +1524,68 @@
   }
 
   /* Live CommonMark check (mdcheck.js on markdown-it, the same parser the
-     server checks every generated document with). Hover the bar for the
-     full list. If the parser failed to load, it says so rather than
-     claiming a check that did not run. */
+     server checks every generated document with). The result sits in the
+     editor header - hover for the list, click to jump from issue to issue -
+     and each problem line gets a marker in the gutter. If the parser failed
+     to load, it says so rather than claiming a check that did not run. */
   var mdIt = window.markdownit && window.ilovemdCheck ? window.markdownit({ html: true }) : null;
+  S.issues = []; S.issueAt = -1;
   function validate() {
-    var el = $('valid');
-    if (!S.md) { el.innerHTML = ''; return; }
-    if (!mdIt) { el.innerHTML = '<span>Markdown · structure check unavailable</span>'; return; }
+    var el = $('chk');
+    if (!S.busy) $('valid').innerHTML = '';   // that line is the "writing…" progress now
+    if (!S.md) { el.hidden = true; S.issues = []; paintGutter(); return; }
+    el.hidden = false;
+    if (!mdIt) { el.className = 'chk'; el.textContent = 'check unavailable'; el.title = 'The CommonMark parser did not load.'; return; }
     var r = window.ilovemdCheck.check(mdIt, S.md);
+    S.issues = r.issues; S.issueAt = -1;
+    paintGutter();
     if (!r.issues.length) {
-      el.innerHTML = '<span class="v-ok" title="Parsed with a CommonMark-compliant parser: fences closed, tables consistent, headings in order.">' +
-        '&#10003; CommonMark checked · structure OK</span>';
+      el.className = 'chk chk--ok';
+      el.innerHTML = '&#10003; CommonMark';
+      el.title = 'Parsed with a CommonMark-compliant parser: fences closed, tables consistent, headings in order.';
       return;
     }
     var errs = r.issues.filter(function (x) { return x.level === 'error'; }).length;
-    var list = r.issues.map(function (x) { return (x.level === 'error' ? '✕ ' : '⚠ ') + x.msg; }).join('\n');
-    el.innerHTML = '<span class="' + (errs ? 'v-err' : 'v-warn') + '" title="' + esc(list) + '">' +
-      (errs ? '&#10005; ' : '&#9888; ') + r.issues.length + (r.issues.length === 1 ? ' issue' : ' issues') +
-      ' · ' + esc(r.issues[0].msg) + '</span>';
+    el.className = 'chk ' + (errs ? 'chk--err' : 'chk--warn');
+    el.innerHTML = (errs ? '&#10005; ' : '&#9888; ') + r.issues.length + (r.issues.length === 1 ? ' issue' : ' issues');
+    el.title = r.issues.map(function (x) {
+      return (x.level === 'error' ? '✕ ' : '⚠ ') + (x.line ? 'Line ' + x.line + ': ' : '') + x.msg;
+    }).join('\n') + '\n\nClick to jump to the next one.';
   }
+  // Line numbers and markers in the editor gutter (see .edbox).
+  function paintGutter() {
+    var ta = $('ed'), bk = $('edbk');
+    if (!ta || !bk) return;
+    var by = {};
+    (S.issues || []).forEach(function (x) { if (x.line > 0) (by[x.line] = by[x.line] || []).push(x); });
+    var lines = ta.value.split('\n'), out = new Array(lines.length);
+    for (var i = 0; i < lines.length; i++) {
+      var n = i + 1, iss = by[n];
+      var lvl = iss ? (iss.some(function (x) { return x.level === 'error'; }) ? 'err' : 'warn') : '';
+      out[i] = '<div class="ln' + (lvl ? ' ln--' + lvl : '') + '" data-n="' + n + '">' +
+        (lvl ? '<span class="ln__mk ln__mk--' + lvl + '" title="' + esc(iss.map(function (x) { return x.msg; }).join('\n')) + '">' +
+          (lvl === 'err' ? '&#10005;' : '&#9888;') + '</span>' : '') +
+        (esc(lines[i]) || '\u200b') + '</div>';
+    }
+    bk.innerHTML = out.join('');
+    bk.style.setProperty('--sbw', (ta.offsetWidth - ta.clientWidth) + 'px');
+    bk.scrollTop = ta.scrollTop;
+  }
+  // Header badge click: select the next problem line and scroll it into view.
+  $('chk').onclick = function () {
+    var withLine = (S.issues || []).filter(function (x) { return x.line > 0; })
+      .sort(function (a, b) { return a.line - b.line; });   // top to bottom
+    var ta = $('ed');
+    if (!withLine.length || !ta) return;
+    S.issueAt = (S.issueAt + 1) % withLine.length;
+    var n = withLine[S.issueAt].line, lines = ta.value.split('\n'), start = 0;
+    for (var i = 0; i < n - 1 && i < lines.length; i++) start += lines[i].length + 1;
+    ta.focus();
+    ta.setSelectionRange(start, start + (lines[n - 1] || '').length);
+    var row = $('edbk').querySelector('.ln[data-n="' + n + '"]');
+    if (row) ta.scrollTop = Math.max(0, row.offsetTop - 60);
+    $('edbk').scrollTop = ta.scrollTop;   // don't wait for the scroll event
+  };
 
   function setStatus(kind, text) { $('status').dataset.s = kind || ''; $('status').textContent = text; }
 
