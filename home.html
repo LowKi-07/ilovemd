@@ -547,7 +547,11 @@
   @media (max-width: 940px) {
     section.wrap { padding-top: 72px; padding-bottom: 72px; }
     .tpl-sec { padding: 72px 0; }
-    .hero { padding: 64px 0 20px; }
+    /* The header bar ends 11px above --navh; the pill starts 16px below it.
+       Top and bottom only - .wrap owns the side gutters. The pill is a block
+       here so no line box adds browser-dependent space above it. */
+    .hero { padding-top: calc(var(--navh) + 5px); padding-bottom: 20px; }
+    .hero__badge { display: flex; width: max-content; margin-left: auto; margin-right: auto; }
     .demo__grid { grid-template-columns: 1fr; }
     .demo__arrow { flex-direction: row; padding: 2px 0; }
     .demo__line { transform: rotate(90deg); }
