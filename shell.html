@@ -66,7 +66,7 @@
   /* ------------------------------------------------------------ buttons */
   .btn {
     display: inline-flex; align-items: center; gap: 6px;
-    padding: 7px 12px; border-radius: 10px;
+    padding: 7px 12px; border-radius: 999px;   /* every CTA is a pill, like the homepage's */
     border: 1px solid transparent; background: transparent;
     color: var(--text); font: 560 13px var(--font);
     cursor: pointer; white-space: nowrap; text-decoration: none;
@@ -102,7 +102,7 @@
   }
   .burger {
     width: 32px; height: 32px; border: 0; background: none; color: var(--text-2);
-    border-radius: 8px; cursor: pointer; font-size: 15px; display: grid; place-items: center;
+    border-radius: 50%; cursor: pointer; font-size: 15px; display: grid; place-items: center;
   }
   .burger:hover { background: var(--panel); color: var(--text); }
   .burger[aria-pressed="true"] { background: var(--accent-soft); color: var(--text); }
@@ -575,7 +575,7 @@
   .prow:has(#prompt[data-tall="1"]) { align-items: flex-end; }
   .prow:has(#prompt[data-tall="1"]) .spark { align-self: flex-start; }
   .sendbtn {
-    flex: none; width: 32px; height: 32px; border: 0; border-radius: 10px;
+    flex: none; width: 32px; height: 32px; border: 0; border-radius: 50%;
     background: var(--primary); color: #fff; cursor: pointer;
     display: grid; place-items: center;
     transition: transform .16s var(--ease), opacity .16s var(--ease);
