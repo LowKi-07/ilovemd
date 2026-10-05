@@ -448,12 +448,6 @@
   }
   .touch.is-touching .tc-burst { animation: tcBreathe 2.8s ease-in-out infinite; }
   @keyframes tcBreathe { 50% { transform: scale(1.12); opacity: .8; } }
-  .touch__cap {
-    margin: 6px auto 0; text-align: center;
-    font: 650 clamp(22px, 3.6vw, 37.5px)/1.2 var(--font); letter-spacing: -.025em;
-    background: var(--gradient); -webkit-background-clip: text; background-clip: text;
-    -webkit-text-fill-color: transparent; color: transparent;
-  }
   @media (prefers-reduced-motion: reduce) {
     .touch.is-touching .tc-burst { animation: none; }
   }
@@ -464,30 +458,35 @@
     letter-spacing: -.03em; line-height: 1.12;
   }
   .bridge > p { margin: 0 auto; max-width: 56ch; color: var(--text-2); font-size: 16px; }
-  .bridge__flow {
-    display: flex; align-items: stretch; justify-content: center;
-    gap: 10px; flex-wrap: wrap; margin: 46px 0 0;
+
+  /* ------------------------------------------------- snapping screens
+     The homepage is five screens - hero, tools, templates, the bridge and
+     trust (+ footer) - and the scroll settles on one at a time, each lined
+     up under the fixed nav. Desktop-sized windows only: on phones and short
+     windows sections outgrow the screen and free scrolling reads better.
+     Each screen also fades up the first time it arrives (.sec-in, script). */
+  @media (min-width: 941px) and (min-height: 620px) {
+    html { scroll-snap-type: y mandatory; scroll-padding-top: var(--navh); }
+    .snap {
+      scroll-snap-align: start;
+      min-height: calc(100svh - var(--navh));
+      display: flex; flex-direction: column; justify-content: center;
+    }
+    section.wrap.snap, .tpl-sec.snap { padding-top: 40px; padding-bottom: 40px; }
+    /* In a flex column, a child with auto side margins shrinks to its
+       content - and the hands stage and the marquee have no intrinsic
+       width. Keep them full width. */
+    .snap .touch, .tpl-sec.snap > .wrap { width: 100%; }
+    /* sized so the bridge screen - heading plus the hands - fits one screen */
+    .snap .touch { max-width: min(940px, calc((100svh - var(--navh) - 260px) * 1200 / 520)); margin-top: 22px; }
+    /* the hero's badge, title and button are centred blocks, not stretched */
+    .hero.snap { min-height: 100svh; padding-bottom: 40px; align-items: center; }
+    footer { scroll-snap-align: end; }
   }
-  .bnode {
-    flex: 0 1 216px; text-align: left;
-    border: 1px solid var(--hairline); background: var(--panel);
-    border-radius: var(--r-md); padding: 16px 18px;
-  }
-  .bnode__lbl {
-    font: 600 9.5px var(--font); letter-spacing: .12em; text-transform: uppercase;
-    color: var(--text-3); margin-bottom: 8px;
-  }
-  .bnode__name { font-size: 15px; font-weight: 620; letter-spacing: -.01em; }
-  .bnode__meta { margin-top: 5px; font: 400 11.5px/1.6 var(--mono); color: var(--text-3); }
-  .bnode--md {
-    border-color: rgba(139,124,255,.34);
-    background:
-      radial-gradient(22em 12em at 50% -30%, rgba(139,124,255,.2), transparent 70%),
-      var(--panel-raised);
-  }
-  .bnode--md .bnode__lbl { color: var(--accent); }
-  .bridge__arr {
-    align-self: center; color: var(--text-3); font-size: 16px; flex: none;
+  .js .sec-in { opacity: 0; transform: translateY(28px); transition: opacity .7s var(--ease), transform .7s var(--ease); }
+  .js .sec-in.is-in { opacity: 1; transform: none; }
+  @media (prefers-reduced-motion: reduce) {
+    .js .sec-in { transform: none; transition: opacity .3s linear; }
   }
 
   /* trust: no container, just the heading and a grid of small monochrome
@@ -547,10 +546,6 @@
     .demo__arrow { flex-direction: row; padding: 2px 0; }
     .demo__line { transform: rotate(90deg); }
     .nav__links { display: none; }
-    /* The flow stacks, so the connectors have to turn with it. */
-    .bridge__flow { flex-direction: column; align-items: stretch; gap: 8px; }
-    .bnode { flex: 1 1 auto; }
-    .bridge__arr { transform: rotate(90deg); }
   }
   @media (max-width: 560px) {
     .tools { grid-template-columns: 1fr; }
@@ -620,7 +615,7 @@
 </script>
 
 <!-- ------------------------------------------------------------- hero -->
-<header class="hero wrap">
+<header class="hero wrap snap">
   <span class="hero__badge reveal" style="animation-delay:.05s">
     <span class="spark">
       <svg viewBox="0 0 24 24" fill="#8b7cff" aria-hidden="true"><path d="M12 2.5l2.1 5.9 5.9 2.1-5.9 2.1L12 18.5l-2.1-5.9L4 10.5l5.9-2.1L12 2.5z"/></svg>
@@ -657,7 +652,7 @@
 </header>
 
 <!-- ------------------------------------------------------- converters -->
-<section id="converters" class="wrap" style="padding-top:48px">
+<section id="converters" class="wrap snap sec-in">
   <div class="filter-bar-wrap reveal" style="animation-delay:.5s">
     <div class="filter-bar" id="filter-bar">
       <button class="fpill active" data-filter="all">All</button>
@@ -743,7 +738,7 @@
 </section>
 
 <!-- --------------------------------------------------------- templates -->
-<section id="templates" class="tpl-sec">
+<section id="templates" class="tpl-sec snap sec-in">
   <div class="wrap sec-h">
     <div class="kicker">Templates</div>
     <h2>Never start from a blank page.</h2>
@@ -758,11 +753,11 @@
 </section>
 
 <!-- ----------------------------------------------------------- bridge -->
-<section id="future" class="wrap bridge">
+<section id="future" class="wrap bridge snap sec-in">
   <div class="kicker" style="font:600 11px var(--font);letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin-bottom:14px">
     The future of talking to AI
   </div>
-  <h2>Markdown is the bridge between your ideas and AI.</h2>
+  <h2>Markdown &mdash; the language you both speak</h2>
   <p>Turn anything &mdash; from a thought to a Figma component &mdash; into structured context AI can understand.</p>
 
   <figure class="touch">
@@ -794,34 +789,13 @@
         <circle class="tc-burst" cx="600" cy="200" r="70" fill="url(#tc-burst)"/>
       </svg>
     </div>
-    <figcaption class="touch__cap">Markdown &mdash; the language you both speak</figcaption>
   </figure>
-
-  <div class="bridge__flow">
-    <div class="bnode">
-      <div class="bnode__lbl">What you have</div>
-      <div class="bnode__name">Anything</div>
-      <div class="bnode__meta">a thought &middot; a PDF<br>a deck &middot; a Figma frame</div>
-    </div>
-    <span class="bridge__arr">&rarr;</span>
-    <div class="bnode bnode--md">
-      <div class="bnode__lbl">The bridge</div>
-      <div class="bnode__name">Markdown</div>
-      <div class="bnode__meta">headings, tables, code<br>structure a model reads</div>
-    </div>
-    <span class="bridge__arr">&rarr;</span>
-    <div class="bnode">
-      <div class="bnode__lbl">What you get</div>
-      <div class="bnode__name">Context AI understands</div>
-      <div class="bnode__meta">any model, any editor<br>any agent you work with</div>
-    </div>
-  </div>
 </section>
 
 <!-- ------------------------------------------------------------ trust -->
 <!-- Every badge states something this deployment actually does. No third-
      party certification belongs here until it has been awarded. -->
-<section id="trust" class="wrap">
+<section id="trust" class="wrap snap sec-in">
   <div class="trust">
     <h2>Built to be trusted. Validated to perform.</h2>
     <p>Every document is converted through a controlled, validated pipeline designed for accuracy, consistency, security, and reliable Markdown output.</p>
@@ -1005,9 +979,12 @@
 
   var target = 0, cur = 0, raf = 0, near = false;
   function measure() {
-    var r = fig.getBoundingClientRect(), vh = window.innerHeight || 1;
-    // 0 when the art's centre is at the bottom edge, 1 once it reaches 40% down.
-    target = Math.max(0, Math.min(1, (vh - (r.top + r.height / 2)) / (vh * 0.6)));
+    // 0 as the bridge section's top enters at the bottom of the window, 1
+    // once it sits under the nav - where the scroll snaps to rest - so the
+    // fingertips meet exactly as that screen settles.
+    var r = (document.getElementById('future') || fig).getBoundingClientRect(), vh = window.innerHeight || 1;
+    var navh = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--navh')) || 80;
+    target = Math.max(0, Math.min(1, (vh - r.top) / Math.max(1, vh - navh - 24)));
   }
   function frame() {
     raf = 0;
@@ -1060,6 +1037,22 @@
     }).join('');
     box.hidden = false;
   }).catch(function () { /* the View Templates button still works */ });
+})();
+</script>
+<script>
+/* Each homepage screen fades up the first time it scrolls into view. The
+   .js class gates the hidden start state, so without script nothing hides. */
+(function () {
+  var secs = document.querySelectorAll('.sec-in');
+  if (!('IntersectionObserver' in window)) return;
+  document.documentElement.classList.add('js');
+  var io = new IntersectionObserver(function (es) {
+    es.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add('is-in'); io.unobserve(e.target); } });
+  // Any height: fires once a section's top is above the bottom 15% of the
+  // window (a ratio threshold could never be met by a section several
+  // screens tall on a phone).
+  }, { threshold: 0, rootMargin: '0px 0px -15% 0px' });
+  secs.forEach(function (s) { io.observe(s); });
 })();
 </script>
 <script src="/nav.js"></script>
