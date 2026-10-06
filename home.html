@@ -119,9 +119,12 @@
      neighbours. Centring rather than baseline alignment on purpose: an
      inline-block that clips its overflow takes its bottom edge as its
      baseline, which would drop the word below the rest of the line. */
+  /* Set like motionsites.ai's hero: the system face at its heaviest (900 -
+     SF Pro Display Black / Segoe UI Black / Roboto Black), uppercase, tracked
+     in to -0.03em. */
   .hero h1 {
-    margin: 0 0 22px; font-size: clamp(40px, 7vw, 76px);
-    font-weight: 700; letter-spacing: -.035em; line-height: 1.04;
+    margin: 0 0 22px; font-size: clamp(34px, 5.8vw, 66px);
+    font-weight: 900; letter-spacing: -.03em; line-height: 1.04; text-transform: uppercase;
     display: flex; flex-wrap: wrap;
     align-items: center; justify-content: center; gap: 0 .26em;
   }
@@ -158,11 +161,27 @@
   @media (prefers-reduced-motion: reduce) {
     .roller, .roller__track { transition: none; }
   }
-  .hero h1 .grad {
-    background: var(--gradient);
+  /* "Markdown." in Magic UI's Aurora Text: a 135deg gradient through its four
+     colours, twice the word's width, drifting while the word tilts and
+     breathes (8s, alternate). Screen readers get the plain .sr copy. */
+  /* side room for the tilt and the 1.1 scale, so it never touches "to" */
+  .aurora { position: relative; display: inline-block; padding: 0 .12em 0 .3em; }
+  .aurora__fx {
+    position: relative; display: inline-block;
+    background-image: linear-gradient(135deg, #FF0080, #7928CA, #0070F3, #38bdf8, #FF0080);
+    background-size: 200% auto;
     -webkit-background-clip: text; background-clip: text;
     -webkit-text-fill-color: transparent; color: transparent;
+    animation: aurora 8s ease-in-out infinite alternate;
   }
+  @keyframes aurora {
+    0%   { background-position: 0% 50%;   transform: rotate(-5deg) scale(.9); }
+    25%  { background-position: 50% 100%; transform: rotate(5deg) scale(1.1); }
+    50%  { background-position: 100% 50%; transform: rotate(-3deg) scale(.95); }
+    75%  { background-position: 50% 0%;   transform: rotate(3deg) scale(1.05); }
+    100% { background-position: 0% 50%;   transform: rotate(-5deg) scale(.9); }
+  }
+  @media (prefers-reduced-motion: reduce) { .aurora__fx { animation: none; } }
   .hero .sub {
     margin: 0 auto; max-width: 52ch;
     color: var(--text-2); font-size: 17px; line-height: 1.6;
@@ -882,7 +901,7 @@
       </span>
     </span>
     <span>to</span>
-    <span class="grad">Markdown.</span>
+    <span class="aurora"><span class="sr">Markdown.</span><span class="aurora__fx" aria-hidden="true">Markdown.</span></span>
   </h1>
   <p class="sub reveal" style="animation-delay:.27s">
     Turn your ideas, files, and designs into clean Markdown.<br>
