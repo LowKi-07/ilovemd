@@ -932,6 +932,7 @@
     // ui
     importDir: null, components: [], groups: null, current: null, curName: '', curType: null,
     kits: [], kit: null,
+    demo: false,                                  // "See how it works": the built-in sample kit, no folder, no AI
     uiDocs: {},                                   // component -> generated markdown
     // figma
     frames: [], curFrame: null, frameDocs: {},    // url -> markdown
@@ -1191,7 +1192,9 @@
       $('valid').innerHTML = '<span style="color:var(--accent)">&#9679;</span> Applying your answers… ' + Math.round((Date.now() - t0) / 1000) + 's';
     }, 500);
     try {
-      var r = await post('/api/ai', { instruction: instruction, mode: 'edit', markdown: S.md }, true);
+      var r = S.demo
+        ? await demoApply(S.md, pairs)
+        : await post('/api/ai', { instruction: instruction, mode: 'edit', markdown: S.md }, true);
       clearInterval(tick);
       if (r.markdown && r.markdown.trim()) {
         S.md = r.markdown;
@@ -1200,7 +1203,9 @@
         S.last = null;
         setStatus('dirty', '');
         paintEditor(); paintPreview();
-        say('a', '<b>Applied your answers</b> in ' + Math.round((Date.now() - t0) / 1000) + 's - review the patched sections, then <b>Keep</b> or <b>Discard</b>.');
+        say('a', '<b>Applied your answers</b> in ' + Math.round((Date.now() - t0) / 1000) + 's' +
+          (r.touched && r.touched.length ? ' - updated <b>' + r.touched.map(esc).join('</b>, <b>') + '</b>' : '') +
+          '. Review the patched sections, then <b>Keep</b> or <b>Discard</b>.');
       } else {
         say('a', aiName() + ' returned nothing. Your text is unchanged.', true);
       }
@@ -1355,7 +1360,9 @@
         wrap.innerHTML =
           '<div class="placeholder"><div class="dropbox dropbox--beam">' + BEAM +
           '<h3>' + esc(cap(S.curName)) + '</h3>' +
-          '<p>' + aiName() + ' reads ' + what + '. Nothing is sent until you generate.</p>' +
+          (S.demo
+            ? '<p>A sample component from the demo kit. Generate to see the documentation ilovemd writes, then answer a few clarifying questions. The demo uses pre-written output, so nothing is sent to AI.</p>'
+            : '<p>' + aiName() + ' reads ' + what + '. Nothing is sent until you generate.</p>') +
           '<div class="dropbox__actions">' +
           '<span class="dropbox__back">' +
           '<button class="btn btn--ghost btn--sm" id="btn-back-comp">&#8592; Back</button>' +
@@ -1382,8 +1389,10 @@
           : !S.importDir
           ? '<p>Select the folder on your computer that holds your design system’s components.</p>' +
             '<button class="btn btn--primary" id="ed-pick">Choose Component Folder</button>' +
+            '<div style="margin-top:10px"><button class="btn btn--ghost btn--sm" id="ed-demo">See how it works</button></div>' +
             '<div class="hint" style="margin-top:12px;font:400 10px var(--mono);color:var(--text-3)">Supported: HTML, CSS</div>'
-          : '<p>' + (S.groups ? 'Choose a page, section or component found in this folder.' : 'Pick a design system, then choose a component to document.') + '</p>' +
+          : '<p>' + (S.demo ? 'A sample design system to try the flow. Pick a component, then generate its documentation.'
+              : S.groups ? 'Choose a page, section or component found in this folder.' : 'Pick a design system, then choose a component to document.') + '</p>' +
             '<div class="folder" style="margin:0 0 10px;text-align:left">' +
             '<span style="flex:none;color:var(--text-3)">&#128193;</span>' +
             '<span class="folder__path" title="' + esc(S.importDir) + '">' + esc(S.importDir) + '</span>' +
@@ -1398,6 +1407,7 @@
         '</div></div>';
       var ep = $('ed-pick') || $('ed-repick');
       if (ep) ep.onclick = pickImport;
+      if ($('ed-demo')) $('ed-demo').onclick = startDemo;
       if (S.upload) $('upl-cancel').onclick = function () { if (S.upload) S.upload.ctrl.abort(); };
       var eks = $('kitsel-ed');
       if (eks) eks.onchange = function () { setKit(eks.value); };
@@ -1704,6 +1714,7 @@
             : '<div class="importbox"><h3>Import UI Components</h3>' +
               '<p>Select the folder on your computer that holds your design system’s components.</p>' +
               '<button class="btn btn--primary btn--sm" id="btn-pick">Choose Component Folder</button>' +
+              '<div style="margin-top:8px"><button class="btn btn--ghost btn--sm" id="btn-demo">See how it works</button></div>' +
               '<div class="hint">Supported: HTML, CSS</div></div>') +
           '<div class="list" id="slist"></div>' +
           '<div class="sidefoot"><button class="btn btn--ghost btn--sm" id="btn-rescan">&#8635; Rescan</button><span class="sp"></span></div>';
@@ -1771,6 +1782,7 @@
       });
       var pick = $('btn-pick') || $('btn-repick');
       if (pick) pick.onclick = pickImport;
+      if ($('btn-demo')) $('btn-demo').onclick = startDemo;
       var ks = $('kitsel');
       if (ks) ks.onchange = function () { setKit(ks.value); };
       $('btn-rescan').onclick = function () { loadComponents(); toast('Folder re-read'); };
@@ -1924,6 +1936,7 @@
     try {
       var r = await post('/api/pick-folder', { for: 'import', prompt: 'Choose the folder that contains your components (HTML and CSS)' });
       if (r.canceled) return;
+      leaveDemo();
       S.importDir = r.path;
       await loadKits();
       await loadComponents();
@@ -1944,6 +1957,298 @@
   }
   // The moving light on the landing cards' border (see .dropbox--beam).
   var BEAM = '<span class="beam" aria-hidden="true"></span>';
+
+  /* ---------------------------------------------------------- demo kit
+     "See how it works": three sample components with pre-written docs in the
+     same section shape /api/component-doc produces, plus clarifying
+     questions. Each question names the section its answer lands in (`sec`);
+     each option carries the line(s) it adds (`add`, empty = nothing to add).
+     A typed answer is added to that section as a bullet. Runs entirely in the
+     browser - no folder, no server, no AI call. */
+  var DEMO_DIR = 'Demo kit · sample components';
+  var DEMO = {
+    Button: {
+      md: [
+        '# Button', '',
+        '## Purpose', '',
+        'Buttons trigger a single action, such as submitting a form, saving changes or opening a dialog. Use a button when the result happens on this page; use a link to go somewhere else.', '',
+        '## Variants', '',
+        '- Primary - the one main action on a screen, such as Save or Continue.',
+        '- Secondary - supporting actions beside a primary, such as Cancel or Back.',
+        '- Tertiary - low-emphasis actions inside cards, tables and toolbars.',
+        '- Destructive - actions that delete something or cannot be undone.',
+        '- Icon only - compact toolbar actions, always with an accessible label.', '',
+        '## States', '',
+        '- Default - ready to be pressed.',
+        '- Hover - the pointer is over the button; the fill darkens slightly.',
+        '- Focus - a visible focus ring shows where the keyboard is.',
+        '- Pressed - feedback while the button is held down.',
+        '- Disabled - the action is unavailable and the button cannot be pressed.', '',
+        '## Anatomy', '',
+        '- Container - the clickable area and its background.',
+        '- Label - a short verb that names the action.',
+        '- Leading icon - optional icon before the label that reinforces its meaning.',
+        '- Trailing icon - optional icon after the label, such as a chevron for menus.', '',
+        '## Dependencies', '',
+        '### Components', '',
+        '- Icon',
+        '- Spinner', '',
+        '### Tokens', '',
+        '- Colour: color-action-primary',
+        '- Colour: color-action-destructive',
+        '- Spacing: space-200',
+        '- Radius: radius-pill',
+        '- Typography: font-label-md', '',
+        '## Behaviour', '',
+        '- Activates on click, tap, Enter or Space.',
+        '- Ignores repeated presses while its action is already running.',
+        '- Width follows the label; a button never wraps onto two lines.', '',
+        '## Actions', '',
+        '- Press does run the action named on the label.', '',
+        '## Accessibility', '',
+        '- Renders as a native button element, so it is focusable and announced as a button.',
+        '- Icon-only buttons carry an aria-label that names the action.',
+        '- Disabled buttons use the native disabled attribute.',
+        '- The focus ring meets 3:1 contrast against the background.', '',
+        '## Do / Don\'t', '',
+        '### Do', '',
+        '- Start labels with a verb: Save, Send, Create project.',
+        '- Use one primary button per screen or dialog.',
+        '- Place the primary action last in a button group.', '',
+        '### Don\'t', '',
+        '- Don\'t use a button to go to another page - use a link.',
+        '- Don\'t put two primary buttons side by side.',
+        '- Don\'t write vague labels such as OK or Click here.', ''
+      ],
+      questions: [
+        { text: 'Should Button have a Loading state while its action runs?', sec: '## States',
+          options: ['Yes - show a spinner and keep the width', 'No - the page shows progress instead'],
+          add: [['- Loading - a spinner replaces the label while the action runs; the button keeps its width and ignores presses.'], []] },
+        { text: 'Which sizes does Button come in?', sec: '## Variants',
+          options: ['Small, Medium and Large', 'Medium and Large', 'One size only'],
+          add: [['- Sizes - Small for dense tables and toolbars, Medium by default, Large for hero and onboarding screens.'],
+                ['- Sizes - Medium by default, Large for hero and onboarding screens.'],
+                ['- Size - one size everywhere, so buttons line up across the product.']] },
+        { text: 'In a delete dialog, can a Primary and a Destructive button appear together?', sec: '### Do',
+          options: ['No - Destructive becomes the main action', 'Yes - Destructive goes on the left'],
+          add: [['- In a delete dialog, make the Destructive button the main action and pair it with a Secondary Cancel.'],
+                ['- When Primary and Destructive appear together, place Destructive on the left, away from Primary.']] },
+        { text: 'What is the minimum touch target?', sec: '## Accessibility',
+          options: ['44 × 44 px', '48 × 48 px'],
+          add: [['- The touch target is at least 44 × 44 px, including small and icon-only buttons.'],
+                ['- The touch target is at least 48 × 48 px, including small and icon-only buttons.']] }
+      ]
+    },
+    Accordion: {
+      md: [
+        '# Accordion', '',
+        '## Purpose', '',
+        'Accordions stack related sections of content behind headers that people expand when they need them. Use them to shorten long pages such as FAQs and settings, where people only read a few sections.', '',
+        '## Variants', '',
+        '- Default - a bordered list of sections for FAQs and help content.',
+        '- Flush - no outer border, for use inside cards and side panels.',
+        '- With icons - a leading icon in each header to help people scan.', '',
+        '## States', '',
+        '- Collapsed - only the header shows.',
+        '- Expanded - the header and its content panel show.',
+        '- Hover - the header highlights under the pointer.',
+        '- Focus - a visible focus ring on the header.',
+        '- Disabled - the header is dimmed and cannot be toggled.', '',
+        '## Anatomy', '',
+        '- Header - the clickable title row of a section.',
+        '- Title - the text that names the section.',
+        '- Chevron - points down when collapsed and up when expanded.',
+        '- Content panel - the body that shows when the section is expanded.',
+        '- Divider - separates one section from the next.', '',
+        '## Dependencies', '',
+        '### Components', '',
+        '- Icon', '',
+        '### Tokens', '',
+        '- Colour: color-border-subtle',
+        '- Colour: color-surface-hover',
+        '- Spacing: space-300',
+        '- Typography: font-heading-sm', '',
+        '## Behaviour', '',
+        '- Clicking a header toggles its section open or closed.',
+        '- Content below moves down smoothly as a section opens.',
+        '- Skips the animation when the system asks for reduced motion.', '',
+        '## Actions', '',
+        '- Click header does toggle the section open or closed.',
+        '- Enter or Space on a focused header does toggle the section.', '',
+        '## Accessibility', '',
+        '- Each header is a native button with aria-expanded set to true or false.',
+        '- Each header points to its panel with aria-controls.',
+        '- Each content panel has role="region" and is labelled by its header.',
+        '- The chevron is decorative and hidden from screen readers.', '',
+        '## Do / Don\'t', '',
+        '### Do', '',
+        '- Write short, specific header titles people can scan.',
+        '- Use accordions for optional or reference content.',
+        '- Keep each section focused on one topic.', '',
+        '### Don\'t', '',
+        '- Don\'t hide information everyone needs inside an accordion.',
+        '- Don\'t nest an accordion inside another accordion.',
+        '- Don\'t use an accordion for a single section.', ''
+      ],
+      questions: [
+        { text: 'Can more than one section be open at the same time?', sec: '## Behaviour',
+          options: ['Yes - sections open independently', 'No - opening one closes the others'],
+          add: [['- Sections open independently; opening one leaves the others as they are.'],
+                ['- Only one section is open at a time; opening a section closes the one that was open.']] },
+        { text: 'Should the first section start expanded?', sec: '## Behaviour',
+          options: ['Yes, on FAQ pages', 'No - all start collapsed'],
+          add: [['- On FAQ pages the first section starts expanded.'], ['- All sections start collapsed.']] },
+        { text: 'Can a header show a count or badge?', sec: '## Anatomy',
+          options: ['Yes - an optional count badge', 'No'],
+          add: [['- Badge - an optional count after the title, such as the number of items inside.'], []] },
+        { text: 'Can people move between headers with the arrow keys?', sec: '## Accessibility',
+          options: ['Yes - Up/Down, Home and End', 'No - Tab only'],
+          add: [['- Up and Down arrows move focus between headers; Home and End jump to the first and last header.'],
+                ['- Tab moves between headers; there are no arrow-key shortcuts.']] }
+      ]
+    },
+    'Text field': {
+      md: [
+        '# Text field', '',
+        '## Purpose', '',
+        'Text fields let people enter and edit a single line of text, such as a name, an email address or a search term. Use a text area instead for longer answers that need several lines.', '',
+        '## Variants', '',
+        '- Default - a labelled single-line input.',
+        '- With leading icon - an icon, such as search or email, hints at the expected content.',
+        '- With prefix or suffix - fixed text such as a currency symbol or a unit.',
+        '- Password - hides the characters, with a show/hide toggle.', '',
+        '## States', '',
+        '- Default - empty and ready for input.',
+        '- Hover - the border darkens under the pointer.',
+        '- Focus - an accent border and focus ring show where typing goes.',
+        '- Filled - the field holds a value.',
+        '- Error - a red border and an error message below the field.',
+        '- Disabled - dimmed; the value cannot be edited.',
+        '- Read-only - the value shows but cannot be changed.', '',
+        '## Anatomy', '',
+        '- Label - names the field, always visible above the input.',
+        '- Input - where people type.',
+        '- Placeholder - an example of the expected format.',
+        '- Helper text - a short hint below the field.',
+        '- Error message - replaces the helper text when the value is invalid.', '',
+        '## Dependencies', '',
+        '### Components', '',
+        '- Icon',
+        '- Label', '',
+        '### Tokens', '',
+        '- Colour: color-border-default',
+        '- Colour: color-border-focus',
+        '- Colour: color-feedback-error',
+        '- Spacing: space-200',
+        '- Radius: radius-md',
+        '- Typography: font-body-md', '',
+        '## Behaviour', '',
+        '- Validates when the field loses focus, not on every keystroke.',
+        '- Clears the error as soon as the value becomes valid.',
+        '- Keeps what was typed if the form fails to submit.', '',
+        '## Actions', '',
+        '- Typing does update the value.',
+        '- Show/hide on a password field does toggle whether the characters are visible.', '',
+        '## Accessibility', '',
+        '- The label is tied to the input, so screen readers announce it on focus.',
+        '- The error message is linked with aria-describedby and announced when it appears.',
+        '- aria-invalid is set to true while the field is in error.',
+        '- The placeholder never replaces the label.', '',
+        '## Do / Don\'t', '',
+        '### Do', '',
+        '- Keep labels short and always visible.',
+        '- Say how to fix an error, not only that something is wrong.',
+        '- Use the right input type, such as email or tel, so phones show the right keyboard.', '',
+        '### Don\'t', '',
+        '- Don\'t use placeholder text as the label.',
+        '- Don\'t show an error before someone has finished typing.',
+        '- Don\'t block pasting, not even in password fields.', ''
+      ],
+      questions: [
+        { text: 'Does Text field show a character counter?', sec: '## Anatomy',
+          options: ['Yes, when a maximum length is set', 'No'],
+          add: [['- Character counter - shows characters used against the limit, such as 24/80, when the field has a maximum length.'], []] },
+        { text: 'How are required fields marked?', sec: '## Anatomy',
+          options: ['An asterisk after the label', '"Optional" on optional fields instead'],
+          add: [['- Required marker - an asterisk after the label, explained once at the top of the form.'],
+                ['- Optional tag - the word "Optional" after the label of fields that are not required; required fields carry no marker.']] },
+        { text: 'Should search fields have a clear (×) button?', sec: '## Actions',
+          options: ['Yes', 'No'],
+          add: [['- Clear does empty the field and return focus to it; it appears in search fields once there is text.'], []] }
+      ]
+    }
+  };
+
+  function startDemo() {
+    S.demo = true;
+    S.importDir = DEMO_DIR;
+    S.kits = [{ id: 'demo', label: 'Demo Kit' }];
+    S.kit = 'demo';
+    S.groups = null;
+    S.components = Object.keys(DEMO).map(function (n) { return { name: n }; });
+    S.current = null; S.curName = ''; S.curType = null;
+    S.uiDocs = {}; S.q = null; S.qList = null;
+    S.before = null; S.pending = false; S.log = [];
+    setDoc('', '');
+    setStatus('', '');
+    paintSidebar(); paintTop(); paintEditor(); paintChat();
+    toast('Demo kit loaded - pick a component');
+  }
+  // A real folder replaces the demo: its generated docs and state go with it.
+  function leaveDemo() {
+    if (!S.demo) return;
+    S.demo = false;
+    S.uiDocs = {}; S.current = null; S.curName = ''; S.curType = null;
+    S.q = null; S.qList = null; S.before = null; S.pending = false;
+    setDoc('', '');
+  }
+  // Waits like a real request does, and Cancel / Stop abort it the same way.
+  function demoWait(ms) {
+    S.ctrl = new AbortController();
+    var sig = S.ctrl.signal;
+    return new Promise(function (done, fail) {
+      var t = setTimeout(done, ms);
+      sig.addEventListener('abort', function () {
+        clearTimeout(t);
+        var e = new Error('aborted'); e.name = 'AbortError'; fail(e);
+      });
+    });
+  }
+  async function demoGenerate(name) {
+    var d = DEMO[name], t0 = Date.now();
+    await demoWait(5200);
+    return {
+      markdown: d.md.join('\n'),
+      questions: d.questions.map(function (q) { return { text: q.text, options: q.options.slice() }; }),
+      ms: Date.now() - t0,
+    };
+  }
+  // Each answer adds its line(s) at the end of the section its question names.
+  function demoInsert(src, heading, add) {
+    var lines = src.split('\n');
+    var at = lines.findIndex(function (l) { return l.trim() === heading; });
+    if (at === -1) return src;
+    var end = at + 1;
+    while (end < lines.length && !/^#{1,6}\s/.test(lines[end])) end++;
+    while (end > at + 1 && !lines[end - 1].trim()) end--;
+    return lines.slice(0, end).concat(add).concat(lines.slice(end)).join('\n');
+  }
+  async function demoApply(src, pairs) {
+    await demoWait(1600);
+    var qs = (DEMO[S.current] || {}).questions || [], touched = [];
+    pairs.forEach(function (p) {
+      var q = qs.find(function (x) { return x.text === p.q; });
+      if (!q) return;
+      var i = q.options.indexOf(p.a);
+      var typed = p.a.trim().replace(/^(yes|no)\b[\s,.:;-]*/i, '') || p.a.trim();   // "Yes, a badge" -> "A badge"
+      var add = i >= 0 ? q.add[i] : ['- ' + cap(typed) + (/[.!?]$/.test(typed) ? '' : '.')];
+      if (!add.length) return;
+      src = demoInsert(src, q.sec, add);
+      var label = q.sec.replace(/^#+\s*/, '');
+      if (touched.indexOf(label) === -1) touched.push(label);
+    });
+    return { markdown: src, touched: touched };
+  }
 
   function figErrorHTML() {
     var f = S.figError;
@@ -2005,6 +2310,7 @@
     if (cancelled) { toast('Upload cancelled'); return; }
     if (stopped) { notify('error', 'Upload stopped', stopped); return; }
     if (!dir) { notify('error', 'Upload failed', 'Could not upload the folder. Try again.'); return; }
+    leaveDemo();
     S.importDir = dir;
     try {
       await api('/api/state', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ importDir: dir }) });
@@ -2014,7 +2320,7 @@
     toast('Imported ' + files.length + ' files' + (up.failed ? ' (' + up.failed + ' failed)' : ''));
   }
   async function loadKits() {
-    if (!S.importDir) { paintSidebar(); return; }
+    if (!S.importDir || S.demo) { paintSidebar(); return; }
     try {
       var r = await api('/api/kits?dir=' + encodeURIComponent(S.importDir));
       S.importDir = r.root;
@@ -2030,10 +2336,11 @@
     S.before = null; S.pending = false;
     setDoc('', '');
     setStatus('', '');
-    api('/api/state', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ kit: id }) }).catch(function () {});
+    if (!S.demo) api('/api/state', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ kit: id }) }).catch(function () {});
     loadComponents();
   }
   async function loadComponents() {
+    if (S.demo) { paintSidebar(); paintTop(); paintEditor(); return; }
     if (!S.importDir) { paintSidebar(); return; }
     try {
       var r = await api('/api/components?dir=' + encodeURIComponent(S.importDir) + '&kit=' + encodeURIComponent(S.kit || ''));
@@ -2085,9 +2392,11 @@
 
     var prevDoc = S.md;
     try {
-      var r = await post('/api/component-doc', S.groups
-        ? { dir: S.importDir, uid: S.current }
-        : { dir: S.importDir, kit: S.kit, name: S.current }, true);
+      var r = S.demo
+        ? await demoGenerate(S.current)
+        : await post('/api/component-doc', S.groups
+          ? { dir: S.importDir, uid: S.current }
+          : { dir: S.importDir, kit: S.kit, name: S.current }, true);
       clearInterval(tick);
       S.uiDocs[S.current] = r.markdown;
       S.qList = r.questions || [];

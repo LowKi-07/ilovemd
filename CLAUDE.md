@@ -135,6 +135,8 @@ open Figma.
 
 The "← Change component" back button in the component detail card calls `paintSidebar(); paintTop(); paintEditor()` — not a function called `paint()`.
 
+**"See how it works" demo kit**: the landing card (and sidebar import box) offers a demo for visitors without a component folder. `startDemo()` sets `S.demo` and loads the `DEMO` object in `shell.html`: three sample components (Button, Accordion, Text field) with pre-written docs in the `/api/component-doc` section shape, plus clarifying questions. Each question names the heading its answer patches (`sec`) and the line(s) each option adds (`add`). `generate()` and `applyAnswers()` branch to `demoGenerate()` / `demoApply()` — no server call, no AI, nothing persisted to `/api/state`. Choosing a real folder calls `leaveDemo()`. The free-form assistant chips still call the real AI on the demo doc.
+
 ## Compare page (`compare.html`)
 
 - Two auto-expanding textareas (no internal scroll — `autoResize(ta)` sets `ta.style.height` dynamically)
