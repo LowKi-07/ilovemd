@@ -811,8 +811,9 @@
   .subtop {
     position: fixed; top: calc(var(--navh) + 52px); left: 0; right: 0; height: 48px; z-index: 9;
     display: none; align-items: center; gap: 6px; padding: 0 14px;
-    background: rgba(10,10,16,.58);
-    backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
+    /* No fill: the workspace starts below this row, so nothing scrolls under
+       it - a background only showed as a band across the page. */
+    background: transparent;
   }
   body.mode-ui.subtop-on .subtop { display: flex; }
   body.mode-ui.subtop-on .shell { inset: calc(var(--navh) + 100px) 0 0 0; }
@@ -831,7 +832,8 @@
   }
   @media (max-width: 940px) {
     body.mode-ui.subtop-on .shell { position: static; }
-    body.mode-ui.subtop-on .subtop { position: sticky; }
+    /* here it sticks while the page scrolls under it, so it takes the page colour */
+    body.mode-ui.subtop-on .subtop { position: sticky; background: var(--canvas); }
   }
   /* ============================================================ light mode
      <html data-theme="light"> (sun/moon switch in the header). Same layout
@@ -902,7 +904,6 @@
   :root[data-theme="light"] .prow { background: #fff; }
   :root[data-theme="light"] .note { box-shadow: 0 14px 40px rgba(30,26,80,.14); }
   :root[data-theme="light"] .toast { color: #fff; background: #16151d; }
-  :root[data-theme="light"] .subtop { background: rgba(255,255,255,.7); }
   :root[data-theme="light"] .sheet-scrim { background: rgba(30,26,60,.25); }
   @media (max-width: 940px) {
     :root[data-theme="light"] .chat { background: var(--panel-solid); box-shadow: -18px 0 50px rgba(30,26,80,.14); }
