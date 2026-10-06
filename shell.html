@@ -373,11 +373,18 @@
     border-radius: 18px; overflow: auto;
     background: #fff radial-gradient(circle, #cfd2d8 1.15px, transparent 1.45px) 0 0 / 22px 22px;
     box-shadow: 0 0 0 1px rgba(255,255,255,.08), 0 24px 60px -24px rgba(0,0,0,.7);
-    display: grid; place-items: center; padding: 28px;
+    display: grid; place-items: center; padding: 28px; position: relative;
   }
+  /* the card at 80% of its 305 x 404 frame */
   .figboard img {
-    width: 305px; max-width: 100%; height: auto; display: block;
+    width: 244px; max-width: 100%; height: auto; display: block;
     box-shadow: 0 1px 2px rgba(16,24,40,.06), 0 12px 32px -12px rgba(16,24,40,.22);
+  }
+  .figboard__tag {
+    position: absolute; top: 16px; right: 16px;
+    padding: 5px 11px; border-radius: 999px;
+    background: #efedff; border: 1px solid #d9d4ff; color: #4f46e5;
+    font: 600 11px/1 var(--font); letter-spacing: .06em; text-transform: uppercase;
   }
   .figdemo__cap { font: 400 12px var(--font); color: var(--text-3); margin: -6px 0 0; }
   .figdemo__actions { display: flex; gap: 10px; align-items: center; }
@@ -1473,7 +1480,7 @@
       // "See how it works": the sample frame on a FigJam-style board.
       wrap.innerHTML =
         '<div class="placeholder"><div class="figdemo">' +
-        '<div class="figboard"><img src="/tesla-vsr-card.svg" width="305" height="404" alt="Tesla VSR Card: a Model Y All-Wheel Drive vehicle card with price, dealer, Compare checkbox and VIN"></div>' +
+        '<div class="figboard"><span class="figboard__tag">Demo</span><img src="/tesla-vsr-card.svg" width="244" height="323" alt="Tesla VSR Card: a Model Y All-Wheel Drive vehicle card with price, dealer, Compare checkbox and VIN"></div>' +
         '<p class="figdemo__cap">Sample frame: <b>Tesla VSR Card</b>. The demo uses pre-written output, so nothing is sent to Figma or AI.</p>' +
         '<div class="figdemo__actions">' +
         '<button class="btn btn--ghost btn--sm" id="btn-figdemo-back">&#8592; Back</button>' +
