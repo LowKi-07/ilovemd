@@ -40,7 +40,35 @@
   --nv-pill: 999px;
   --nv-r-md: 11px;
   --nv-r-lg: 16px;
+
+  --nv-logo: #fff;
+  --nv-shadow: 0 10px 36px rgba(0,0,0,.42);
+  --nv-inset: inset 0 1px 0 rgba(255,255,255,.07);
+  --nv-panel-shadow: 0 16px 44px rgba(0,0,0,.55);
 }
+
+/* Light mode: <html data-theme="light">, set before first paint by each
+   page's head script and toggled by the sun/moon switch (nav.js). Dark stays
+   the default; every page keeps its dark styling and adds a light block. */
+:root[data-theme="light"] {
+  --nv-text: #16151d;
+  --nv-text-2: #55546a;
+  --nv-text-3: #8a889c;
+  --nv-warn: #b7791f;
+  --nv-bar: rgba(255,255,255,.74);
+  --nv-edge: rgba(22,20,60,.1);
+  --nv-hover: rgba(22,20,60,.05);
+  --nv-active: rgba(22,20,60,.07);
+  --nv-panel: rgba(255,255,255,.98);
+  --nv-panel-edge: rgba(22,20,60,.1);
+  --nv-accent-soft: rgba(91,79,240,.1);
+  --nv-logo: #16151d;
+  --nv-shadow: 0 10px 30px rgba(30,26,80,.1);
+  --nv-inset: inset 0 1px 0 rgba(255,255,255,.9);
+  --nv-panel-shadow: 0 16px 40px rgba(30,26,80,.14);
+}
+/* The logo's letters are drawn white; they follow the theme. */
+.brand-logo path[fill="white"] { fill: var(--nv-logo); }
 
 
 /* ------------------------------------------------------------------ bar
@@ -55,8 +83,8 @@
   backdrop-filter: saturate(170%) blur(20px);
   -webkit-backdrop-filter: saturate(170%) blur(20px);
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.07),
-    0 10px 36px rgba(0,0,0,.42);
+    var(--nv-inset),
+    var(--nv-shadow);
 }
 /* .nav__in also carries the pages' .wrap class, and some pages give .wrap
    their own padding - .nav .nav__in outranks any of them, so the logo and
@@ -174,12 +202,27 @@
 }
 .hdrop__btn:hover { background: var(--nv-hover); color: var(--nv-text); }
 .hdrop__btn svg { display: block; }
+/* Sun / moon switch, left of the menu. Shows where a click takes you:
+   the sun in dark mode, the moon in light mode. */
+.themebtn {
+  width: 31px; height: 31px; border: 0; flex: none;
+  background: transparent; border-radius: 8px;
+  color: var(--nv-text-2); cursor: pointer;
+  display: grid; place-items: center;
+  transition: background-color .16s var(--nv-ease), color .16s var(--nv-ease);
+}
+.themebtn:hover { background: var(--nv-hover); color: var(--nv-text); }
+.themebtn svg { width: 18px; height: 18px; display: block; transition: transform .35s var(--nv-ease); }
+.themebtn .tb-moon { display: none; }
+:root[data-theme="light"] .themebtn .tb-sun { display: none; }
+:root[data-theme="light"] .themebtn .tb-moon { display: block; }
+.themebtn:hover svg { transform: rotate(-18deg); }
 .hdrop__menu {
   position: absolute; top: calc(100% + 8px); right: 0; z-index: 100;
   min-width: 158px;
   background: var(--nv-panel); border: 1px solid var(--nv-panel-edge);
   border-radius: var(--nv-r-md); overflow: hidden;
-  box-shadow: 0 16px 44px rgba(0,0,0,.55);
+  box-shadow: var(--nv-panel-shadow);
   opacity: 0; transform: translateY(-6px) scale(.98);
   pointer-events: none;
   transition: opacity .16s var(--nv-ease), transform .16s var(--nv-ease);

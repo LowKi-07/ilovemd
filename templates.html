@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="en">
 <head>
+<script>/* light/dark: apply the saved choice before first paint (nav.js toggles it) */try{if(localStorage.getItem('ilovemd-theme')==='light')document.documentElement.setAttribute('data-theme','light')}catch(e){}</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
@@ -231,6 +232,49 @@
     .card:hover, .btn:hover { transform: none; }
     dialog.pv[open] { animation: none; }
   }
+  /* ============================================================ light mode
+     <html data-theme="light"> (sun/moon switch in the header). Same layout
+     and styling as dark - only the palette changes. */
+  :root[data-theme="light"] {
+    color-scheme: light;
+    --canvas: #f6f5fb;
+    --panel: rgba(22,20,60,.035);
+    --panel-raised: rgba(22,20,60,.06);
+    --panel-solid: #ffffff;
+    --hairline: rgba(22,20,60,.09);
+    --hairline-strong: rgba(22,20,60,.16);
+    --text: #16151d;
+    --text-2: #55546a;
+    --text-3: #8a889c;
+    --accent: #6a5af0;
+    --accent-soft: rgba(106,90,240,.1);
+    --accent-2: #0e9fb2;
+    --gradient: linear-gradient(135deg,#6a5af0 0%,#4f6ff0 45%,#0e9fb2 100%);
+    --danger: #e11d48;
+  }
+  :root[data-theme="light"] body::before {
+    background:
+      radial-gradient(52em 34em at 8% -6%, rgba(106,90,240,.11), transparent 62%),
+      radial-gradient(46em 30em at 102% 104%, rgba(14,159,178,.07), transparent 60%);
+  }
+  :root[data-theme="light"] .hero::before { background-image: radial-gradient(circle at 1px 1px, rgba(70,66,110,.28) 1px, transparent 1.25px); }
+  :root[data-theme="light"] .search input { background: rgba(255,255,255,.9); }
+  :root[data-theme="light"] .search input:focus { border-color: rgba(106,90,240,.5); box-shadow: 0 0 0 4px rgba(106,90,240,.12); }
+  :root[data-theme="light"] .pill:hover { background: rgba(22,20,60,.05); }
+  :root[data-theme="light"] .pill[aria-pressed="true"] { border-color: rgba(106,90,240,.4); }
+  :root[data-theme="light"] .card { background: linear-gradient(135deg, rgba(106,90,240,.06) 0%, rgba(111,139,255,.02) 40%, rgba(255,255,255,.9) 100%); }
+  :root[data-theme="light"] .card:hover { border-color: rgba(106,90,240,.35); background-color: #fff; }
+  :root[data-theme="light"] .ico { border-color: rgba(106,90,240,.28); }
+  :root[data-theme="light"] .ico--mono { color: #5b4ff0; }
+  :root[data-theme="light"] dialog.pv { background: #ffffff; box-shadow: 0 30px 80px rgba(30,26,80,.25); }
+  :root[data-theme="light"] dialog.pv::backdrop { background: rgba(30,26,60,.3); }
+  :root[data-theme="light"] .seg button[aria-pressed="true"] { background: rgba(22,20,60,.07); }
+  :root[data-theme="light"] .pv__raw { color: #26252f; }
+  :root[data-theme="light"] .md { color: #26252f; }
+  :root[data-theme="light"] .md code { background: rgba(22,20,60,.06); }
+  :root[data-theme="light"] .md pre { background: rgba(22,20,60,.04); }
+  :root[data-theme="light"] .md blockquote { border-left-color: rgba(106,90,240,.5); }
+  :root[data-theme="light"] .md th { background: rgba(22,20,60,.04); }
 </style>
 </head>
 <body>

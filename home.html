@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="en">
 <head>
+<script>/* light/dark: apply the saved choice before first paint (nav.js toggles it) */try{if(localStorage.getItem('ilovemd-theme')==='light')document.documentElement.setAttribute('data-theme','light')}catch(e){}</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
@@ -660,6 +661,78 @@
   .fpill.active { background: rgba(255,255,255,.1); color: var(--text); }
   .fpill.active:hover { background: rgba(255,255,255,.13); }
   .tool[hidden] { display: none !important; }
+  /* ============================================================ light mode
+     <html data-theme="light"> (sun/moon switch in the header). Same layout
+     and styling as dark - only the palette changes. */
+  :root[data-theme="light"] {
+    color-scheme: light;
+    --canvas: #f6f5fb;
+    --panel: rgba(22,20,60,.035);
+    --panel-raised: rgba(22,20,60,.06);
+    --panel-solid: #ffffff;
+    --hairline: rgba(22,20,60,.09);
+    --hairline-strong: rgba(22,20,60,.16);
+    --text: #16151d;
+    --text-2: #55546a;
+    --text-3: #8a889c;
+    --accent: #6a5af0;
+    --accent-soft: rgba(106,90,240,.1);
+    --accent-2: #0e9fb2;
+    --gradient: linear-gradient(135deg,#6a5af0 0%,#4f6ff0 45%,#0e9fb2 100%);
+    --ok: #0f9d6b;
+    --warn: #b7791f;
+    --danger: #e11d48;
+  }
+  :root[data-theme="light"] body::before {
+    background:
+      radial-gradient(52em 34em at 8% -6%, rgba(106,90,240,.12), transparent 62%),
+      radial-gradient(46em 30em at 102% 104%, rgba(14,159,178,.08), transparent 60%);
+  }
+  :root[data-theme="light"] ::-webkit-scrollbar-thumb { background: rgba(22,20,60,.16); background-clip: padding-box; }
+  :root[data-theme="light"] ::-webkit-scrollbar-thumb:hover { background: rgba(22,20,60,.28); background-clip: padding-box; }
+  :root[data-theme="light"] .hero::before { background-image: radial-gradient(circle at 1px 1px, rgba(70,66,110,.3) 1px, transparent 1.25px); }
+  :root[data-theme="light"] .card__head { background: rgba(22,20,60,.03); }
+  :root[data-theme="light"] .tool {
+    border-color: rgba(106,90,240,.14);
+    background: linear-gradient(135deg, rgba(106,90,240,.06) 0%, rgba(111,139,255,.025) 40%, rgba(255,255,255,.85) 100%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 4px 18px rgba(30,26,80,.06);
+  }
+  :root[data-theme="light"] .tool::before { background: linear-gradient(135deg, rgba(255,255,255,.6) 0%, rgba(106,90,240,.03) 30%, transparent 55%); }
+  :root[data-theme="light"] a.tool:hover {
+    border-color: rgba(106,90,240,.35);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 10px 30px rgba(106,90,240,.12), 0 2px 8px rgba(30,26,80,.06);
+  }
+  :root[data-theme="light"] .tool__icon { box-shadow: inset 0 1px 0 rgba(255,255,255,.8); }
+  :root[data-theme="light"] .tcard {
+    background: linear-gradient(135deg, rgba(106,90,240,.06) 0%, rgba(111,139,255,.02) 40%, rgba(255,255,255,.9) 100%);
+  }
+  :root[data-theme="light"] .tcard:hover { border-color: rgba(106,90,240,.35); background-color: #fff; }
+  :root[data-theme="light"] .tcard__ico { color: #5b4ff0; border-color: rgba(106,90,240,.28); }
+  /* On a light page the forearms' cut edges show, so the bottom fades out as
+     well as the outer side (two masks, intersected). No drop shadows. */
+  :root[data-theme="light"] .tc-hand--ai {
+    filter: contrast(1.04);
+    -webkit-mask-image: linear-gradient(to right, transparent 0, #000 30%), linear-gradient(to top, transparent 0, #000 22%);
+    -webkit-mask-composite: source-in;
+            mask-image: linear-gradient(to right, transparent 0, #000 30%), linear-gradient(to top, transparent 0, #000 22%);
+            mask-composite: intersect;
+  }
+  :root[data-theme="light"] .tc-hand--you {
+    filter: none;
+    -webkit-mask-image: linear-gradient(to left, transparent 0, #000 30%), linear-gradient(to top, transparent 0, #000 22%);
+    -webkit-mask-composite: source-in;
+            mask-image: linear-gradient(to left, transparent 0, #000 30%), linear-gradient(to top, transparent 0, #000 22%);
+            mask-composite: intersect;
+  }
+  :root[data-theme="light"] .hvd__btn img { box-shadow: 0 30px 70px -30px rgba(30,26,80,.35), 0 0 90px -40px rgba(106,90,240,.4); }
+  :root[data-theme="light"] .hvd__len { background: rgba(255,255,255,.85); color: var(--text); }
+  :root[data-theme="light"] .tshield { filter: drop-shadow(0 10px 26px rgba(106,90,240,.28)); }
+  :root[data-theme="light"] .tshield__check { stroke: #5b4ff0; }
+  :root[data-theme="light"] .badge { color: #6e6c80; }
+  :root[data-theme="light"] .badge:hover, :root[data-theme="light"] .badge:focus-visible { color: #16151d; }
+  :root[data-theme="light"] .fpill:hover { background: rgba(22,20,60,.05); }
+  :root[data-theme="light"] .fpill.active { background: rgba(22,20,60,.08); }
+  :root[data-theme="light"] .fpill.active:hover { background: rgba(22,20,60,.11); }
 </style>
 </head>
 <body>

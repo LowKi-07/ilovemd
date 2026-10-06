@@ -77,6 +77,10 @@
       <a href="/templates">Templates</a>
     </div>
     <span class="sp"></span>
+    <button class="themebtn" id="btn-theme" type="button" aria-label="Switch to light mode" title="Switch to light mode">
+      <svg class="tb-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6"/></svg>
+      <svg class="tb-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.5 14.6A8.5 8.5 0 0 1 9.4 3.5a8.5 8.5 0 1 0 11.1 11.1Z"/></svg>
+    </button>
     <!-- Menu dropdown -->
     <div class="hdrop">
       <button class="hdrop__btn" id="btn-hamb" aria-label="Main menu" aria-haspopup="true" aria-expanded="false">
@@ -115,6 +119,27 @@
   var mount = document.getElementById('site-nav');
   if (!mount) return;
   mount.innerHTML = MARKUP;
+
+  /* ---- light / dark switch ----
+     Each page's <head> applies the saved choice before first paint (so a
+     light page never flashes dark); this only flips it and remembers it. */
+  var tbtn = document.getElementById('btn-theme');
+  function paintThemeBtn() {
+    var light = document.documentElement.getAttribute('data-theme') === 'light';
+    var label = light ? 'Switch to dark mode' : 'Switch to light mode';
+    tbtn.setAttribute('aria-label', label); tbtn.title = label;
+  }
+  if (tbtn) {
+    paintThemeBtn();
+    tbtn.addEventListener('click', function () {
+      var light = document.documentElement.getAttribute('data-theme') !== 'light';
+      if (light) document.documentElement.setAttribute('data-theme', 'light');
+      else document.documentElement.removeAttribute('data-theme');
+      try { localStorage.setItem('ilovemd-theme', light ? 'light' : 'dark'); } catch (e) { /* private mode */ }
+      paintThemeBtn();
+      document.dispatchEvent(new CustomEvent('ilovemd:theme', { detail: { light: light } }));
+    });
+  }
 
   /* ---- the logo heart beats twice as the page loads (nav.css) ----
      The class comes off when that ends, so leaving a hover never replays it. */

@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="en">
 <head>
+<script>/* light/dark: apply the saved choice before first paint (nav.js toggles it) */try{if(localStorage.getItem('ilovemd-theme')==='light')document.documentElement.setAttribute('data-theme','light')}catch(e){}</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
@@ -831,6 +832,81 @@
   @media (max-width: 940px) {
     body.mode-ui.subtop-on .shell { position: static; }
     body.mode-ui.subtop-on .subtop { position: sticky; }
+  }
+  /* ============================================================ light mode
+     <html data-theme="light"> (sun/moon switch in the header). Same layout
+     and styling as dark - only the palette changes. */
+  :root[data-theme="light"] {
+    color-scheme: light;
+    --canvas: #f6f5fb;
+    --panel: rgba(22,20,60,.035);
+    --panel-raised: rgba(22,20,60,.06);
+    --panel-solid: #ffffff;
+    --hairline: rgba(22,20,60,.09);
+    --hairline-strong: rgba(22,20,60,.16);
+    --text: #16151d;
+    --text-2: #55546a;
+    --text-3: #8a889c;
+    --accent: #6a5af0;
+    --accent-soft: rgba(106,90,240,.1);
+    --accent-2: #0e9fb2;
+    --gradient: linear-gradient(135deg,#6a5af0 0%,#4f6ff0 45%,#0e9fb2 100%);
+    --ok: #0f9d6b;
+    --warn: #b7791f;
+    --danger: #e11d48;
+  }
+  :root[data-theme="light"] body::before {
+    background:
+      radial-gradient(46em 30em at -8% 112%, rgba(106,90,240,.1), transparent 60%),
+      radial-gradient(42em 28em at 106% 96%, rgba(14,159,178,.07), transparent 58%);
+  }
+  :root[data-theme="light"] ::-webkit-scrollbar-thumb { background: rgba(22,20,60,.16); background-clip: padding-box; }
+  :root[data-theme="light"] ::-webkit-scrollbar-thumb:hover { background: rgba(22,20,60,.28); background-clip: padding-box; }
+  :root[data-theme="light"] .btn--outline { border-color: rgba(106,90,240,.5); }
+  :root[data-theme="light"] .btn--outline:hover:not(:disabled) { background: rgba(106,90,240,.08); border-color: rgba(106,90,240,.75); }
+  :root[data-theme="light"] .modetag { color: #0b7f8f; border-color: rgba(14,159,178,.35); background: rgba(14,159,178,.08); }
+  :root[data-theme="light"] .shell::before { background-image: radial-gradient(circle at 1px 1px, rgba(70,66,110,.22) 1px, transparent 1.25px); }
+  :root[data-theme="light"] .side { box-shadow: 18px 0 50px rgba(30,26,80,.12); }
+  :root[data-theme="light"] .preview { background: rgba(255,255,255,.55); }
+  :root[data-theme="light"] #ed, :root[data-theme="light"] .code { color: #26252f; }
+  :root[data-theme="light"] .ln::before { color: #a3a1b4; }
+  :root[data-theme="light"] .ln--warn { background: rgba(217,150,20,.09); }
+  :root[data-theme="light"] .ln--err { background: rgba(225,29,72,.07); }
+  :root[data-theme="light"] .fixit { background: #f1efff; color: #4f46e5; border-color: rgba(106,90,240,.45); box-shadow: 0 4px 14px rgba(30,26,80,.14); }
+  :root[data-theme="light"] .fixit:hover { background: #e5e1ff; color: #3b33c9; }
+  :root[data-theme="light"] #ed::selection { background: rgba(106,90,240,.22); }
+  :root[data-theme="light"] .figboard { box-shadow: 0 0 0 1px rgba(22,20,60,.08), 0 24px 60px -28px rgba(30,26,80,.3); }
+  :root[data-theme="light"] .dropbox {
+    border-color: rgba(106,90,240,.14);
+    background: linear-gradient(135deg, rgba(106,90,240,.06) 0%, rgba(111,139,255,.025) 40%, rgba(255,255,255,.88) 100%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 6px 26px rgba(30,26,80,.08);
+  }
+  :root[data-theme="light"] .dropbox::before { background: linear-gradient(135deg, rgba(255,255,255,.6) 0%, rgba(106,90,240,.03) 30%, transparent 55%); }
+  :root[data-theme="light"] .ftile { background: var(--tb, rgba(22,20,60,.04)); }
+  :root[data-theme="light"] .carderr { border-color: rgba(225,29,72,.35); background: rgba(225,29,72,.06); }
+  :root[data-theme="light"] .dropbox input, :root[data-theme="light"] .qcard input { background: #fff; }
+  :root[data-theme="light"] .genbar, :root[data-theme="light"] .chatfoot { background: rgba(255,255,255,.75); }
+  :root[data-theme="light"] .md code { background: rgba(22,20,60,.06); }
+  :root[data-theme="light"] .md pre { background: rgba(22,20,60,.04); }
+  :root[data-theme="light"] .chat { background: rgba(255,255,255,.55); }
+  :root[data-theme="light"] .shell[data-islands="1"] .editor,
+  :root[data-theme="light"] .shell[data-islands="1"] .preview,
+  :root[data-theme="light"] .shell[data-islands="1"] .chat { background: rgba(255,255,255,.72); }
+  :root[data-theme="light"] .msg--u { border-color: rgba(106,90,240,.3); }
+  :root[data-theme="light"] .msg--err { border-color: rgba(225,29,72,.35); background: rgba(225,29,72,.06); }
+  :root[data-theme="light"] .qoverlay { background: rgba(30,26,60,.28); }
+  :root[data-theme="light"] .qcard--big { box-shadow: 0 30px 80px rgba(30,26,80,.25); }
+  :root[data-theme="light"] .chip--add { color: #5b4ff0; border-color: rgba(106,90,240,.45); }
+  :root[data-theme="light"] .afile button { background: rgba(22,20,60,.07); }
+  :root[data-theme="light"] .afile button:hover { background: rgba(22,20,60,.13); }
+  :root[data-theme="light"] .prow { background: #fff; }
+  :root[data-theme="light"] .note { box-shadow: 0 14px 40px rgba(30,26,80,.14); }
+  :root[data-theme="light"] .toast { color: #fff; background: #16151d; }
+  :root[data-theme="light"] .subtop { background: rgba(255,255,255,.7); }
+  :root[data-theme="light"] .sheet-scrim { background: rgba(30,26,60,.25); }
+  @media (max-width: 940px) {
+    :root[data-theme="light"] .chat { background: var(--panel-solid); box-shadow: -18px 0 50px rgba(30,26,80,.14); }
+    :root[data-theme="light"] .shell .chat, :root[data-theme="light"] .shell[data-islands="1"] .chat, :root[data-theme="light"] .shell[data-chat="closed"] .chat { box-shadow: 0 -24px 60px rgba(30,26,80,.16); }
   }
 </style>
 </head>

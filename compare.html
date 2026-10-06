@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="en">
 <head>
+<script>/* light/dark: apply the saved choice before first paint (nav.js toggles it) */try{if(localStorage.getItem('ilovemd-theme')==='light')document.documentElement.setAttribute('data-theme','light')}catch(e){}</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
@@ -271,6 +272,37 @@
     .sdiff__col:first-child { border-right: none; border-bottom: 1px solid var(--hairline); }
     .chat { position: fixed; top: calc(var(--navh) + 52px); right: 0; bottom: 0; z-index: 100; }
   }
+  /* ============================================================ light mode
+     <html data-theme="light"> (sun/moon switch in the header). Same layout
+     and styling as dark - only the palette changes. */
+  :root[data-theme="light"] {
+    color-scheme: light;
+    --canvas: #f6f5fb; --panel: #ffffff; --panel-solid: #ffffff; --panel-raised: rgba(22,20,60,.06);
+    --hairline: rgba(22,20,60,.09); --hairline-strong: rgba(22,20,60,.16);
+    --text: #16151d; --text-2: #55546a; --text-3: #8a889c;
+    --accent: #6a5af0; --accent-soft: rgba(106,90,240,.1); --accent-2: #0e9fb2;
+    --add-bg: rgba(16,185,129,.12); --add-line: rgba(16,185,129,.45);
+    --del-bg: rgba(225,29,72,.08); --del-line: rgba(225,29,72,.4);
+    --add-text: #0b7a52; --del-text: #be123c;
+  }
+  :root[data-theme="light"] body::before {
+    background:
+      radial-gradient(46em 30em at -8% 112%, rgba(106,90,240,.1), transparent 60%),
+      radial-gradient(42em 28em at 106% 96%, rgba(14,159,178,.07), transparent 58%);
+  }
+  :root[data-theme="light"] .modetag { color: #0b7f8f; border-color: rgba(14,159,178,.35); background: rgba(14,159,178,.08); }
+  :root[data-theme="light"] .md code { background: rgba(22,20,60,.06); }
+  :root[data-theme="light"] .md pre { background: rgba(22,20,60,.04); }
+  :root[data-theme="light"] .md th { background: rgba(22,20,60,.04); }
+  :root[data-theme="light"] .panel__upload:hover { border-color: rgba(22,20,60,.2); }
+  :root[data-theme="light"] .vtab.active { background: rgba(106,90,240,.1); border-color: rgba(106,90,240,.4); }
+  :root[data-theme="light"] .udiff__row--sep { background: rgba(22,20,60,.03); }
+  :root[data-theme="light"] .sdiff__head { background: rgba(22,20,60,.03); }
+  :root[data-theme="light"] .sdiff__line--empty { background: rgba(22,20,60,.02); }
+  :root[data-theme="light"] .chat { background: rgba(255,255,255,.9); }
+  :root[data-theme="light"] .msg--err { border-color: rgba(225,29,72,.35); background: rgba(225,29,72,.06); color: #be123c; }
+  :root[data-theme="light"] .chatfoot { background: rgba(255,255,255,.8); }
+  :root[data-theme="light"] .prow { background: #fff; }
 </style>
 </head>
 <body>

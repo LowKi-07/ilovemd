@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="en">
 <head>
+<script>/* light/dark: apply the saved choice before first paint (nav.js toggles it) */try{if(localStorage.getItem('ilovemd-theme')==='light')document.documentElement.setAttribute('data-theme','light')}catch(e){}</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
@@ -60,6 +61,23 @@
     background: rgba(251,113,133,.12); border: 1px solid rgba(251,113,133,.3);
     color: var(--danger); font-size: 13px;
   }
+  /* ============================================================ light mode
+     <html data-theme="light"> (sun/moon switch in the header). Same layout
+     and styling as dark - only the palette changes. */
+  :root[data-theme="light"] {
+    color-scheme: light;
+    --canvas: #f6f5fb; --panel: rgba(22,20,60,.035); --panel-raised: rgba(22,20,60,.06);
+    --hairline: rgba(22,20,60,.09); --hairline-strong: rgba(22,20,60,.16);
+    --text: #16151d; --text-2: #55546a; --text-3: #8a889c; --danger: #e11d48;
+    --gradient: linear-gradient(135deg,#6a5af0 0%,#4f6ff0 45%,#0e9fb2 100%);
+  }
+  :root[data-theme="light"] body::before {
+    background:
+      radial-gradient(52em 34em at 8% -6%, rgba(106,90,240,.12), transparent 62%),
+      radial-gradient(46em 30em at 102% 104%, rgba(14,159,178,.08), transparent 60%);
+  }
+  :root[data-theme="light"] input[type=password] { background: #fff; }
+  :root[data-theme="light"] .err { background: rgba(225,29,72,.07); border-color: rgba(225,29,72,.3); }
 </style>
 </head>
 <body>
