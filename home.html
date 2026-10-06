@@ -1205,7 +1205,8 @@
     });
   }
   fetch('/api/templates', { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
-    var list = (j.templates || []).slice(0, 12);
+    // everyday templates only - the Design MDs live on their own shelf on /templates
+    var list = (j.templates || []).filter(function (t) { return t.group !== 'design'; }).slice(0, 12);
     if (!list.length) return;
     var cards = list.map(function (t) {
       return '<a class="tcard" href="/templates?t=' + encodeURIComponent(t.slug) + '">' +

@@ -1477,20 +1477,55 @@ function parseTemplate(slug, raw) {
   };
 }
 
+/* Design MDs: brand / design-system context files in templates/Design
+   systems/, any file name ("Apple DESIGN.md"). They list under the "Design
+   MD" pill. Their slug is derived from the file name ("design--apple") and
+   resolved by scanning the folder - a client never supplies a path. */
+const DESIGN_DIR = path.join(TEMPLATES_DIR, 'Design systems');
+const DESIGN_PREFIX = 'design--';
+function designSlug(name) {
+  return DESIGN_PREFIX + name.replace(/\.md$/i, '').replace(/[\s._-]*design$/i, '')
+    .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+}
+function designFiles() {
+  try { return fs.readdirSync(DESIGN_DIR).filter((n) => n.toLowerCase().endsWith('.md')); }
+  catch (e) { return []; }
+}
+function readDesign(slug) {
+  const file = designFiles().find((n) => designSlug(n) === slug);
+  if (!file) return null;
+  let raw;
+  try { raw = fs.readFileSync(path.join(DESIGN_DIR, file), 'utf8'); } catch (e) { return null; }
+  const t = parseTemplate(slug, raw);
+  // "**Brand character:** ..." / "**Surface type:** ..." describe a DESIGN.md better than its first paragraph
+  const field = (k) => { const m = t.markdown.match(new RegExp('^\\*\\*' + k + ':\\*\\*\\s*(.+)$', 'mi')); return m ? m[1].replace(/[*_`]/g, '').trim() : ''; };
+  const character = field('Brand character');
+  if (character && !/^description\s*:/im.test(raw)) t.description = character.slice(0, 240);
+  const surface = field('Surface type');
+  if (surface && !t.tags.length) t.tags = [surface];
+  t.category = 'Design MD';
+  t.group = 'design';
+  return t;
+}
+
 function readTemplate(slug) {
   if (!TEMPLATE_SLUG.test(slug)) return null;
-  try { return parseTemplate(slug, fs.readFileSync(path.join(TEMPLATES_DIR, slug + '.md'), 'utf8')); }
-  catch (e) { return null; }
+  if (slug.startsWith(DESIGN_PREFIX)) return readDesign(slug);
+  try {
+    const t = parseTemplate(slug, fs.readFileSync(path.join(TEMPLATES_DIR, slug + '.md'), 'utf8'));
+    t.group = 'md';
+    return t;
+  } catch (e) { return null; }
 }
 
 function listTemplates() {
   let names = [];
   try { names = fs.readdirSync(TEMPLATES_DIR); } catch (e) { return []; }
-  return names
-    .filter((n) => n.toLowerCase().endsWith('.md'))
-    .map((n) => readTemplate(n.slice(0, -3)))
+  const md = names.filter((n) => n.toLowerCase().endsWith('.md')).map((n) => readTemplate(n.slice(0, -3)));
+  const design = designFiles().map((n) => readDesign(designSlug(n)));
+  return md.concat(design)
     .filter(Boolean)
-    .sort((a, b) => a.order - b.order || a.title.localeCompare(b.title))
+    .sort((a, b) => (a.group === b.group ? 0 : a.group === 'md' ? -1 : 1) || a.order - b.order || a.title.localeCompare(b.title))
     .map(({ markdown, order, ...card }) => card);
 }
 

@@ -292,7 +292,7 @@
 
 <main class="wrap">
   <div class="toolbar">
-    <div class="pills" id="pills" role="group" aria-label="Filter by category"></div>
+    <div class="pills" id="pills" role="group" aria-label="Template type"></div>
     <span class="count" id="count" aria-live="polite"></span>
   </div>
   <div class="grid" id="grid"></div>
@@ -366,14 +366,15 @@
   function paint() {
     var q = $('q').value.trim().toLowerCase();
     var words = q.split(/\s+/).filter(Boolean);
-    var hits = all.filter(function (t) {
-      if (cat !== 'All' && t.category !== cat) return false;
+    var inGroup = all.filter(function (t) { return (t.group || 'md') === cat; });
+    var hits = inGroup.filter(function (t) {
       var hay = (t.title + ' ' + t.description + ' ' + t.category + ' ' + t.tags.join(' ')).toLowerCase();
       return words.every(function (w) { return hay.indexOf(w) !== -1; });
     });
-    $('count').textContent = hits.length + ' of ' + all.length + ' template' + (all.length === 1 ? '' : 's');
-    if (!all.length) {
-      $('grid').innerHTML = '<div class="empty"><b>Templates are on their way.</b>Check back soon.</div>';
+    var noun = cat === 'design' ? 'Design MD' : 'template';
+    $('count').textContent = hits.length + ' of ' + inGroup.length + ' ' + noun + (inGroup.length === 1 || noun === 'Design MD' ? '' : 's');
+    if (!inGroup.length) {
+      $('grid').innerHTML = '<div class="empty"><b>' + (cat === 'design' ? 'Design MDs are on their way.' : 'Templates are on their way.') + '</b>Check back soon.</div>';
       $('count').textContent = '';
       return;
     }
@@ -390,19 +391,20 @@
       '</article>';
     }).join('') : '<div class="empty"><b>No templates match “' + esc(q) + '”.</b>Try another word, or clear the filters.</div>';
   }
+  // Two shelves: everyday Markdown templates, and Design MDs (brand and
+  // design-system context files from templates/Design systems/).
+  var GROUPS = [['md', 'MD templates'], ['design', 'Design MD']];
   function paintPills() {
-    var cats = ['All'];
-    all.forEach(function (t) { if (cats.indexOf(t.category) === -1) cats.push(t.category); });
-    if (cats.indexOf(cat) === -1) cat = 'All';
-    $('pills').innerHTML = cats.length > 2 ? cats.map(function (c) {
-      return '<button class="pill" data-cat="' + esc(c) + '" aria-pressed="' + (c === cat) + '">' + esc(c) + '</button>';
-    }).join('') : '';
+    if (!GROUPS.some(function (g) { return g[0] === cat; })) cat = 'md';
+    $('pills').innerHTML = GROUPS.map(function (g) {
+      return '<button class="pill" data-cat="' + g[0] + '" aria-pressed="' + (g[0] === cat) + '">' + esc(g[1]) + '</button>';
+    }).join('');
   }
 
   $('pills').addEventListener('click', function (e) {
     var b = e.target.closest('.pill'); if (!b) return;
     cat = b.getAttribute('data-cat');
-    setParam('category', cat === 'All' ? '' : cat);
+    setParam('category', cat === 'md' ? '' : cat);
     paintPills(); paint();
   });
   var qT;
@@ -472,9 +474,11 @@
 
   // --------------------------------------------------------------- boot
   $('q').value = params.get('q') || '';
-  cat = params.get('category') || 'All';
+  cat = params.get('category') === 'design' ? 'design' : 'md';
   fetch('/api/templates', { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
     all = j.templates || [];
+    var linked = params.get('t') && all.find(function (t) { return t.slug === params.get('t'); });
+    if (linked && linked.group) cat = linked.group;   // a linked Design MD opens on its own shelf
     paintPills(); paint();
     if (params.get('t')) preview(params.get('t'));
   }).catch(function () {
