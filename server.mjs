@@ -167,6 +167,7 @@ const PUBLIC_FILES = new Set([
   'home.html', 'shell.html', 'compare.html', 'login.html',
   'Menu.svg', 'Profile.svg', 'ilovemd logo.svg', 'favicon.svg',
   'hand-ai.webp', 'hand-human.webp',
+  'tesla-vsr-card.svg',   // the Figma → MD "See how it works" demo frame
 ]);
 
 const MIME = {

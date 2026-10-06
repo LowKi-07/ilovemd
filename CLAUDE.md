@@ -137,6 +137,8 @@ The "← Change component" back button in the component detail card calls `paint
 
 **"See how it works" demo kit**: the landing card (and sidebar import box) offers a demo for visitors without a component folder. `startDemo()` sets `S.demo` and loads the `DEMO` object in `shell.html`: three sample components (Button, Accordion, Text field) with pre-written docs in the `/api/component-doc` section shape, plus clarifying questions. Each question names the heading its answer patches (`sec`) and the line(s) each option adds (`add`). `generate()` and `applyAnswers()` branch to `demoGenerate()` / `demoApply()` — no server call, no AI, nothing persisted to `/api/state`. Choosing a real folder calls `leaveDemo()`. The free-form assistant chips still call the real AI on the demo doc.
 
+**Figma → MD "See how it works"**: a ghost button under Generate Documentation on both Figma landing cards sets `S.figDemo`, which shows a FigJam-style board (`.figboard`: white, grey dot grid, no tool chrome) holding `tesla-vsr-card.svg` (in `PUBLIC_FILES`; a copy of the designer's `Tesla VSR Card.svg`). Its Generate Documentation runs `figDemoGenerate()` → `FIG_DEMO` (pre-written doc in the `/api/figma-doc` section shape plus questions), sharing `demoGenerate()` / `demoApply()` with the component demo. Nothing reaches Figma or AI.
+
 ## Compare page (`compare.html`)
 
 - Two auto-expanding textareas (no internal scroll — `autoResize(ta)` sets `ta.style.height` dynamically)

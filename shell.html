@@ -358,6 +358,23 @@
     color: var(--text-3); font-size: 13px; padding: 30px;
   }
   .placeholder .big { font-size: 26px; margin-bottom: 10px; opacity: .6; }
+
+  /* Figma → MD demo: a FigJam-style board - white, light grey dot grid, no
+     tool chrome - holding the one sample frame. */
+  .figdemo { width: min(980px, 100%); display: flex; flex-direction: column; align-items: center; gap: 18px; }
+  .figboard {
+    width: 100%; height: min(62vh, 600px); min-height: 360px;
+    border-radius: 18px; overflow: auto;
+    background: #fff radial-gradient(circle, #cfd2d8 1.15px, transparent 1.45px) 0 0 / 22px 22px;
+    box-shadow: 0 0 0 1px rgba(255,255,255,.08), 0 24px 60px -24px rgba(0,0,0,.7);
+    display: grid; place-items: center; padding: 28px;
+  }
+  .figboard img {
+    width: 305px; max-width: 100%; height: auto; display: block;
+    box-shadow: 0 1px 2px rgba(16,24,40,.06), 0 12px 32px -12px rgba(16,24,40,.22);
+  }
+  .figdemo__cap { font: 400 12px var(--font); color: var(--text-3); margin: -6px 0 0; }
+  .figdemo__actions { display: flex; gap: 10px; align-items: center; }
   /* Glassmorphic, matching the tool cards on the homepage: diagonal purple
      lighting from the top-left falling away to near-black. */
   .dropbox {
@@ -933,6 +950,7 @@
     importDir: null, components: [], groups: null, current: null, curName: '', curType: null,
     kits: [], kit: null,
     demo: false,                                  // "See how it works": the built-in sample kit, no folder, no AI
+    figDemo: false,                               // Figma "See how it works": the sample frame board is showing
     uiDocs: {},                                   // component -> generated markdown
     // figma
     frames: [], curFrame: null, frameDocs: {},    // url -> markdown
@@ -997,6 +1015,12 @@
     return Math.round(s / 86400) + 'd ago';
   }
   function cap(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : ''; }
+  // The file-name field is as wide as its text: start from a ch estimate,
+  // then grow to the measured width (wide capitals outrun the ch guess).
+  function sizeTitle(t) {
+    t.style.width = Math.min(30, Math.max(4, (t.value || '').length + 1)) + 'ch';
+    if (t.offsetParent && t.scrollWidth > t.clientWidth) t.style.width = (t.scrollWidth + 6) + 'px';
+  }
 
   /* ============================================================ markdown */
   var md = window.ilovemdMarkdown;   // md.js
@@ -1275,12 +1299,12 @@
     $('modetag').style.display = S.md ? '' : 'none';
     var t = $('title');
     t.readOnly = MODE === 'ui';   // component docs are named by the component itself
-    t.style.width = Math.min(30, Math.max(4, (t.value || '').length + 1)) + 'ch';
     /* Text mode names its own download, so the field is there from the
        start. Elsewhere the name comes from the component or file being read,
        so it waits for one - and while generating, the spinner card is already
        saying which that is. */
     t.style.display = (S.md || MODE === 'text') ? '' : 'none';
+    sizeTitle(t);   // after display: a hidden field cannot be measured
     $('btn-chat').setAttribute('aria-pressed', String(S.chat));
     $('shell').dataset.side = S.side ? 'open' : 'closed';
     $('shell').dataset.chat = S.chat ? 'open' : 'closed';
@@ -1325,7 +1349,7 @@
       wrap.innerHTML =
         '<div class="placeholder"><div class="dropbox dropbox--bare">' +
         '<div class="loader" role="status" aria-label="Generating"></div>' +
-        '<h3>' + (genFigma ? 'Figma &rarr; Markdown' : esc(cap(S.curName))) + '</h3>' +
+        '<h3>' + (genFigma ? (S.figDemo ? 'Tesla VSR Card' : 'Figma &rarr; Markdown') : esc(cap(S.curName))) + '</h3>' +
         '<p id="gen-live">' + (genFigma ? 'Retrieving from Figma…' : 'Reading the source…') + '</p>' +
         '<button class="btn btn--stroke" id="btn-cancel">Cancel</button>' +
         '</div></div>';
@@ -1426,6 +1450,20 @@
       };
       return;
     }
+    if (!S.md && MODE === 'figma' && !S.busy && S.figDemo) {
+      // "See how it works": the sample frame on a FigJam-style board.
+      wrap.innerHTML =
+        '<div class="placeholder"><div class="figdemo">' +
+        '<div class="figboard"><img src="/tesla-vsr-card.svg" width="305" height="404" alt="Tesla VSR Card: a Model Y All-Wheel Drive vehicle card with price, dealer, Compare checkbox and VIN"></div>' +
+        '<p class="figdemo__cap">Sample frame: <b>Tesla VSR Card</b>. The demo uses pre-written output, so nothing is sent to Figma or AI.</p>' +
+        '<div class="figdemo__actions">' +
+        '<button class="btn btn--ghost btn--sm" id="btn-figdemo-back">&#8592; Back</button>' +
+        '<button class="btn btn--primary" id="btn-figdemo-gen">Generate Documentation</button>' +
+        '</div></div></div>';
+      $('btn-figdemo-gen').onclick = figDemoGenerate;
+      $('btn-figdemo-back').onclick = function () { S.figDemo = false; paintEditor(); };
+      return;
+    }
     if (!S.md && MODE === 'figma' && !S.busy && S.siteMode === 'public') {
       // Public: the visitor's own link and own Figma token. The token lives in
       // this tab's memory only - never storage, never the URL.
@@ -1448,8 +1486,10 @@
         '</details>' +
         figErrorHTML() +
         '<button class="btn btn--primary" id="btn-fig">Generate Documentation</button>' +
-        (S.figmaDemo ? '<div style="margin-top:10px"><button class="btn btn--ghost btn--sm" id="btn-fig-demo">Or try the demo file</button></div>' : '') +
+        '<div style="margin-top:10px"><button class="btn btn--ghost btn--sm" id="btn-fig-how">See how it works</button></div>' +
+        (S.figmaDemo ? '<div style="margin-top:4px"><button class="btn btn--ghost btn--sm" id="btn-fig-demo">Or try the demo file</button></div>' : '') +
         '</div></div>';
+      $('btn-fig-how').onclick = function () { S.figDemo = true; paintEditor(); };
       var fu = $('figurl'), ft = $('figtok');
       if (S.figUrlDraft) fu.value = S.figUrlDraft;
       if (S.figmaToken) ft.value = S.figmaToken;
@@ -1474,8 +1514,10 @@
         '<input id="figurl" type="text" spellcheck="false" placeholder="https://www.figma.com/design/…?node-id=…">' +
         figErrorHTML() +
         '<button class="btn btn--primary" id="btn-fig">Generate Documentation</button>' +
+        '<div style="margin-top:10px"><button class="btn btn--ghost btn--sm" id="btn-fig-how">See how it works</button></div>' +
         '</div></div>';
       $('btn-fig').onclick = function () { figGenerate($('figurl').value.trim()); };
+      $('btn-fig-how').onclick = function () { S.figDemo = true; paintEditor(); };
       $('figurl').addEventListener('keydown', function (e) {
         if (e.key === 'Enter') figGenerate($('figurl').value.trim());
       });
@@ -2214,8 +2256,8 @@
       });
     });
   }
-  async function demoGenerate(name) {
-    var d = DEMO[name], t0 = Date.now();
+  async function demoGenerate(d) {
+    var t0 = Date.now();
     await demoWait(5200);
     return {
       markdown: d.md.join('\n'),
@@ -2235,7 +2277,7 @@
   }
   async function demoApply(src, pairs) {
     await demoWait(1600);
-    var qs = (DEMO[S.current] || {}).questions || [], touched = [];
+    var qs = ((MODE === 'figma' ? FIG_DEMO : DEMO[S.current]) || {}).questions || [], touched = [];
     pairs.forEach(function (p) {
       var q = qs.find(function (x) { return x.text === p.q; });
       if (!q) return;
@@ -2248,6 +2290,128 @@
       if (touched.indexOf(label) === -1) touched.push(label);
     });
     return { markdown: src, touched: touched };
+  }
+
+  /* Figma → MD "See how it works": the Tesla VSR Card frame (tesla-vsr-card.svg)
+     on a FigJam-style board, documented in the section shape /api/figma-doc
+     asks for. Same question format as the component demo above. */
+  var FIG_DEMO = {
+    md: [
+      '# Tesla VSR Card', '',
+      '## Overview', '',
+      'A vehicle search results (VSR) card that presents one in-stock vehicle: its availability, model and trim, price, selling dealer and VIN. Shoppers can save the vehicle or add it to a comparison without leaving the results grid.', '',
+      '## Anatomy', '',
+      '- Availability label - "AVAILABLE NOW", uppercase, top left.',
+      '- Favorite button - a heart icon, top right, that saves the vehicle.',
+      '- Model name - "Model Y", bold.',
+      '- Trim - "All-Wheel Drive", bold, on the line below the model.',
+      '- MSRP - "MSRP: $124,990" with an asterisk that points to a disclaimer.',
+      '- Vehicle image - a side three-quarter view on a white background.',
+      '- Dealer - "ATLANTA TESLA" with its distance, "(2.4 mi.)".',
+      '- Price label - "Dealer Price After Offers".',
+      '- Price - "$124,990", bold, followed by an info icon.',
+      '- Compare checkbox - labelled "Compare".',
+      '- Divider - separates the price row from the footer.',
+      '- VIN - "VIN: 5YJ3E1EA7LF123456", centred in the footer.', '',
+      '## Variants', '',
+      '- Available now - the vehicle is on the lot and can be bought today.', '',
+      '## Properties', '',
+      '| Property | Type | Example |',
+      '|---|---|---|',
+      '| availability | Text | AVAILABLE NOW |',
+      '| model | Text | Model Y |',
+      '| trim | Text | All-Wheel Drive |',
+      '| msrp | Price | $124,990 |',
+      '| image | Image | Side three-quarter view |',
+      '| dealerName | Text | ATLANTA TESLA |',
+      '| distance | Text | 2.4 mi. |',
+      '| price | Price | $124,990 |',
+      '| vin | Text | 5YJ3E1EA7LF123456 |',
+      '| favorited | Boolean | false |',
+      '| compared | Boolean | false |', '',
+      '## States', '',
+      '- Default - heart outlined, Compare unchecked.',
+      '- Saved - heart filled; the vehicle is in the shopper\'s saved list.',
+      '- Selected for compare - the Compare box is checked.', '',
+      '## Design Tokens', '',
+      '- Colour: text-primary - #262626, for the model, price and VIN.',
+      '- Colour: text-secondary - #666666, for the availability label, MSRP label, dealer and price label.',
+      '- Colour: border-subtle - #E6E6E6, for the card border and the divider.',
+      '- Colour: favorite - #EB5757, for the heart.',
+      '- Colour: surface - #FFFFFF.',
+      '- Spacing: 16 px inner padding.',
+      '- Size: 305 × 404 px frame.', '',
+      '## Behavior', '',
+      '- The heart and Compare toggle on their own; neither opens the vehicle.',
+      '- The price shown is the dealer\'s price after offers; MSRP stays visible for reference.', '',
+      '## Accessibility', '',
+      '- The heart is a toggle button with an accessible name such as "Save Model Y All-Wheel Drive" and aria-pressed.',
+      '- Compare is a native checkbox with a visible label.',
+      '- The vehicle image has alt text naming the model, trim and colour.',
+      '- The info icon next to the price is a button named "About this price".',
+      '- Secondary text (#666666 on white) has a 5.7:1 contrast ratio.', '',
+      '## Do', '',
+      '- Keep the model and trim on two short lines so cards line up across the grid.',
+      '- Show the dealer\'s distance so shoppers can compare locations at a glance.',
+      '- Keep the VIN visible; buyers use it to confirm the exact vehicle.', '',
+      '## Don\'t', '',
+      '- Don\'t show MSRP and price as different numbers without explaining the offers.',
+      '- Don\'t truncate the price or the VIN.',
+      '- Don\'t let a long dealer name push the distance onto a new line.', ''
+    ],
+    questions: [
+      { text: 'What happens when a shopper ticks Compare?', sec: '## Behavior',
+        options: ['It adds the vehicle to a compare tray (up to 3)', 'A second tick opens a side-by-side comparison'],
+        add: [['- Ticking Compare adds the vehicle to a compare tray at the bottom of the page; up to three vehicles can be compared at once.'],
+              ['- Ticking Compare on a second vehicle opens a side-by-side comparison of the two.']] },
+      { text: 'Does saving with the heart need sign-in?', sec: '## Behavior',
+        options: ['Yes - signed-out shoppers are asked to sign in', 'No - it saves on this device until sign-in'],
+        add: [['- Tapping the heart while signed out opens sign-in, then saves the vehicle.'],
+              ['- Tapping the heart saves the vehicle on this device; the list moves to the account after sign-in.']] },
+      { text: 'What does the asterisk next to MSRP open?', sec: '## Anatomy',
+        options: ['A pricing disclaimer tooltip', 'A link to the full pricing terms'],
+        add: [['- MSRP disclaimer - the asterisk opens a tooltip explaining what MSRP includes and excludes.'],
+              ['- MSRP disclaimer - the asterisk links to the full pricing terms.']] },
+      { text: 'Which other availability labels does the card use?', sec: '## Variants',
+        options: ['In transit and Coming soon', 'Reserved and Sold', 'Only Available now'],
+        add: [['- In transit - the vehicle is on its way to the dealer; the card shows an estimated arrival date.',
+               '- Coming soon - the vehicle is ordered but not built yet; Compare stays available, buying does not.'],
+              ['- Reserved - another shopper has placed a deposit; the card stays visible but cannot be saved.',
+               '- Sold - shown only in saved lists, greyed out, with the price hidden.'],
+              []] }
+    ]
+  };
+  async function figDemoGenerate() {
+    if (S.busy) return;
+    S.busy = true; S.demo = true;
+    paintTop(); paintChips(); paintEditor();   // the board gives way to the spinner
+    say('u', 'Generate documentation for Tesla VSR Card');
+    var steps = ['Retrieving the frame', 'Reading layers', 'Reading properties and variables', 'Writing documentation'];
+    var t0 = Date.now();
+    var tick = setInterval(function () {
+      var secs = Math.round((Date.now() - t0) / 1000), step = steps[Math.min(steps.length - 1, Math.floor((Date.now() - t0) / 1300))];
+      var live = $('gen-live');
+      if (live) live.textContent = step + '… ' + secs + 's';
+      $('valid').innerHTML = '<span style="color:var(--accent)">&#9679;</span> ' + step + '… ' + secs + 's';
+    }, 400);
+    var prevDoc = S.md;
+    try {
+      var r = await demoGenerate(FIG_DEMO);
+      clearInterval(tick);
+      S.qList = r.questions;
+      S.view = 'split';
+      S.before = prevDoc; S.pending = true; S.last = { figHow: true };
+      setDoc(r.markdown, 'Tesla VSR Card.md');
+      setStatus('dirty', '');
+      say('a', '<b>Generated documentation for Tesla VSR Card</b> in ' + Math.round(r.ms / 1000) + 's. Review it, tell me what to change, or press Download.');
+      startQuestions(true);
+    } catch (e) {
+      clearInterval(tick);
+      say('a', 'Stopped generating.');
+      $('valid').innerHTML = '';
+    }
+    S.busy = false;
+    paintTop(); paintEditor(); paintPreview(); paintChat(); validate();
   }
 
   function figErrorHTML() {
@@ -2393,7 +2557,7 @@
     var prevDoc = S.md;
     try {
       var r = S.demo
-        ? await demoGenerate(S.current)
+        ? await demoGenerate(DEMO[S.current])
         : await post('/api/component-doc', S.groups
           ? { dir: S.importDir, uid: S.current }
           : { dir: S.importDir, kit: S.kit, name: S.current }, true);
@@ -2740,6 +2904,7 @@
     if (!S.last) return;
     if (S.last.gen) return generate();
     if (S.last.figDemo) return figGenerateDemo();
+    if (S.last.figHow) return figDemoGenerate();
     if (S.last.fig) return figGenerate(S.last.fig);
     $('prompt').value = S.last.instruction;
     send(S.last.asking);
@@ -2800,7 +2965,7 @@
     S.dirty = true;
     setStatus('dirty', '');
     var t = $('title');
-    t.style.width = Math.min(30, Math.max(4, (t.value || '').length + 1)) + 'ch';
+    sizeTitle(t);
   });
   document.addEventListener('keydown', function (e) {
     var mod = e.metaKey || e.ctrlKey;
