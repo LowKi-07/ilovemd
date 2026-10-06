@@ -460,8 +460,8 @@
   .bridge > p { margin: 0 auto; max-width: 56ch; color: var(--text-2); font-size: 16px; }
 
   /* ------------------------------------------------- snapping screens
-     The homepage is five screens - hero, tools, templates, the bridge and
-     trust (+ footer) - and the scroll settles on one at a time, each lined
+     The homepage is six screens - hero, tools, templates, the bridge, the
+     film and trust (+ footer) - and the scroll settles on one at a time, each lined
      up under the fixed nav. Desktop-sized windows only: on phones and short
      windows sections outgrow the screen and free scrolling reads better.
      Each screen also fades up the first time it arrives (.sec-in, script). */
@@ -494,6 +494,64 @@
 
   /* the tools sit close under the hero, so both show on landing */
   #converters { padding-top: 48px; }
+
+  /* ------------------------------------------------------------- film
+     After Magic UI's Hero Video Dialog: a thumbnail that dims on hover, a
+     frosted ring around a gradient play button that swells, and a dialog
+     that springs out from the centre over a blurred backdrop. */
+  #film .sec-h { margin-bottom: 30px; }
+  .hvd { position: relative; width: 100%; max-width: min(880px, calc((100svh - var(--navh) - 250px) * 16 / 9)); margin: 0 auto; }
+  .hvd__btn { position: relative; display: block; width: 100%; padding: 0; border: 0; background: transparent; cursor: pointer; border-radius: 16px; }
+  .hvd__btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+  .hvd__btn img {
+    display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: cover;
+    border-radius: 16px; border: 1px solid var(--hairline-strong);
+    box-shadow: 0 30px 80px -30px rgba(0,0,0,.9), 0 0 90px -40px rgba(139,124,255,.55);
+    transition: filter .2s ease-out;
+  }
+  .hvd__btn:hover img { filter: brightness(.8); }
+  .hvd__play { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; transform: scale(.9); transition: transform .2s ease-out; }
+  .hvd__btn:hover .hvd__play { transform: scale(1); }
+  .hvd__ring {
+    width: 112px; height: 112px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    background: rgba(139,124,255,.12); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+  }
+  .hvd__core {
+    width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(to bottom, rgba(139,124,255,.3), var(--primary));
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,.25), 0 2px 4px -2px rgba(0,0,0,.2);
+    transition: transform .2s ease-out;
+  }
+  .hvd__btn:hover .hvd__core { transform: scale(1.2); }
+  .hvd__core svg { width: 32px; height: 32px; margin-left: 3px; fill: #fff; filter: drop-shadow(0 4px 3px rgba(0,0,0,.07)) drop-shadow(0 2px 2px rgba(0,0,0,.06)); transition: transform .2s ease-out; }
+  .hvd__btn:hover .hvd__core svg { transform: scale(1.05); }
+  .hvd__len { position: absolute; right: 14px; bottom: 12px; padding: 4px 9px; border-radius: 999px; background: rgba(8,8,12,.7); color: var(--text); font: 500 12px var(--mono); }
+
+  .hvd-ov {
+    position: fixed; inset: 0; z-index: 200; display: flex; align-items: center; justify-content: center;
+    background: rgba(0,0,0,.5); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+    opacity: 0; transition: opacity .25s ease;
+  }
+  .hvd-ov.on { opacity: 1; }
+  .hvd-box {
+    position: relative; width: min(896px, calc(100vw - 32px), calc((100svh - 160px) * 16 / 9)); aspect-ratio: 16 / 9;
+    opacity: 0; transform: scale(.5);
+    transition: transform .5s cubic-bezier(.2,1.2,.35,1), opacity .3s ease;
+  }
+  .hvd-ov.on .hvd-box { opacity: 1; transform: none; }
+  .hvd-x {
+    position: absolute; top: -56px; right: 0; width: 40px; height: 40px; border-radius: 50%; border: 0; cursor: pointer;
+    display: grid; place-items: center; color: #fff; background: rgba(23,23,23,.5);
+    box-shadow: 0 0 0 1px rgba(255,255,255,.25); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+  }
+  .hvd-x:hover { background: rgba(60,60,70,.6); }
+  .hvd-x svg { width: 20px; height: 20px; }
+  .hvd-frame { width: 100%; height: 100%; overflow: hidden; border-radius: 16px; border: 2px solid #fff; background: #000; }
+  .hvd-frame video { display: block; width: 100%; height: 100%; }
+  @media (prefers-reduced-motion: reduce) {
+    .hvd-box { transform: none; transition: opacity .2s linear; }
+    .hvd__play, .hvd__core, .hvd__core svg, .hvd__btn img { transition: none; }
+  }
 
   /* trust: no container, just the heading and a grid of small monochrome
      badges (icon + two-line label) */
@@ -800,6 +858,24 @@
   </figure>
 </section>
 
+<!-- ------------------------------------------------------------- film -->
+<section id="film" class="wrap snap sec-in">
+  <div class="sec-h">
+    <div class="kicker">See it in action</div>
+    <h2>Ideas to Markdown, in 46 seconds</h2>
+    <p>Convert a Word file, write a document from a prompt, check it against CommonMark and fix it in place.</p>
+  </div>
+  <div class="hvd">
+    <button type="button" class="hvd__btn" id="film-play" aria-label="Play the ilovemd film, 46 seconds, with voiceover">
+      <img src="/ilovemd-film.jpg" width="1600" height="900" alt="" loading="lazy" decoding="async">
+      <span class="hvd__play" aria-hidden="true"><span class="hvd__ring"><span class="hvd__core">
+        <svg viewBox="0 0 24 24"><path d="M7 4.5v15l12.5-7.5z" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/></svg>
+      </span></span></span>
+      <span class="hvd__len" aria-hidden="true">0:46</span>
+    </button>
+  </div>
+</section>
+
 <!-- ------------------------------------------------------------ trust -->
 <!-- Every badge states something this deployment actually does. No third-
      party certification belongs here until it has been awarded. -->
@@ -1061,6 +1137,47 @@
   // screens tall on a phone).
   }, { threshold: 0, rootMargin: '0px 0px -15% 0px' });
   secs.forEach(function (s) { io.observe(s); });
+})();
+</script>
+<script>
+/* Film dialog (Magic UI Hero Video Dialog, without React): opens on the
+   thumbnail, closes on the X, the backdrop or Escape; the video stops and
+   the dialog is removed when it closes. */
+(function () {
+  var btn = document.getElementById('film-play');
+  if (!btn) return;
+  var ov = null;
+  function close() {
+    if (!ov) return;
+    var el = ov; ov = null;
+    var v = el.querySelector('video'); if (v) v.pause();
+    el.classList.remove('on');
+    document.documentElement.style.overflow = '';
+    document.removeEventListener('keydown', onKey);
+    setTimeout(function () { el.remove(); btn.focus(); }, 300);
+  }
+  function onKey(e) { if (e.key === 'Escape') close(); }
+  btn.addEventListener('click', function () {
+    if (ov) return;
+    ov = document.createElement('div');
+    ov.className = 'hvd-ov';
+    ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true'); ov.setAttribute('aria-label', 'ilovemd film');
+    ov.innerHTML =
+      '<div class="hvd-box">' +
+      '<button type="button" class="hvd-x" aria-label="Close video"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>' +
+      '<div class="hvd-frame"><video src="/ilovemd-film.mp4" poster="/ilovemd-film.jpg" controls autoplay playsinline preload="auto"></video></div>' +
+      '</div>';
+    document.body.appendChild(ov);
+    document.documentElement.style.overflow = 'hidden';
+    ov.addEventListener('click', function (e) { if (e.target === ov) close(); });
+    ov.querySelector('.hvd-x').addEventListener('click', close);
+    document.addEventListener('keydown', onKey);
+    var v = ov.querySelector('video');
+    v.addEventListener('ended', close);
+    requestAnimationFrame(function () { requestAnimationFrame(function () { if (ov) ov.classList.add('on'); }); });
+    var p = v.play(); if (p && p.catch) p.catch(function () {});
+    ov.querySelector('.hvd-x').focus();
+  });
 })();
 </script>
 <script src="/nav.js"></script>

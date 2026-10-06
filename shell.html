@@ -78,6 +78,9 @@
   .btn--stroke:hover:not(:disabled) { background: var(--panel-raised); }
   .btn--ghost { color: var(--text-2); }
   .btn--ghost:hover:not(:disabled) { background: var(--panel); color: var(--text); }
+  /* Secondary CTA: an outline beside or under a primary, same size. */
+  .btn--outline { border-color: rgba(139,124,255,.55); color: var(--text); font-weight: 600; }
+  .btn--outline:hover:not(:disabled) { background: rgba(139,124,255,.12); border-color: rgba(139,124,255,.8); }
   .btn--primary { background: var(--primary); color: #fff; font-weight: 620; }
   .btn--primary:hover:not(:disabled) { background: var(--primary-hov); }
   .btn--sm { padding: 5px 10px; font-size: 12.5px; }
@@ -1413,7 +1416,7 @@
           : !S.importDir
           ? '<p>Select the folder on your computer that holds your design system’s components.</p>' +
             '<button class="btn btn--primary" id="ed-pick">Choose Component Folder</button>' +
-            '<div style="margin-top:10px"><button class="btn btn--ghost btn--sm" id="ed-demo">See how it works</button></div>' +
+            '<div style="margin-top:10px"><button class="btn btn--outline" id="ed-demo">See how it works</button></div>' +
             '<div class="hint" style="margin-top:12px;font:400 10px var(--mono);color:var(--text-3)">Supported: HTML, CSS</div>'
           : '<p>' + (S.demo ? 'A sample design system to try the flow. Pick a component, then generate its documentation.'
               : S.groups ? 'Choose a page, section or component found in this folder.' : 'Pick a design system, then choose a component to document.') + '</p>' +
@@ -1486,7 +1489,7 @@
         '</details>' +
         figErrorHTML() +
         '<button class="btn btn--primary" id="btn-fig">Generate Documentation</button>' +
-        '<div style="margin-top:10px"><button class="btn btn--ghost btn--sm" id="btn-fig-how">See how it works</button></div>' +
+        '<div style="margin-top:10px"><button class="btn btn--outline" id="btn-fig-how">See how it works</button></div>' +
         (S.figmaDemo ? '<div style="margin-top:4px"><button class="btn btn--ghost btn--sm" id="btn-fig-demo">Or try the demo file</button></div>' : '') +
         '</div></div>';
       $('btn-fig-how').onclick = function () { S.figDemo = true; paintEditor(); };
@@ -1514,7 +1517,7 @@
         '<input id="figurl" type="text" spellcheck="false" placeholder="https://www.figma.com/design/…?node-id=…">' +
         figErrorHTML() +
         '<button class="btn btn--primary" id="btn-fig">Generate Documentation</button>' +
-        '<div style="margin-top:10px"><button class="btn btn--ghost btn--sm" id="btn-fig-how">See how it works</button></div>' +
+        '<div style="margin-top:10px"><button class="btn btn--outline" id="btn-fig-how">See how it works</button></div>' +
         '</div></div>';
       $('btn-fig').onclick = function () { figGenerate($('figurl').value.trim()); };
       $('btn-fig-how').onclick = function () { S.figDemo = true; paintEditor(); };
@@ -1756,7 +1759,7 @@
             : '<div class="importbox"><h3>Import UI Components</h3>' +
               '<p>Select the folder on your computer that holds your design system’s components.</p>' +
               '<button class="btn btn--primary btn--sm" id="btn-pick">Choose Component Folder</button>' +
-              '<div style="margin-top:8px"><button class="btn btn--ghost btn--sm" id="btn-demo">See how it works</button></div>' +
+              '<div style="margin-top:8px"><button class="btn btn--outline btn--sm" id="btn-demo">See how it works</button></div>' +
               '<div class="hint">Supported: HTML, CSS</div></div>') +
           '<div class="list" id="slist"></div>' +
           '<div class="sidefoot"><button class="btn btn--ghost btn--sm" id="btn-rescan">&#8635; Rescan</button><span class="sp"></span></div>';

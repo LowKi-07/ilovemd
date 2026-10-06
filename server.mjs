@@ -168,6 +168,7 @@ const PUBLIC_FILES = new Set([
   'Menu.svg', 'Profile.svg', 'ilovemd logo.svg', 'favicon.svg',
   'hand-ai.webp', 'hand-human.webp',
   'tesla-vsr-card.svg',   // the Figma → MD "See how it works" demo frame
+  'ilovemd-film.mp4', 'ilovemd-film.jpg',   // homepage product film + its poster
 ]);
 
 const MIME = {
@@ -175,6 +176,7 @@ const MIME = {
   '.css': 'text/css; charset=utf-8', '.json': 'application/json; charset=utf-8',
   '.md': 'text/markdown; charset=utf-8', '.svg': 'image/svg+xml',
   '.png': 'image/png', '.webp': 'image/webp', '.jpg': 'image/jpeg', '.woff2': 'font/woff2',
+  '.mp4': 'video/mp4',
 };
 
 function sendJson(res, code, body) {
@@ -2309,6 +2311,25 @@ async function handle(req, res) {
     if (!fs.existsSync(target) || !fs.statSync(target).isFile()) {
       res.writeHead(404, { 'Content-Type': 'text/plain' });
       return res.end('404 Not Found');
+    }
+    // Video is streamed and honours Range requests - browsers seek with them,
+    // and Safari will not play an mp4 from a server that ignores them.
+    if (path.extname(target).toLowerCase() === '.mp4') {
+      const size = fs.statSync(target).size;
+      const m = /^bytes=(\d*)-(\d*)$/.exec(req.headers.range || '');
+      const head = { 'Content-Type': MIME['.mp4'], 'Accept-Ranges': 'bytes', 'Cache-Control': 'public, max-age=86400' };
+      if (!m || (!m[1] && !m[2])) {
+        res.writeHead(200, { ...head, 'Content-Length': size });
+        return fs.createReadStream(target).pipe(res);
+      }
+      let start = m[1] ? Number(m[1]) : Math.max(0, size - Number(m[2]));
+      let end = m[1] && m[2] ? Math.min(Number(m[2]), size - 1) : size - 1;
+      if (start >= size || start > end) {
+        res.writeHead(416, { 'Content-Range': `bytes */${size}` });
+        return res.end();
+      }
+      res.writeHead(206, { ...head, 'Content-Range': `bytes ${start}-${end}/${size}`, 'Content-Length': end - start + 1 });
+      return fs.createReadStream(target, { start, end }).pipe(res);
     }
     const buf = fs.readFileSync(target);
     res.writeHead(200, {
