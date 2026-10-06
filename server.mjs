@@ -1484,8 +1484,20 @@ function parseTemplate(slug, raw) {
 const DESIGN_DIR = path.join(TEMPLATES_DIR, 'Design systems');
 const DESIGN_PREFIX = 'design--';
 function designSlug(name) {
-  return DESIGN_PREFIX + name.replace(/\.md$/i, '').replace(/[\s._-]*design$/i, '')
+  return DESIGN_PREFIX + name.replace(/\.md$/i, '').trim().replace(/[\s._-]*design$/i, '')
     .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+}
+/* Each Design MD's logo: templates/Design systems/logos/<name>.<png|svg|webp|jpg>,
+   <name> being the slug without "design--" (Apple DESIGN.md -> apple.png).
+   Served by /design-logo/<file>; shown on a white tile on the cards. */
+const DESIGN_LOGO_DIR = path.join(DESIGN_DIR, 'logos');
+const DESIGN_LOGO_FILE = /^[a-z0-9][a-z0-9-]{0,60}\.(png|svg|webp|jpg)$/;
+function designLogo(slug) {
+  const key = slug.slice(DESIGN_PREFIX.length);
+  for (const ext of ['svg', 'png', 'webp', 'jpg']) {
+    if (fs.existsSync(path.join(DESIGN_LOGO_DIR, key + '.' + ext))) return '/design-logo/' + key + '.' + ext;
+  }
+  return '';
 }
 function designFiles() {
   try { return fs.readdirSync(DESIGN_DIR).filter((n) => n.toLowerCase().endsWith('.md')); }
@@ -1503,8 +1515,11 @@ function readDesign(slug) {
   if (character && !/^description\s*:/im.test(raw)) t.description = character.slice(0, 240);
   const surface = field('Surface type');
   if (surface && !t.tags.length) t.tags = [surface];
+  // "Page title | Brand" headings (copied from a site's <title>) name the brand
+  if (/\s\|\s/.test(t.title) && !/^title\s*:/im.test(raw)) t.title = t.title.split('|').pop().trim();
   t.category = 'Design MD';
   t.group = 'design';
+  t.logo = designLogo(slug);
   return t;
 }
 
@@ -1605,6 +1620,18 @@ async function handle(req, res) {
       const html = fs.readFileSync(path.join(HERE, 'templates.html'));
       res.writeHead(200, { 'Content-Type': MIME['.html'], 'Cache-Control': 'no-store' });
       return res.end(html);
+    }
+
+    if (route.startsWith('/design-logo/') && req.method === 'GET') {
+      const file = decodeURIComponent(route.slice('/design-logo/'.length));
+      const target = path.join(DESIGN_LOGO_DIR, file);
+      if (!DESIGN_LOGO_FILE.test(file) || !fs.existsSync(target)) {
+        res.writeHead(404, { 'Content-Type': 'text/plain' });
+        return res.end('404 Not Found');
+      }
+      const buf = fs.readFileSync(target);
+      res.writeHead(200, { 'Content-Type': MIME[path.extname(file)], 'Content-Length': buf.length, 'Cache-Control': 'public, max-age=86400' });
+      return res.end(buf);
     }
 
     if (route === '/api/templates' && req.method === 'GET') {
