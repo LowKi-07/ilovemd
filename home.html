@@ -556,6 +556,18 @@
   /* trust: no container, just the heading and a grid of small monochrome
      badges (icon + two-line label) */
   .trust { text-align: center; }
+  .tshield { width: 104px; height: 104px; margin: 0 auto 18px; filter: drop-shadow(0 10px 30px rgba(139,124,255,.35)); }
+  .tshield svg { width: 100%; height: 100%; display: block; overflow: visible; }
+  .tshield__ring { transform-origin: 60px 58px; animation: tsSpin 40s linear infinite; }
+  /* the check draws itself when the section arrives (.sec-in -> .is-in) */
+  .tshield__check { stroke-dasharray: 1; stroke-dashoffset: 0; }
+  .js .sec-in:not(.is-in) .tshield__check { stroke-dashoffset: 1; }
+  .js .sec-in.is-in .tshield__check { transition: stroke-dashoffset .7s var(--ease) .35s; }
+  @keyframes tsSpin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) {
+    .tshield__ring { animation: none; }
+    .js .sec-in.is-in .tshield__check { transition: none; }
+  }
   .trust h2 { margin: 0 0 12px; font-size: clamp(26px, 3.6vw, 36px); font-weight: 680; letter-spacing: -.025em; }
   .trust > p { margin: 0 auto; max-width: 60ch; color: var(--text-2); }
   .badges {
@@ -862,7 +874,7 @@
 <section id="film" class="wrap snap sec-in">
   <div class="sec-h">
     <div class="kicker">See it in action</div>
-    <h2>Ideas to Markdown, in 46 seconds</h2>
+    <h2>Anything to Markdown in seconds</h2>
     <p>Convert a Word file, write a document from a prompt, check it against CommonMark and fix it in place.</p>
   </div>
   <div class="hvd">
@@ -881,6 +893,27 @@
      party certification belongs here until it has been awarded. -->
 <section id="trust" class="wrap snap sec-in">
   <div class="trust">
+    <!-- shield: gradient outline, glassy fill, a check, soft rings behind -->
+    <div class="tshield" aria-hidden="true">
+      <svg viewBox="0 0 120 120" fill="none">
+        <defs>
+          <linearGradient id="ts-edge" x1="24" y1="14" x2="96" y2="104" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stop-color="#a99dff"/><stop offset=".55" stop-color="#6f8bff"/><stop offset="1" stop-color="#3fd0e0"/>
+          </linearGradient>
+          <linearGradient id="ts-fill" x1="60" y1="14" x2="60" y2="106" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stop-color="#8b7cff" stop-opacity=".28"/><stop offset="1" stop-color="#3fd0e0" stop-opacity=".05"/>
+          </linearGradient>
+          <radialGradient id="ts-glow" cx="60" cy="58" r="56" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stop-color="#8b7cff" stop-opacity=".35"/><stop offset="1" stop-color="#8b7cff" stop-opacity="0"/>
+          </radialGradient>
+        </defs>
+        <circle cx="60" cy="58" r="56" fill="url(#ts-glow)"/>
+        <circle class="tshield__ring" cx="60" cy="58" r="50" stroke="#8b7cff" stroke-opacity=".18" stroke-dasharray="2 6"/>
+        <path d="M60 16 92 28v24c0 22.5-13.8 38.6-32 46-18.2-7.4-32-23.5-32-46V28Z" fill="url(#ts-fill)" stroke="url(#ts-edge)" stroke-width="2.6" stroke-linejoin="round"/>
+        <path d="M60 25.5 84 34.5v17.8c0 17-10.2 29.4-24 35.6" stroke="#fff" stroke-opacity=".16" stroke-width="1.4" stroke-linecap="round"/>
+        <path class="tshield__check" d="m47 57.5 9.5 9.5 18-19" stroke="#fff" stroke-width="4.4" stroke-linecap="round" stroke-linejoin="round" pathLength="1"/>
+      </svg>
+    </div>
     <h2>Built to be trusted. Validated to perform.</h2>
     <p>Every document is converted through a controlled, validated pipeline designed for accuracy, consistency, security, and reliable Markdown output.</p>
     <ul class="badges" aria-label="How ilovemd keeps your documents safe and correct">
