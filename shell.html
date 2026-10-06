@@ -81,6 +81,9 @@
   /* Secondary CTA: an outline beside or under a primary, same size. */
   .btn--outline { border-color: rgba(139,124,255,.55); color: var(--text); font-weight: 600; }
   .btn--outline:hover:not(:disabled) { background: rgba(139,124,255,.12); border-color: rgba(139,124,255,.8); }
+  /* A primary with its secondary stacked under it: both as wide as the wider one. */
+  .ctastack { display: inline-grid; gap: 10px; }
+  .ctastack .btn { justify-content: center; }
   .btn--primary { background: var(--primary); color: #fff; font-weight: 620; }
   .btn--primary:hover:not(:disabled) { background: var(--primary-hov); }
   .btn--sm { padding: 5px 10px; font-size: 12.5px; }
@@ -478,8 +481,21 @@
   }
   .carderr b { display: block; color: var(--text); font-weight: 600; margin-bottom: 2px; }
   .figtok-help { margin: -4px 0 14px; text-align: left; font-size: 11.5px; color: var(--text-3); }
-  .figtok-help summary { cursor: pointer; width: max-content; }
+  .figtok-help summary {
+    cursor: pointer; width: max-content; list-style: none;
+    display: inline-flex; align-items: center; gap: 5px; border-radius: 6px;
+  }
+  .figtok-help summary::-webkit-details-marker { display: none; }
+  .figtok-help summary::marker { content: ''; }
+  /* chevron: right when closed, down when open */
+  .figtok-help summary::before {
+    content: ''; width: 6px; height: 6px; flex: none; margin: 0 2px 0 1px;
+    border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor;
+    transform: rotate(-45deg); transition: transform .18s var(--ease);
+  }
+  .figtok-help[open] summary::before { transform: translateY(-2px) rotate(45deg); }
   .figtok-help summary:hover { color: var(--text-2); }
+  @media (prefers-reduced-motion: reduce) { .figtok-help summary::before { transition: none; } }
   .figtok-help ol { margin: 8px 0 6px; padding-left: 18px; line-height: 1.6; color: var(--text-2); }
   .figtok-help p { margin: 0; font-size: 11.5px; color: var(--text-3); }
   .dropbox input {
@@ -1415,8 +1431,8 @@
             uploadProgressHTML()
           : !S.importDir
           ? '<p>Select the folder on your computer that holds your design system’s components.</p>' +
-            '<button class="btn btn--primary" id="ed-pick">Choose Component Folder</button>' +
-            '<div style="margin-top:10px"><button class="btn btn--outline" id="ed-demo">See how it works</button></div>' +
+            '<div class="ctastack"><button class="btn btn--primary" id="ed-pick">Choose Component Folder</button>' +
+            '<button class="btn btn--outline" id="ed-demo">See how it works</button></div>' +
             '<div class="hint" style="margin-top:12px;font:400 10px var(--mono);color:var(--text-3)">Supported: HTML, CSS</div>'
           : '<p>' + (S.demo ? 'A sample design system to try the flow. Pick a component, then generate its documentation.'
               : S.groups ? 'Choose a page, section or component found in this folder.' : 'Pick a design system, then choose a component to document.') + '</p>' +
@@ -1488,8 +1504,8 @@
         '<p>ilovemd uses it only to read this file, for this one request. It is never saved; closing the tab forgets it.</p>' +
         '</details>' +
         figErrorHTML() +
-        '<button class="btn btn--primary" id="btn-fig">Generate Documentation</button>' +
-        '<div style="margin-top:10px"><button class="btn btn--outline" id="btn-fig-how">See how it works</button></div>' +
+        '<div class="ctastack"><button class="btn btn--primary" id="btn-fig">Generate Documentation</button>' +
+        '<button class="btn btn--outline" id="btn-fig-how">See how it works</button></div>' +
         (S.figmaDemo ? '<div style="margin-top:4px"><button class="btn btn--ghost btn--sm" id="btn-fig-demo">Or try the demo file</button></div>' : '') +
         '</div></div>';
       $('btn-fig-how').onclick = function () { S.figDemo = true; paintEditor(); };
@@ -1516,8 +1532,8 @@
         '<p>Paste a link to a Figma frame or component. ilovemd retrieves it from the Figma desktop app and ' + aiName() + ' writes structured documentation.</p>' +
         '<input id="figurl" type="text" spellcheck="false" placeholder="https://www.figma.com/design/…?node-id=…">' +
         figErrorHTML() +
-        '<button class="btn btn--primary" id="btn-fig">Generate Documentation</button>' +
-        '<div style="margin-top:10px"><button class="btn btn--outline" id="btn-fig-how">See how it works</button></div>' +
+        '<div class="ctastack"><button class="btn btn--primary" id="btn-fig">Generate Documentation</button>' +
+        '<button class="btn btn--outline" id="btn-fig-how">See how it works</button></div>' +
         '</div></div>';
       $('btn-fig').onclick = function () { figGenerate($('figurl').value.trim()); };
       $('btn-fig-how').onclick = function () { S.figDemo = true; paintEditor(); };
