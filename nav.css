@@ -58,9 +58,12 @@
     inset 0 1px 0 rgba(255,255,255,.07),
     0 10px 36px rgba(0,0,0,.42);
 }
-.nav__in {
+/* .nav__in also carries the pages' .wrap class, and some pages give .wrap
+   their own padding - .nav .nav__in outranks any of them, so the logo and
+   the menu icon sit 24px in from the pill's ends on every page. */
+.nav .nav__in {
   display: flex; align-items: center; gap: 9px; height: 54px;
-  position: relative; padding: 0 9px 0 18px; max-width: none; margin: 0;
+  position: relative; padding: 0 24px; max-width: none; margin: 0;
 }
 .nav .sp { flex: 1 1 auto; min-width: 0; }
 .brand-logo { display: flex; align-items: center; flex-shrink: 0; }
