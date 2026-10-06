@@ -108,7 +108,7 @@
 
   /* ------------------------------------------------------------ toolbar */
   .toolbar {
-    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap;
     margin: 18px 0 22px;
   }
   .pills { display: flex; gap: 6px; flex-wrap: wrap; }
@@ -119,7 +119,6 @@
   }
   .pill:hover { color: var(--text); background: rgba(255,255,255,.05); }
   .pill[aria-pressed="true"] { color: var(--text); background: var(--accent-soft); border-color: rgba(139,124,255,.45); }
-  .count { margin-left: auto; font: 400 12px var(--mono); color: var(--text-3); }
 
   /* --------------------------------------------------------------- grid */
   .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; padding-bottom: 100px; }
@@ -225,7 +224,6 @@
   @media (max-width: 620px) {
     .grid { grid-template-columns: 1fr; }
     .hero { padding-top: calc(var(--navh) + 30px); }
-    .count { width: 100%; margin-left: 0; }
     .pv__body { padding: 20px 18px 32px; }
     .pv__bar { flex-wrap: wrap; padding: 10px 14px; }
     .pv__bar .btn span { display: none; }
@@ -298,7 +296,6 @@
 <main class="wrap">
   <div class="toolbar">
     <div class="pills" id="pills" role="group" aria-label="Template type"></div>
-    <span class="count" id="count" aria-live="polite"></span>
   </div>
   <div class="grid" id="grid"></div>
 </main>
@@ -377,11 +374,8 @@
       var hay = (t.title + ' ' + t.description + ' ' + t.category + ' ' + t.tags.join(' ')).toLowerCase();
       return words.every(function (w) { return hay.indexOf(w) !== -1; });
     });
-    var noun = cat === 'design' ? 'Design MD' : 'template';
-    $('count').textContent = hits.length + ' of ' + inGroup.length + ' ' + noun + (inGroup.length === 1 || noun === 'Design MD' ? '' : 's');
     if (!inGroup.length) {
       $('grid').innerHTML = '<div class="empty"><b>' + (cat === 'design' ? 'Design MDs are on their way.' : 'Templates are on their way.') + '</b>Check back soon.</div>';
-      $('count').textContent = '';
       return;
     }
     $('grid').innerHTML = hits.length ? hits.map(function (t) {
