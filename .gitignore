@@ -34,3 +34,6 @@ npm-debug.log*
 .vscode/
 *.swp
 *.swo
+
+# /brag launch-video output (video, frames, work files)
+brag-output*/
