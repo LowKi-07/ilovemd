@@ -456,25 +456,23 @@
   .hvd__btn img {
     display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: cover;
     border-radius: 16px; border: 1px solid var(--hairline-strong);
-    box-shadow: 0 30px 80px -30px rgba(0,0,0,.9), 0 0 90px -40px rgba(139,124,255,.55);
+    box-shadow: 0 30px 80px -30px rgba(0,0,0,.9);   /* depth only - no glow */
     transition: filter .2s ease-out;
   }
   .hvd__btn:hover img { filter: brightness(.8); }
   .hvd__play { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; transform: scale(.9); transition: transform .2s ease-out; }
   .hvd__btn:hover .hvd__play { transform: scale(1); }
-  .hvd__ring {
-    width: 112px; height: 112px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
-    background: rgba(139,124,255,.12); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
-  }
+  /* Play button: one translucent grey disc, lightly blurred, with a white
+     rounded triangle - no ring, no gradient. */
+  .hvd__ring { display: contents; }
   .hvd__core {
-    width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
-    background: linear-gradient(to bottom, rgba(139,124,255,.3), var(--primary));
-    box-shadow: 0 4px 6px -1px rgba(0,0,0,.25), 0 2px 4px -2px rgba(0,0,0,.2);
-    transition: transform .2s ease-out;
+    width: 96px; height: 96px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    background: rgba(58,58,60,.72); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+    box-shadow: 0 8px 24px rgba(0,0,0,.35);
+    transition: transform .2s ease-out, background-color .2s ease-out;
   }
-  .hvd__btn:hover .hvd__core { transform: scale(1.2); }
-  .hvd__core svg { width: 32px; height: 32px; margin-left: 3px; fill: #fff; filter: drop-shadow(0 4px 3px rgba(0,0,0,.07)) drop-shadow(0 2px 2px rgba(0,0,0,.06)); transition: transform .2s ease-out; }
-  .hvd__btn:hover .hvd__core svg { transform: scale(1.05); }
+  .hvd__btn:hover .hvd__core { transform: scale(1.06); background: rgba(70,70,72,.8); }
+  .hvd__core svg { width: 38px; height: 38px; margin-left: 5px; fill: #fff; transition: transform .2s ease-out; }
   .hvd__len { position: absolute; right: 14px; bottom: 12px; padding: 4px 9px; border-radius: 999px; background: rgba(8,8,12,.7); color: var(--text); font: 500 12px var(--mono); }
 
   .hvd-ov {
@@ -757,7 +755,7 @@
             mask-image: linear-gradient(to left, transparent 0, #000 30%), linear-gradient(to top, transparent 0, #000 22%);
             mask-composite: intersect;
   }
-  :root[data-theme="light"] .hvd__btn img { box-shadow: 0 30px 70px -30px rgba(30,26,80,.35), 0 0 90px -40px rgba(106,90,240,.4); }
+  :root[data-theme="light"] .hvd__btn img { box-shadow: 0 30px 70px -30px rgba(30,26,80,.35); }
   :root[data-theme="light"] .hvd__len { background: rgba(255,255,255,.85); color: var(--text); }
   :root[data-theme="light"] .tshield { filter: drop-shadow(0 10px 26px rgba(106,90,240,.28)); }
   :root[data-theme="light"] .tshield__check { stroke: #5b4ff0; }
