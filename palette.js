@@ -1,5 +1,5 @@
 /* Site palette: Mono. The pages are still written in the original violet /
-   cyan accent; this swaps those accent shades - in every stylesheet rule,
+   cyan accent and blue-leaning greys; this swaps those accent shades - in every stylesheet rule,
    inline style and SVG paint - for white and greys on the dark theme and
    black and greys on the light theme. Anything not listed is left as it is:
    app logo colours, status colours (ok / warn / error, diff lines) and the
@@ -42,7 +42,22 @@
     '20,19,31':    ['24,24,27', '24,24,27'],         // #14131f
   };
   var col = light ? 1 : 0;
+  // the replacement greys themselves are true greys too
+  Object.keys(MAP).forEach(function (k) {
+    MAP[k] = MAP[k].map(function (v) { var c = v.split(','); return neutral(c[0], c[1], c[2]) || v; });
+  });
 
+  /* Neutrals: the pages' greys lean blue (#08080c, #12121a, rgba(18,18,28),
+     #a3a3b4, #f6f5fb, rgba(22,20,60) ...). Any colour whose red and green
+     are about equal with blue only a little above them is a tinted grey -
+     it becomes a true grey of the same brightness. Saturated colours (logos,
+     status, the heart, the accent shades above) never qualify. */
+  function neutral(r, g, b) {
+    r = +r; g = +g; b = +b;
+    if (Math.abs(r - g) > 6 || b <= Math.max(r, g) || b - Math.max(r, g) > 60) return null;
+    var y = Math.round(0.2126 * r + 0.7152 * g + 0.0722 * b);
+    return y + ',' + y + ',' + y;
+  }
   function hexToKey(h) {
     h = h.slice(1);
     if (h.length === 3) h = h.replace(/./g, '$&$&');
@@ -51,18 +66,20 @@
   function swap(v) {
     if (!v || v.indexOf('(') === -1 && v.indexOf('#') === -1) return v;
     v = v.replace(/#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})\b/g, function (m) {
-      var to = MAP[hexToKey(m)]; return to ? 'rgb(' + to[col] + ')' : m;
+      var k = hexToKey(m), to = MAP[k], c = k.split(','), n = to ? to[col] : neutral(c[0], c[1], c[2]);
+      return n ? 'rgb(' + n + ')' : m;
     });
     return v.replace(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(,\s*[\d.]+\s*)?\)/g, function (m, r, g, b, a) {
-      var to = MAP[r + ',' + g + ',' + b];
-      return to ? (a ? 'rgba(' + to[col] + a + ')' : 'rgb(' + to[col] + ')') : m;
+      var to = MAP[r + ',' + g + ',' + b], n = to ? to[col] : neutral(r, g, b);
+      return n ? (a ? 'rgba(' + n + a + ')' : 'rgb(' + n + ')') : m;
     });
   }
+  // Whole declaration text, not property by property: a shorthand written
+  // with var() (background: var(--tb, rgba(...))) has no longhand values to
+  // read, but its text is all there.
   function swapStyle(st) {
-    for (var i = 0; i < st.length; i++) {
-      var p = st[i], v = st.getPropertyValue(p), n = swap(v);
-      if (n !== v) st.setProperty(p, n, st.getPropertyPriority(p));
-    }
+    var t = st.cssText, n = swap(t);
+    if (n !== t) st.cssText = n;
   }
   function swapRules(rules) {
     for (var i = 0; i < rules.length; i++) {

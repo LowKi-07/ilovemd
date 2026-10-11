@@ -8,8 +8,8 @@
 :root:not([data-theme="light"]) .send,
 :root:not([data-theme="light"]) #send,
 :root:not([data-theme="light"]) #go,
-:root:not([data-theme="light"]) .hvd__core { color: #0a0a0c; }
-:root:not([data-theme="light"]) .hvd__core svg { fill: #0a0a0c; }
+:root:not([data-theme="light"]) .hvd__core { color: #0a0a0a; }
+:root:not([data-theme="light"]) .hvd__core svg { fill: #0a0a0a; }
 :root:not([data-theme="light"]) .msg--u { color: var(--text); }
 :root:not([data-theme="light"]) .pill[aria-pressed="true"],
 :root:not([data-theme="light"]) .fpill.active { color: #fff; }
