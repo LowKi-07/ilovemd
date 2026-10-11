@@ -1,0 +1,15 @@
+/* Mono palette (with palette.js): what a colour swap alone cannot express.
+   On the dark theme the primary fill becomes white, so text and icons on it
+   turn black; on the light theme it becomes black and keeps its white text. */
+:root:not([data-theme="light"]) .btn--primary,
+:root:not([data-theme="light"]) .btn--primary:hover:not(:disabled),
+:root:not([data-theme="light"]) .sendbtn,
+:root:not([data-theme="light"]) .hbtn.dl,
+:root:not([data-theme="light"]) .send,
+:root:not([data-theme="light"]) #send,
+:root:not([data-theme="light"]) #go,
+:root:not([data-theme="light"]) .hvd__core { color: #0a0a0c; }
+:root:not([data-theme="light"]) .hvd__core svg { fill: #0a0a0c; }
+:root:not([data-theme="light"]) .msg--u { color: var(--text); }
+:root:not([data-theme="light"]) .pill[aria-pressed="true"],
+:root:not([data-theme="light"]) .fpill.active { color: #fff; }
