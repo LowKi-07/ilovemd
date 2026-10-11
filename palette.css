@@ -13,3 +13,11 @@
 :root:not([data-theme="light"]) .msg--u { color: var(--text); }
 :root:not([data-theme="light"]) .pill[aria-pressed="true"],
 :root:not([data-theme="light"]) .fpill.active { color: #fff; }
+
+/* Homepage hands: the glows were tuned for violet; in white they bloom, so
+   they are turned well down - the robot hand's rim, the Markdown card's glow
+   and the halo behind it. */
+.tc-hand--ai { filter: brightness(1.12) contrast(1.04) drop-shadow(0 0 10px rgba(255,255,255,.08)); }
+.tc-doc { filter: drop-shadow(0 0 calc(var(--touch) * 8px) rgba(255,255,255,.18)) !important; }
+.tc-doc circle { opacity: .3; }
+:root[data-theme="light"] .tc-hand--ai { filter: contrast(1.04); }
