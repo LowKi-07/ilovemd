@@ -432,7 +432,13 @@
     /* The landing view is the hero plus a peek of the tools below it (tabs
        and the first row of cards), so the hero keeps its natural height and
        the tools screen starts at its top rather than centring. */
-    .hero.snap { min-height: 0; display: block; padding-bottom: 30px; }
+    /* The landing view is the hero plus exactly one row of tools: the hero
+       takes the window less the tools' pills and first card row (~290px)
+       and some breathing room, with its content centred in that space. */
+    .hero.snap {
+      min-height: calc(100svh - 316px); padding-top: var(--navh); padding-bottom: 24px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+    }
     #converters.snap { justify-content: flex-start; padding-top: 18px; }
     footer { scroll-snap-align: end; }
   }
