@@ -444,15 +444,9 @@
     backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: none;
   }
   .dropbox--bare::before { display: none; }
-  /* The generating card: an opaque panel, so the page's dot grid never shows
-     through it. Declared for both themes - the light .dropbox rule is more
-     specific than a single class. */
-  .dropbox--solid, :root[data-theme="light"] .dropbox.dropbox--solid {
-    background: var(--panel-solid); border-color: var(--hairline-strong);
-    backdrop-filter: none; -webkit-backdrop-filter: none;
-    box-shadow: 0 4px 24px rgba(0,0,0,.18);
-  }
-  .dropbox--solid::before, :root[data-theme="light"] .dropbox--solid::before { display: none; }
+  /* The generating card is the selected-component card with a loader in it.
+     Its width is fixed, so it does not resize as the progress line changes. */
+  .dropbox--gen { width: 420px; max-width: 100%; box-sizing: border-box; }
   /* The primary action sits right; back is centred in whatever room is left,
      so the gap either side of it matches. The preceding <p> already carries a
      16px bottom margin, so only a little is needed here. */
@@ -1464,7 +1458,7 @@
     if (!S.md && S.busy && (genFigma || ((MODE === 'ui' || MODE === 'convert') && S.curName))) {
       // Generating: spinner above the component name, chrome stripped away.
       wrap.innerHTML =
-        '<div class="placeholder"><div class="dropbox dropbox--solid">' +
+        '<div class="placeholder"><div class="dropbox dropbox--beam dropbox--gen">' + BEAM +
         '<div class="loader" role="status" aria-label="Generating"></div>' +
         '<h3>' + (genFigma ? (S.figDemo ? 'Tesla VSR Card' : 'Figma &rarr; Markdown') : esc(cap(S.curName))) + '</h3>' +
         '<p id="gen-live">' + (genFigma ? 'Retrieving from Figma…' : 'Reading the source…') + '</p>' +
