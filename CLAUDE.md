@@ -29,6 +29,7 @@ It runs in one of two modes from the same codebase, controlled by `ILOVEMD_MODE`
 | `home.html` | Homepage — hero, filter pills and the grid of tool cards |
 | `hand-ai.webp`, `hand-human.webp` | Homepage bridge-section renders, cropped and compressed from the Meshy PNG sources. Placement in `.tc-hand--*` assumes these exact crops (index fingertips meet at stage point 600,200) - re-derive the percentages if they change |
 | `ilovemd-film.mp4`, `ilovemd-film.jpg` | The 46 s product film (with voiceover) and its thumbnail, played in the homepage `#film` section through a vanilla port of Magic UI's Hero Video Dialog. The static handler streams `.mp4` with HTTP Range support - Safari will not play video from a server that ignores Range. Sources and the render pipeline live in the gitignored `brag-output/` |
+| `deck.html` | The "Why ilovemd?" slide deck, served at `/why` and opened in a new tab by the button in the homepage `#future` section. One self-contained file (screenshots embedded as data URIs, Geist from Google Fonts), built outside the repo and copied in - replace the whole file to update it |
 | `favicon.svg` | Browser-tab icon: the logo's red heart on its own. Linked from every page's `<head>` and also served for `/favicon.ico` |
 | `nav.css`, `nav.js` | The site nav bar, shared by `home.html`, `shell.html`, `compare.html` and `templates.html`. One menu dropdown (Profile, About…, Log Out when gated via `window.ilovemdNav.showLogout(fn)`); at ≤940px the header links move into it, the tool lists copied from the desktop dropdowns. Injected into `<div id="site-nav"></div>` by `nav.js`; self-contained (its own `--nv-*` tokens) because the pages' own design tokens differ. Edit here, not per page |
 | `templates.html` | Templates page (`/templates`): search, category pills, cards and a preview dialog (rendered/raw, Copy, Download, Use template → `/text?template=<slug>`) |
@@ -56,6 +57,7 @@ It runs in one of two modes from the same codebase, controlled by `ILOVEMD_MODE`
 | `/` | `home.html` — tool homepage |
 | `/text`, `/ui`, `/figma`, `/convert` | `shell.html` — main workspace |
 | `/compare` | `compare.html` — file comparison |
+| `/why` | `deck.html` — the "Why ilovemd?" slide deck |
 | `/templates` | `templates.html` — template gallery (`?q=`, `?category=`, `?t=<slug>` opens a preview) |
 | `/app` | `app.html` — legacy editor (redirects to `/text`) |
 | `/login` | `login.html` — public-mode password gate (redirects to `/` when no password is set) |

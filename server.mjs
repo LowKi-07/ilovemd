@@ -170,6 +170,7 @@ const PUBLIC_FILES = new Set([
   'tesla-vsr-card.svg',   // the Figma → MD "See how it works" demo frame
   'ilovemd-film.mp4', 'ilovemd-film.jpg',   // homepage product film + its poster
   'palette.css', 'palette.js',               // the Mono palette, applied over the pages' accent colours
+  'deck.html',                               // the "Why ilovemd?" slide deck (/why), self-contained
 ]);
 
 const MIME = {
@@ -1617,6 +1618,12 @@ async function handle(req, res) {
     }
 
     /* ---- the unified workspace: /text, /ui, /figma ---- */
+    if (route === '/why') {
+      const html = fs.readFileSync(path.join(HERE, 'deck.html'));
+      res.writeHead(200, { 'Content-Type': MIME['.html'], 'Cache-Control': 'no-store' });
+      return res.end(html);
+    }
+
     if (route === '/templates') {
       const html = fs.readFileSync(path.join(HERE, 'templates.html'));
       res.writeHead(200, { 'Content-Type': MIME['.html'], 'Cache-Control': 'no-store' });
