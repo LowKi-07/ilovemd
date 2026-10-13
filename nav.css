@@ -95,7 +95,7 @@
 }
 .nav .sp { flex: 1 1 auto; min-width: 0; }
 .brand-logo { display: flex; align-items: center; flex-shrink: 0; }
-.brand-logo svg { height: 29px; width: auto; display: block; }
+.brand-logo svg { height: 25px; width: auto; display: block; }
 
 /* The heart in the logo beats: twice on page load (nav.js adds .is-intro),
    and for as long as the logo is hovered or focused. A lub-dub double pulse,

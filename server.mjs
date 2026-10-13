@@ -165,7 +165,7 @@ const SYSTEM_PROMPT = [
 const PUBLIC_FILES = new Set([
   'nav.css', 'nav.js', 'md.js', 'mdcheck.js',
   'home.html', 'shell.html', 'compare.html', 'login.html',
-  'Menu.svg', 'Profile.svg', 'ilovemd logo.svg', 'favicon.svg',
+  'Menu.svg', 'Profile.svg', 'ilovemdlogo.svg', 'logo-heart.webp', 'favicon.png',
   'hand-ai.webp', 'hand-human.webp',
   'tesla-vsr-card.svg',   // the Figma → MD "See how it works" demo frame
   'ilovemd-film.mp4', 'ilovemd-film.jpg',   // homepage product film + its poster
@@ -2363,8 +2363,8 @@ async function handle(req, res) {
 
     // Some clients ask for /favicon.ico regardless of <link rel="icon">.
     if (route === '/favicon.ico') {
-      const buf = fs.readFileSync(path.join(HERE, 'favicon.svg'));
-      res.writeHead(200, { 'Content-Type': MIME['.svg'], 'Content-Length': buf.length, 'Cache-Control': 'public, max-age=86400' });
+      const buf = fs.readFileSync(path.join(HERE, 'favicon.png'));
+      res.writeHead(200, { 'Content-Type': MIME['.png'], 'Content-Length': buf.length, 'Cache-Control': 'public, max-age=86400' });
       return res.end(buf);
     }
 
