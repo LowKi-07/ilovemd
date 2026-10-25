@@ -4,7 +4,7 @@
 <script>/* light/dark: apply the saved choice before first paint (nav.js toggles it) */try{if(localStorage.getItem('ilovemd-theme')==='light')document.documentElement.setAttribute('data-theme','light')}catch(e){}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Geist+Mono:wght@100..900&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,200..800&family=Geist:wght@100..900&family=Geist+Mono:wght@100..900&display=swap">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" href="/favicon.png" type="image/png">
@@ -35,7 +35,7 @@
     --r-sm: 8px; --r-md: 12px; --r-lg: 18px; --r-pill: 999px;
     --blur: saturate(180%) blur(16px);
     --ease: cubic-bezier(.2,.8,.3,1);
-    --font: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    --font: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; --display: 'Bricolage Grotesque', 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     --mono: 'Geist Mono', ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
     --side: 244px;
     --chat: 320px;
@@ -915,6 +915,9 @@
     :root[data-theme="light"] .chat { background: var(--panel-solid); box-shadow: -18px 0 50px rgba(30,26,80,.14); }
     :root[data-theme="light"] .shell .chat, :root[data-theme="light"] .shell[data-islands="1"] .chat, :root[data-theme="light"] .shell[data-chat="closed"] .chat { box-shadow: 0 -24px 60px rgba(30,26,80,.16); }
   }
+  /* Titles in Bricolage Grotesque; rendered Markdown (.md) keeps the text face. */
+  h1, h2, h3, h4 { font-family: var(--display); }
+  .md h1, .md h2, .md h3, .md h4 { font-family: var(--font); }
 </style>
 <link rel="stylesheet" href="/palette.css">
 <script src="/palette.js"></script>

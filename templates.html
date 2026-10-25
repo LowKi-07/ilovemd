@@ -4,7 +4,7 @@
 <script>/* light/dark: apply the saved choice before first paint (nav.js toggles it) */try{if(localStorage.getItem('ilovemd-theme')==='light')document.documentElement.setAttribute('data-theme','light')}catch(e){}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Geist+Mono:wght@100..900&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,200..800&family=Geist:wght@100..900&family=Geist+Mono:wght@100..900&display=swap">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" href="/favicon.png" type="image/png">
@@ -32,7 +32,7 @@
     --gradient: linear-gradient(135deg,#8b7cff 0%,#6f8bff 45%,#3fd0e0 100%);
     --r-sm: 8px; --r-md: 12px; --r-lg: 18px; --r-pill: 999px;
     --ease: cubic-bezier(.2,.8,.3,1);
-    --font: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    --font: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; --display: 'Bricolage Grotesque', 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     --mono: 'Geist Mono', ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
   }
   * { box-sizing: border-box; }
@@ -281,6 +281,9 @@
   :root[data-theme="light"] .md pre { background: rgba(22,20,60,.04); }
   :root[data-theme="light"] .md blockquote { border-left-color: rgba(106,90,240,.5); }
   :root[data-theme="light"] .md th { background: rgba(22,20,60,.04); }
+  /* Titles in Bricolage Grotesque; rendered Markdown (.md) keeps the text face. */
+  h1, h2, h3, h4 { font-family: var(--display); }
+  .md h1, .md h2, .md h3, .md h4 { font-family: var(--font); }
 </style>
 <link rel="stylesheet" href="/palette.css">
 <script src="/palette.js"></script>
