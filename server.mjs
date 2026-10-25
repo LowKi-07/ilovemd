@@ -170,8 +170,6 @@ const PUBLIC_FILES = new Set([
   'tesla-vsr-card.svg',   // the Figma → MD "See how it works" demo frame
   'ilovemd-film.mp4', 'ilovemd-film.jpg',   // homepage product film + its poster
   'palette.css', 'palette.js',               // the Mono palette, applied over the pages' accent colours
-  'tool-text.webp', 'tool-html.webp', 'tool-figma.webp', 'tool-pdf.webp', 'tool-word.webp', 'tool-ppt.webp',
-  'tool-excel.webp', 'tool-react.webp', 'tool-compare.webp', 'tool-notion.webp', 'tool-confluence.webp',   // 3D objects on the homepage tool cards
   'deck.html',                               // the "Why ilovemd?" slide deck (/why), self-contained
 ]);
 
