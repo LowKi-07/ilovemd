@@ -309,6 +309,10 @@
   /* Titles in Bricolage Grotesque; rendered Markdown (.md) keeps the text face. */
   h1, h2, h3, h4 { font-family: var(--display); }
   .md h1, .md h2, .md h3, .md h4 { font-family: var(--font); }
+  /* Cards: one flat panel style site-wide - a plain fill, no outline, gradient,
+     sheen or glow (the homepage tool cards set it). Popups get an opaque fill. */
+  .prevpane, .panel, .udiff, .sdiff, .no-diff { background: rgba(255,255,255,.055) !important; background-image: none !important; border-color: transparent !important; box-shadow: none !important; }
+  :root[data-theme="light"] .prevpane, :root[data-theme="light"] .panel, :root[data-theme="light"] .udiff, :root[data-theme="light"] .sdiff, :root[data-theme="light"] .no-diff { background: rgba(0,0,0,.04) !important; background-image: none !important; border-color: transparent !important; box-shadow: none !important; }
 </style>
 <link rel="stylesheet" href="/palette.css">
 <script src="/palette.js"></script>
