@@ -240,12 +240,12 @@
 
   /* converter grid */
   .tools { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
-  /* Glass cards: a flat translucent fill over a blur, nothing else. No
-     gradient, sheen, glow or outline - a plain raised panel, like a price card. */
+  /* Glass cards: a flat translucent fill over a blur, and one outline. No
+     gradient, sheen or glow - those read as a diagonal ray across the card. */
   .tool {
     position: relative; display: block; overflow: hidden;
-    border: 1px solid transparent;
-    background: rgba(255,255,255,.055);
+    border: 1px solid rgba(255,255,255,.1);
+    background: rgba(255,255,255,.03);
     backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
     border-radius: var(--r-lg); padding: 24px 20px 22px;
     color: var(--text); text-decoration: none;
@@ -253,7 +253,7 @@
   }
   a.tool:hover {
     transform: translateY(-3px);
-    background: rgba(255,255,255,.08);
+    border-color: rgba(255,255,255,.22);
   }
   .tool__icon {
     width: 46px; height: 46px; border-radius: 13px;
@@ -713,10 +713,10 @@
   :root[data-theme="light"] .hero::before { background-image: radial-gradient(circle at 1px 1px, rgba(70,66,110,.3) 1px, transparent 1.25px); }
   :root[data-theme="light"] .card__head { background: rgba(22,20,60,.03); }
   :root[data-theme="light"] .tool {
-    border-color: transparent;
-    background: rgba(0,0,0,.04);
+    border-color: rgba(0,0,0,.1);
+    background: rgba(255,255,255,.55);
   }
-  :root[data-theme="light"] a.tool:hover { background: rgba(0,0,0,.065); }
+  :root[data-theme="light"] a.tool:hover { border-color: rgba(0,0,0,.22); }
   :root[data-theme="light"] .tool__icon { box-shadow: inset 0 1px 0 rgba(255,255,255,.8); }
   :root[data-theme="light"] .tcard {
     background: linear-gradient(135deg, rgba(106,90,240,.06) 0%, rgba(111,139,255,.02) 40%, rgba(255,255,255,.9) 100%);
