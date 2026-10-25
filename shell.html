@@ -918,20 +918,6 @@
   /* Titles in Bricolage Grotesque; rendered Markdown (.md) keeps the text face. */
   h1, h2, h3, h4 { font-family: var(--display); }
   .md h1, .md h2, .md h3, .md h4 { font-family: var(--font); }
-  /* Cards: one flat panel style site-wide - a plain fill, no outline, gradient,
-     sheen or glow (the homepage tool cards set it). Popups get an opaque fill. */
-  .dropbox:not(.dropbox--bare), .importbox { background: rgba(255,255,255,.055) !important; background-image: none !important; border-color: transparent !important; box-shadow: none !important; }
-  :root[data-theme="light"] .dropbox:not(.dropbox--bare), :root[data-theme="light"] .importbox { background: rgba(0,0,0,.04) !important; background-image: none !important; border-color: transparent !important; box-shadow: none !important; }
-  .qcard { background: #1b1b1b !important; background-image: none !important; border-color: transparent !important; box-shadow: 0 24px 60px -18px rgba(0,0,0,.85) !important; }
-  :root[data-theme="light"] .qcard { background: #fff !important; background-image: none !important; border-color: transparent !important; box-shadow: 0 24px 60px -24px rgba(0,0,0,.3) !important; }
-  .dropbox::before { display: none !important; }
-  .dropbox > .beam { display: none !important; }
-  /* The workspace panels too, on desktop only: on narrow screens the chat is
-     a bottom sheet over the editor and keeps its opaque fill. */
-  @media (min-width: 941px) {
-    .shell[data-islands="1"] .editor, .shell[data-islands="1"] .preview, .shell[data-islands="1"] .chat { background: rgba(255,255,255,.055) !important; border-color: transparent !important; box-shadow: none !important; }
-    :root[data-theme="light"] .shell[data-islands="1"] .editor, :root[data-theme="light"] .shell[data-islands="1"] .preview, :root[data-theme="light"] .shell[data-islands="1"] .chat { background: rgba(0,0,0,.04) !important; }
-  }
 </style>
 <link rel="stylesheet" href="/palette.css">
 <script src="/palette.js"></script>
