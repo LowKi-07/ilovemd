@@ -116,3 +116,28 @@ One server with the current setup handles a lot: the server mostly waits on the
 AI API, and the real ceiling is your AI rate limits and budget. The step to two
 or more servers is the first one that needs code, and only in those two
 `platform/` files.
+
+
+## Stage environment
+
+A second copy of the site for trying designs without touching ilovemd.xyz. It
+runs the `stage` branch; `main` stays the live site.
+
+1. Push the branch once: `git push -u origin stage`.
+2. Render: **New > Web Service**, pick this repo, and set **Branch** to
+   `stage`. Name it `ilovemd-stage` (the name becomes the link), runtime Node,
+   build `npm install`, start `node server.mjs`, health check `/healthz`, plan
+   Free, auto-deploy on.
+3. Environment, as in `render.yaml`: `ILOVEMD_MODE=public`, `HOST=0.0.0.0`,
+   `ILOVEMD_AI_PROVIDER=gemini`, `GEMINI_API_KEY`, and a **new**
+   `ILOVEMD_SESSION_SECRET` (any 16+ random characters, not the live one).
+   Add `ILOVEMD_GATE_PASSWORD` so only you can open it. The AI limits are per
+   service, so stage traffic counts against the same key's budget.
+4. The link is `https://ilovemd-stage.onrender.com`. For `stage.ilovemd.xyz`
+   instead: add it under the stage service's **Settings > Custom Domains**,
+   then in GoDaddy DNS add a `CNAME` named `stage` pointing to
+   `ilovemd-stage.onrender.com`.
+
+Working with it: commit to `stage` and push - only the stage service
+redeploys. When a design is ready, bring it to the live site with
+`git checkout main && git merge stage && git push`.

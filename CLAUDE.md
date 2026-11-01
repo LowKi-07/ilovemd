@@ -207,6 +207,7 @@ This repo's remote is a **personal GitHub account** — never push from the offi
 
 - Official Claude session: edit files, commit locally (`git add -A && git commit -m "..."`)
 - Personal Claude session (or Terminal): review changes and `git push`
+- Branches: `main` is the live site (ilovemd.xyz). `stage` is the design playground, deployed by its own Render service (see **Stage environment** in `DEPLOY.md`). Experiments go on `stage`; ready work is merged into `main`
 
 ## Starting the server manually
 
