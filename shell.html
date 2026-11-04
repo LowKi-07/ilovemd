@@ -118,6 +118,8 @@
   .burger:hover { background: var(--panel); color: var(--text); }
   .burger[aria-pressed="true"] { background: var(--accent-soft); color: var(--text); }
   .brandname { font-size: 15px; font-weight: 660; letter-spacing: -.015em; color: var(--text); text-decoration: none; }
+  /* The mode tag (UI → MD …) is hidden: the nav already says where you are. */
+  .modetag { display: none !important; }
   .modetag {
     font: 600 10px var(--mono); letter-spacing: .06em; color: var(--accent-2);
     border: 1px solid rgba(63,208,224,.3); background: rgba(63,208,224,.1);
@@ -149,8 +151,8 @@
     -webkit-mask-image: radial-gradient(ellipse 70% 75% at 50% 40%, #000 25%, transparent 85%);
             mask-image: radial-gradient(ellipse 70% 75% at 50% 40%, #000 25%, transparent 85%);
   }
-  /* Text mode is panels edge to edge - no dots behind them there. */
-  body.mode-text .shell::before { display: none; }
+  /* The dot pattern is off in every mode: plain page behind the cards. */
+  .shell::before { display: none; }
   .panel { min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
   /* No rule or tint under the label: inside a card it read as a seam across
      the top of every panel. The label sits straight on the card now. */
@@ -814,16 +816,10 @@
   }
 
   /* ---------------------------------------------------------------- subtop */
-  .subtop {
-    position: fixed; top: calc(var(--navh) + 52px); left: 0; right: 0; height: 48px; z-index: 9;
-    display: none; align-items: center; gap: 6px; padding: 0 14px;
-    /* No fill: the workspace starts below this row, so nothing scrolls under
-       it - a background only showed as a band across the page. */
-    background: transparent;
-  }
+  /* The folder and component pickers sit in the top bar, after the title,
+     so the workspace starts right under that one row. */
+  .subtop { display: none; align-items: center; gap: 6px; min-width: 0; margin-left: 4px; }
   body.mode-ui.subtop-on .subtop { display: flex; }
-  body.mode-ui.subtop-on .shell { inset: calc(var(--navh) + 100px) 0 0 0; }
-  body.mode-ui.subtop-on .side { top: calc(var(--navh) + 100px); }
   .subtop .folder__path {
     max-width: 180px; white-space: nowrap; overflow: hidden;
     text-overflow: ellipsis; direction: rtl;
@@ -837,9 +833,8 @@
     flex: none; width: auto; min-width: 128px; max-width: 220px;
   }
   @media (max-width: 940px) {
-    body.mode-ui.subtop-on .shell { position: static; }
-    /* here it sticks while the page scrolls under it, so it takes the page colour */
-    body.mode-ui.subtop-on .subtop { position: sticky; background: var(--canvas); }
+    /* no room for the folder path beside the title on a phone */
+    .subtop .folder__path, .subtop > span:first-child { display: none; }
   }
   /* ============================================================ light mode
      <html data-theme="light"> (sun/moon switch in the header). Same layout
@@ -932,6 +927,7 @@
   <span class="modetag" id="modetag"></span>
   <input id="title" value="" spellcheck="false" aria-label="Document name">
   <span class="status" id="status"></span>
+  <div class="subtop" id="subtop"></div>
   <span class="sp"></span>
   <span class="mode" id="viewmode" role="group" aria-label="View">
     <button data-v="edit">Edit</button>
@@ -942,7 +938,6 @@
   <button class="btn btn--primary btn--sm" id="btn-save"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0-4.5-4.5M12 15l4.5-4.5M4 19h16"/></svg>Download</button>
   <button class="burger" id="btn-chat" title="Show or hide the assistant" aria-pressed="true">&#10022;</button>
 </header>
-<div class="subtop" id="subtop"></div>
 
 <div class="shell" id="shell" data-side="closed" data-chat="open" data-view="split">
 

@@ -159,7 +159,7 @@
     conic-gradient(from var(--rs-ga), var(--rs-aurora)) border-box !important;
   animation: rsSpin 2.4s linear infinite;
 }
-:root[data-theme="light"] .dropbox--gen {
+:root[data-theme="light"] .dropbox.dropbox--gen {
   border: 1.5px solid transparent !important;
   background:
     linear-gradient(var(--rs-surface), var(--rs-surface)) padding-box,
