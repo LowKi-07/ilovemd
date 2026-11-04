@@ -1,0 +1,177 @@
+/* Stage experiment: a Resend-style light UI (resend.com's public design
+   language - its dashboard pages need a login). Loaded after palette.css on
+   every page and scoped to the light theme, which is now the default; dark
+   mode is untouched. Flat white surfaces with one hairline border, 12-16px
+   rounded rectangles instead of pills, neutral line icons, and a soft
+   gradient stroke on the AI chat that turns while the AI is working. */
+
+:root[data-theme="light"] {
+  --rs-bg: #fcfcfc;
+  --rs-surface: #ffffff;
+  --rs-sunken: #f6f6f7;
+  --rs-ink: #1c2024;
+  --rs-ink-2: #60646c;
+  --rs-ink-3: #8b8d98;
+  --rs-line: rgba(0, 0, 0, .08);
+  --rs-line-2: rgba(0, 0, 0, .13);
+  --rs-shadow: 0 1px 2px rgba(0, 0, 0, .05);
+  --rs-r-card: 16px;
+  --rs-r-ctl: 12px;
+  --rs-r-sm: 10px;
+  --rs-aurora: #ff7a59, #ffc24d, #3ddc97, #4cc9f0, #8e7cff, #ff7a59;
+}
+
+/* ---------------------------------------------------------------- page */
+:root[data-theme="light"] body { background: var(--rs-bg) !important; color: var(--rs-ink); }
+:root[data-theme="light"] .hero::before { opacity: .55; }
+
+/* ------------------------------------------------------------- buttons */
+:root[data-theme="light"] .btn,
+:root[data-theme="light"] .hbtn,
+:root[data-theme="light"] .msg__apply-btn {
+  border-radius: var(--rs-r-ctl) !important;
+  font-weight: 600;
+  box-shadow: none;
+}
+:root[data-theme="light"] .btn--primary,
+:root[data-theme="light"] .btn--primary:hover:not(:disabled),
+:root[data-theme="light"] .hbtn.dl {
+  background: var(--rs-ink) !important; color: #fff !important; border: 1px solid var(--rs-ink) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .14), 0 1px 2px rgba(0, 0, 0, .18) !important;
+}
+:root[data-theme="light"] .btn--primary:hover:not(:disabled) { background: #000 !important; }
+:root[data-theme="light"] .btn--stroke,
+:root[data-theme="light"] .btn--ghost,
+:root[data-theme="light"] .msg__apply-btn {
+  background: var(--rs-surface) !important; color: var(--rs-ink) !important;
+  border: 1px solid var(--rs-line-2) !important; box-shadow: var(--rs-shadow) !important;
+}
+:root[data-theme="light"] .btn--stroke:hover,
+:root[data-theme="light"] .btn--ghost:hover:not(:disabled) { background: var(--rs-sunken) !important; }
+
+/* send / icon buttons: small rounded squares, not circles */
+:root[data-theme="light"] .sendbtn { border-radius: var(--rs-r-sm) !important; background: var(--rs-ink) !important; color: #fff !important; }
+:root[data-theme="light"] .ibtn,
+:root[data-theme="light"] .chknav__b { border-radius: 8px !important; }
+
+/* filter pills and segmented controls: tabs with a small radius */
+:root[data-theme="light"] .filter-bar,
+:root[data-theme="light"] .mode,
+:root[data-theme="light"] .toolbar .pills {
+  border-radius: var(--rs-r-ctl) !important; background: var(--rs-sunken) !important; border: 1px solid var(--rs-line) !important;
+}
+:root[data-theme="light"] .fpill,
+:root[data-theme="light"] .pill,
+:root[data-theme="light"] .mode button { border-radius: 9px !important; }
+:root[data-theme="light"] .fpill.active,
+:root[data-theme="light"] .pill[aria-pressed="true"],
+:root[data-theme="light"] .mode button[aria-pressed="true"] {
+  background: var(--rs-surface) !important; color: var(--rs-ink) !important;
+  border-color: var(--rs-line) !important; box-shadow: var(--rs-shadow) !important;
+}
+
+/* ---------------------------------------------------------------- cards */
+:root[data-theme="light"] .tool,
+:root[data-theme="light"] .tcard,
+:root[data-theme="light"] .card,
+:root[data-theme="light"] .dropbox:not(.dropbox--bare),
+:root[data-theme="light"] .importbox,
+:root[data-theme="light"] .panel,
+:root[data-theme="light"] .prevpane,
+:root[data-theme="light"] .udiff,
+:root[data-theme="light"] .sdiff,
+:root[data-theme="light"] .no-diff,
+:root[data-theme="light"] .badge {
+  background: var(--rs-surface) !important; background-image: none !important;
+  border: 1px solid var(--rs-line) !important; border-radius: var(--rs-r-card) !important;
+  box-shadow: var(--rs-shadow) !important;
+  backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+}
+:root[data-theme="light"] .tool::before,
+:root[data-theme="light"] .dropbox::before { display: none !important; }
+:root[data-theme="light"] .dropbox > .beam { display: none !important; }
+:root[data-theme="light"] a.tool:hover,
+:root[data-theme="light"] .tcard:hover,
+:root[data-theme="light"] .card:hover {
+  border-color: var(--rs-line-2) !important; box-shadow: 0 4px 14px -6px rgba(0, 0, 0, .12) !important;
+}
+:root[data-theme="light"] .tpop,
+:root[data-theme="light"] .qcard {
+  background: var(--rs-surface) !important; background-image: none !important;
+  border: 1px solid var(--rs-line) !important; border-radius: var(--rs-r-card) !important;
+  box-shadow: 0 16px 40px -16px rgba(0, 0, 0, .22) !important;
+}
+
+/* workspace panels */
+:root[data-theme="light"] .shell[data-islands="1"] .editor,
+:root[data-theme="light"] .shell[data-islands="1"] .preview,
+:root[data-theme="light"] .shell[data-islands="1"] .chat {
+  background: var(--rs-surface) !important; border: 1px solid var(--rs-line) !important;
+  border-radius: var(--rs-r-card) !important; box-shadow: var(--rs-shadow) !important;
+  backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+}
+
+/* ---------------------------------------------------------------- icons */
+/* Resend's icons are neutral line drawings on a white tile with a hairline. */
+:root[data-theme="light"] .tool__icon,
+:root[data-theme="light"] .tcard__ico,
+:root[data-theme="light"] .ico,
+:root[data-theme="light"] .ftile {
+  background: var(--rs-surface) !important; border: 1px solid var(--rs-line) !important;
+  border-radius: var(--rs-r-sm) !important; box-shadow: var(--rs-shadow) !important;
+}
+:root[data-theme="light"] .tool__icon svg,
+:root[data-theme="light"] .ftile svg { filter: grayscale(1) brightness(.45) contrast(1.4); }
+
+/* ---------------------------------------------------------------- inputs */
+:root[data-theme="light"] .search input,
+:root[data-theme="light"] input[type=search],
+:root[data-theme="light"] input[type=text],
+:root[data-theme="light"] input[type=password],
+:root[data-theme="light"] textarea:not(#prompt):not(#chat-inp) {
+  border-radius: var(--rs-r-ctl) !important;
+}
+:root[data-theme="light"] .search { border-radius: var(--rs-r-ctl) !important; }
+
+/* ------------------------------------------------------------- AI chat */
+/* A gradient stroke on the chat input, drawn as a border-box background so it
+   follows the rounded corners. While the AI works (.is-busy on the chat
+   panel, or the generating card) the gradient turns. */
+@property --rs-ga { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+@keyframes rsSpin { to { --rs-ga: 360deg; } }
+
+:root[data-theme="light"] .prow {
+  border: 1.5px solid transparent !important; border-radius: var(--rs-r-ctl) !important;
+  background:
+    linear-gradient(var(--rs-surface), var(--rs-surface)) padding-box,
+    conic-gradient(from var(--rs-ga), var(--rs-aurora)) border-box !important;
+  box-shadow: 0 6px 20px -10px rgba(142, 124, 255, .45) !important;
+}
+:root[data-theme="light"] .prow:focus-within { box-shadow: 0 6px 22px -8px rgba(142, 124, 255, .6) !important; }
+
+:root[data-theme="light"] .chat.is-busy .prow,
+:root[data-theme="light"] .dropbox--gen { animation: rsSpin 2.4s linear infinite; }
+:root[data-theme="light"] .chat.is-busy,
+:root[data-theme="light"] .shell[data-islands="1"] .chat.is-busy {
+  border: 1.5px solid transparent !important;
+  background:
+    linear-gradient(var(--rs-surface), var(--rs-surface)) padding-box,
+    conic-gradient(from var(--rs-ga), var(--rs-aurora)) border-box !important;
+  animation: rsSpin 2.4s linear infinite;
+}
+:root[data-theme="light"] .dropbox--gen {
+  border: 1.5px solid transparent !important;
+  background:
+    linear-gradient(var(--rs-surface), var(--rs-surface)) padding-box,
+    conic-gradient(from var(--rs-ga), var(--rs-aurora)) border-box !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root[data-theme="light"] .chat.is-busy,
+  :root[data-theme="light"] .chat.is-busy .prow,
+  :root[data-theme="light"] .dropbox--gen { animation: none; }
+}
+
+/* nav bar: a rounded rectangle, and square-ish hover states */
+:root[data-theme="light"] .nav { border-radius: var(--rs-r-card) !important; }
+:root[data-theme="light"] .nav__links a,
+:root[data-theme="light"] .navdrop__btn { border-radius: 8px !important; }

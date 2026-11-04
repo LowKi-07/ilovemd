@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en">
 <head>
-<script>/* light/dark: apply the saved choice before first paint (nav.js toggles it) */try{if(localStorage.getItem('ilovemd-theme')==='light')document.documentElement.setAttribute('data-theme','light')}catch(e){}</script>
+<script>/* light/dark: light unless dark was chosen, before first paint (nav.js toggles it) */try{if(localStorage.getItem('ilovemd-theme')!=='dark')document.documentElement.setAttribute('data-theme','light')}catch(e){}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,200..800&family=Geist:wght@100..900&family=Geist+Mono:wght@100..900&display=swap">
@@ -86,6 +86,7 @@
   .md h1, .md h2, .md h3, .md h4 { font-family: var(--font); }
 </style>
 <link rel="stylesheet" href="/palette.css">
+<link rel="stylesheet" href="/resend.css">
 <script src="/palette.js"></script>
 </head>
 <body>
