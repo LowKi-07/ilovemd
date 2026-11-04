@@ -175,3 +175,33 @@
 :root[data-theme="light"] .nav { border-radius: var(--rs-r-card) !important; }
 :root[data-theme="light"] .nav__links a,
 :root[data-theme="light"] .navdrop__btn { border-radius: 8px !important; }
+
+/* --------------------------------------------------- workspace layout */
+/* Desktop: the read-only preview sits first, on the page with no box; the
+   editable parts - the Markdown editor and the AI chat - share one card,
+   split by a single divider (Resend's sidebar + content card). Phones keep
+   the stacked layout with the chat as a bottom sheet. */
+@media (min-width: 941px) {
+  :root:root .shell[data-islands="1"] .main .preview { order: -1; }
+  :root:root .shell[data-islands="1"] .main { gap: 16px; }
+  :root:root .shell[data-islands="1"]:not([data-chat="closed"]):not([data-nochat="1"]) { gap: 0; }
+
+  :root:root .shell[data-islands="1"] .main .preview {
+    border: 0 !important; background: transparent !important; box-shadow: none !important;
+    backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+  }
+
+  /* editor = left half of the card, chat = right half */
+  :root:root .shell[data-islands="1"]:not([data-chat="closed"]):not([data-nochat="1"]):not([data-view="preview"]) .main .editor {
+    border-right: 0 !important; border-top-right-radius: 0 !important; border-bottom-right-radius: 0 !important;
+    box-shadow: none !important;
+  }
+  :root:root .shell[data-islands="1"]:not([data-view="preview"]) .chat {
+    border-top-left-radius: 0 !important; border-bottom-left-radius: 0 !important; box-shadow: none !important;
+  }
+  :root:root .shell[data-islands="1"]:not([data-chat="closed"]):not([data-view="preview"]) .chat {
+    border-left: 1px solid var(--rs-line, var(--hairline)) !important;
+  }
+  :root[data-theme="light"] .shell[data-islands="1"] .main .editor,
+  :root[data-theme="light"] .shell[data-islands="1"] .chat { border-top-color: var(--rs-line) !important; }
+}
