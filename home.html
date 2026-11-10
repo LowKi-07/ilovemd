@@ -339,6 +339,44 @@
     display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
   }
   .tpl-sec { padding: 104px 0; }
+  /* Templates as Mobbin shows screens: a search line typing template names,
+     then one smooth row of big grey cards, each holding a page of the
+     template with its icon on a tile over the top-left corner. */
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .tsearch-h { text-align: left; }
+  .tsearch { display: flex; align-items: center; gap: .32em; margin: 0 0 44px;
+    font-size: clamp(34px, 5vw, 64px) !important; font-weight: 650; letter-spacing: -.025em; line-height: 1.1; }
+  .tsearch__ico { width: .8em; height: .8em; flex: none; }
+  .tsearch__q { white-space: nowrap; }
+  .tsearch__caret { width: 3px; height: .95em; background: currentColor; margin-left: 2px; animation: caret 1s steps(1) infinite; }
+  @keyframes caret { 50% { opacity: 0; } }
+  /* edge to edge across the window, like Mobbin's screen rows */
+  .marquee--shots { --gap: 28px; padding: 30px 0 10px; -webkit-mask-image: none; mask-image: none; }
+  .tcard.tcard--shot {
+    --shot-bg: rgba(255,255,255,.05); --shot-page: #151515;
+    position: relative; width: 440px; height: 330px; padding: 0; display: block; overflow: visible;
+    background: var(--shot-bg) !important; border: 0 !important; border-radius: 40px !important; box-shadow: none !important;
+  }
+  :root[data-theme="light"] .tcard.tcard--shot { --shot-bg: #f5f5f5; --shot-page: #ffffff; }
+  .tcard.tcard--shot:hover { transform: translateY(-4px); }
+  .tshot__page {
+    position: absolute; inset: 44px 0 0 44px; overflow: hidden; display: block;
+    background: var(--shot-page); border-radius: 18px 0 38px 0; box-shadow: 0 1px 3px rgba(0,0,0,.08);
+    -webkit-mask-image: linear-gradient(#000 70%, transparent); mask-image: linear-gradient(#000 70%, transparent);
+  }
+  .tshot__md { display: block; padding: 40px 34px 0 30px; font-size: 10.5px; line-height: 1.55; color: var(--text-2); pointer-events: none; }
+  .tshot__md h1 { font-size: 19px !important; margin: 0 0 8px; color: var(--text); }
+  .tshot__md h2 { font-size: 12.5px !important; margin: 14px 0 6px; padding: 0; border: 0; color: var(--text); }
+  .tshot__md h3 { font-size: 11px !important; margin: 10px 0 4px; }
+  .tshot__md p, .tshot__md li { font-size: 10.5px; margin: 0 0 6px; }
+  .tshot__md table { font-size: 9.5px; }
+  .tshot__md b { display: block; font-size: 19px; color: var(--text); margin-bottom: 8px; }
+  .tshot__md i { font-style: normal; }
+  .tshot__ico {
+    position: absolute; z-index: 1; left: 18px; top: -18px; width: 76px; height: 76px; border-radius: 22px;
+    display: grid; place-items: center; font-size: 38px; line-height: 1;
+    background: #fff; box-shadow: 0 6px 18px -6px rgba(0,0,0,.25), 0 0 0 1px rgba(0,0,0,.05);
+  }
   .tpl-cta { display: flex; justify-content: center; margin-top: 34px; }
   @media (prefers-reduced-motion: reduce) {
     /* still: one copy, scrolled by hand */
@@ -824,19 +862,31 @@
 
 <!-- ------------------------------------------------------------- hero -->
 <header class="hero wrap snap">
-  <h1 class="mb-h1 reveal" style="animation-delay:.08s">
-    <span class="mb-line">Where <span class="hico hico--fig" style="--i:0" aria-hidden="true"><svg viewBox="0 0 24 24"><path fill="#F24E1E" d="M12 2H8.5a3.5 3.5 0 0 0 0 7H12V2z"/><path fill="#FF7262" d="M12 2h3.5a3.5 3.5 0 0 1 0 7H12V2z"/><path fill="#A259FF" d="M12 9H8.5a3.5 3.5 0 0 0 0 7H12V9z"/><path fill="#0ACF83" d="M8.5 16a3.5 3.5 0 1 0 3.5 3.5V16H8.5z"/><circle fill="#1ABCFE" cx="15.5" cy="12.5" r="3.5"/></svg></span> designs,</span>
-    <span class="mb-line"><span class="hico hico--pdf" style="--i:1" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"><path d="M14 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7z"/><path d="M14 2v5h5"/></svg></span> docs and <span class="hico hico--ai" style="--i:2" aria-hidden="true"><svg viewBox="0 0 24 24" fill="#fff"><path d="M12 2.5l2.1 5.9 5.9 2.1-5.9 2.1L12 18.5l-2.1-5.9L4 10.5l5.9-2.1L12 2.5z"/></svg></span> ideas</span>
-    <span class="mb-line">become Markdown.</span>
+  <span class="hero__badge reveal" style="animation-delay:.05s">
+    <span class="spark">
+      <svg viewBox="0 0 24 24" fill="#8b7cff" aria-hidden="true"><path d="M12 2.5l2.1 5.9 5.9 2.1-5.9 2.1L12 18.5l-2.1-5.9L4 10.5l5.9-2.1L12 2.5z"/></svg>
+    </span>
+    AI-Powered Markdown
+  </span>
+  <h1 class="reveal" style="animation-delay:.16s">
+    <span class="roller" id="roller" aria-label="Ideas, Design, Docs or Code">
+      <span class="roller__track" id="roller-track">
+        <span class="roller__w">Ideas</span>
+        <span class="roller__w">Design</span>
+        <span class="roller__w">Docs</span>
+        <span class="roller__w">Code</span>
+        <!-- repeat of the first, so the last step rolls onward instead of
+             snapping backwards through the whole list -->
+        <span class="roller__w" aria-hidden="true">Ideas</span>
+      </span>
+    </span>
+    <span>to</span>
+    <span class="grad">Markdown.</span>
   </h1>
-  <p class="sub reveal" style="animation-delay:.2s">
-    The AI Markdown toolchain for design teams. Convert, create and compare<br>
-    documents - every file checked against CommonMark.
+  <p class="sub reveal" style="animation-delay:.27s">
+    Turn your ideas, files, and designs into clean Markdown.<br>
+    Convert, create, compare, and start building faster.
   </p>
-  <div class="mb-ctas reveal" style="animation-delay:.3s">
-    <a class="mb-btn" href="/text">Start for free</a>
-    <a class="mb-link" href="/templates">See templates <span aria-hidden="true">&rarr;</span></a>
-  </div>
 </header>
 
 <!-- ------------------------------------------------------- converters -->
@@ -927,14 +977,16 @@
 
 <!-- --------------------------------------------------------- templates -->
 <section id="templates" class="tpl-sec snap sec-in">
-  <div class="wrap sec-h">
-    <div class="kicker">Templates</div>
-    <h2>Never start from a blank page.</h2>
-    <p>Ready-made Markdown for the documents you write every week &mdash; pick one, then let AI fill in the rest.</p>
+  <div class="wrap sec-h tsearch-h">
+    <h2 class="tsearch">
+      <span class="sr-only">Never start from a blank page - Markdown templates.</span>
+      <svg class="tsearch__ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/><path d="M19 2.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7z" fill="currentColor" stroke="none"/></svg>
+      <span class="tsearch__q" id="tsearch-q" aria-hidden="true">Product requirements</span><span class="tsearch__caret" aria-hidden="true"></span>
+    </h2>
   </div>
   <!-- Two rows of cards from /api/templates (script below), in the same
        column as the header and the other sections. -->
-  <div class="wrap"><div class="marquees" id="tpl-marquee" hidden></div></div>
+  <div class="marquees" id="tpl-marquee" hidden></div>
   <div class="wrap tpl-cta">
     <a class="btn btn--stroke" href="/templates">View Templates <span aria-hidden="true">&rarr;</span></a>
   </div>
@@ -1276,14 +1328,16 @@
     var list = (j.templates || []).filter(function (t) { return t.group !== 'design'; }).slice(0, 12);
     if (!list.length) return;
     var cards = list.map(function (t) {
-      return '<a class="tcard" data-slug="' + esc(t.slug) + '" href="/templates?t=' + encodeURIComponent(t.slug) + '">' +
-        '<div class="tcard__top"><span class="tcard__ico">' + esc(t.icon || t.title.charAt(0).toUpperCase()) + '</span>' +
-        '<div><h3>' + esc(t.title) + '</h3><div class="tcard__meta">' + esc(t.category) + ' · ' + t.sections + ' sections</div></div></div>' +
-        '<p>' + esc(t.description) + '</p></a>';
+      // A big grey card holding a page of the template, its icon on a tile
+      // over the corner - Mobbin's screen cards. The page is filled in below.
+      return '<a class="tcard tcard--shot" data-slug="' + esc(t.slug) + '" href="/templates?t=' + encodeURIComponent(t.slug) + '" aria-label="' + esc(t.title) + '">' +
+        '<span class="tshot__ico" aria-hidden="true">' + esc(t.icon || t.title.charAt(0).toUpperCase()) + '</span>' +
+        '<span class="tshot__page" aria-hidden="true"><span class="tshot__md" data-md="' + esc(t.slug) + '">' +
+        '<b>' + esc(t.title) + '</b><i>' + esc(t.description) + '</i></span></span></a>';
     });
     // Like Magic UI's demo: first half on top, second half underneath running
     // the other way. Under four templates a second row would only repeat.
-    var half = list.length >= 4 ? Math.ceil(list.length / 2) : list.length;
+    var half = list.length;   // one row, like Mobbin's screen carousel
     var rows = [cards.slice(0, half), cards.slice(half)].filter(function (r) { return r.length; });
     box.innerHTML = rows.map(function (row, n) {
       var group = row.join(''), html = '';
@@ -1293,13 +1347,39 @@
         html += '<div class="marquee__group"' + (i ? ' aria-hidden="true"' : '') + '>' +
           (i ? group.replace(/<a class="tcard"/g, '<a tabindex="-1" class="tcard"') : group) + '</div>';
       }
-      return '<div class="marquee' + (n ? ' marquee--reverse' : '') + '" style="--duration:' +
-        Math.max(20, row.length * 8) + 's">' + html + '</div>';
+      return '<div class="marquee marquee--shots" style="--duration:' +
+        Math.max(40, row.length * 11) + 's">' + html + '</div>';
     }).join('');
     box.hidden = false;
+    // Fill each page with the template itself, rendered (md.js escapes first).
+    list.forEach(function (t) {
+      fetch('/api/template?slug=' + encodeURIComponent(t.slug)).then(function (r) { return r.json(); }).then(function (d) {
+        if (!d.markdown || !window.ilovemdMarkdown) return;
+        var html = window.ilovemdMarkdown(d.markdown.split('\n').slice(0, 40).join('\n'));
+        box.querySelectorAll('[data-md="' + t.slug.replace(/"/g, '') + '"]').forEach(function (el) { el.innerHTML = html; el.classList.add('md'); });
+      }).catch(function () {});
+    });
     window.ilovemdTemplates = list;
     document.dispatchEvent(new CustomEvent('ilovemd:templates'));
   }).catch(function () { /* the View Templates button still works */ });
+})();
+</script>
+<script>
+/* The templates heading types template names into a search line, Mobbin-style:
+   type, hold, delete, next. Decorative - the real heading is screen-reader text. */
+(function () {
+  var q = document.getElementById('tsearch-q');
+  if (!q || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches)) return;
+  var words = ['Product requirements', 'Release notes', 'Project README', 'API reference', 'Meeting notes', 'AI prompt brief'];
+  var w = 0, n = words[0].length, dir = -1;
+  function tick() {
+    var word = words[w], wait = 55;
+    if (dir > 0) { n++; if (n >= word.length) { dir = -1; wait = 1900; } }
+    else { n--; wait = 28; if (n <= 0) { dir = 1; w = (w + 1) % words.length; wait = 380; } }
+    q.textContent = words[w].slice(0, Math.max(0, n));
+    setTimeout(tick, wait);
+  }
+  setTimeout(tick, 2200);
 })();
 </script>
 <script>
@@ -1446,7 +1526,7 @@
   if (canHover) {
     box.addEventListener('mouseover', function (e) {
       var card = e.target.closest('.tcard');
-      if (!card || card === src) return;
+      if (!card || card === src || card.classList.contains('tcard--shot')) return;
       clearTimeout(openT); clearTimeout(closeT);
       openT = setTimeout(function () { show(card); }, 140);
     });

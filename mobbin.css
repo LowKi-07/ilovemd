@@ -23,44 +23,17 @@
 :root[data-theme="light"] .nav { background: rgba(255, 255, 255, .86) !important; border-color: transparent !important; box-shadow: none !important; }
 
 /* ------------------------------------------------------------- hero */
-:root[data-theme="light"] .hero { text-align: left; }
-:root[data-theme="light"] .hero::before { display: none; }
-@media (min-width: 941px) and (min-height: 620px) {
-  :root[data-theme="light"] .hero.snap { align-items: flex-start !important; }
+/* The original hero - badge, rolling word, two-line subtitle - alone on the
+   first screen: it fills the viewport, centred, on a plain page (no dots). */
+.hero, .hero.snap {
+  min-height: 100svh !important; box-sizing: border-box;
+  display: flex !important; flex-direction: column; align-items: center !important; justify-content: center !important;
+  padding-top: var(--navh) !important; padding-bottom: 0 !important;
 }
-:root[data-theme="light"] .mb-h1 {
-  display: flex; flex-direction: column; align-items: flex-start; gap: 0;
-  margin: 0 0 26px; font: 650 clamp(40px, 6.4vw, 88px)/1.02 var(--mb-font);
-  letter-spacing: -.025em; color: var(--mb-ink);
-}
-.mb-line { display: block; white-space: nowrap; }
-/* App-icon tiles sit between the words, like Mobbin's hero: a rounded
-   square a little under the cap height that opens its slot as it pops in. */
-.hico {
-  display: inline-grid; place-items: center; vertical-align: -.075em;
-  width: .85em; height: .85em; margin: 0 .2em; border-radius: 30%;
-  box-shadow: 0 .04em .12em rgba(0, 0, 0, .18), inset 0 0 0 1px rgba(0, 0, 0, .06);
-  animation: hicoIn .7s cubic-bezier(.2, .9, .3, 1.25) both; animation-delay: calc(.5s + var(--i, 0) * .14s);
-}
-.hico svg { width: 56%; height: 56%; display: block; }
-.hico--fig { background: #fff; }
-.hico--pdf { background: #ef3e36; }
-.hico--ai { background: #141414; }
-@keyframes hicoIn { from { width: 0; margin: 0; transform: scale(.2) rotate(-12deg); opacity: 0; } to { width: .85em; margin: 0 .2em; transform: none; opacity: 1; } }
-@media (prefers-reduced-motion: reduce) { .hico { animation: none; } }
-
-:root[data-theme="light"] .hero .sub { margin: 0; max-width: none; text-align: left; color: var(--mb-ink-2); font-size: 18px; line-height: 1.5; }
-.mb-ctas { display: flex; align-items: center; gap: 22px; margin-top: 30px; }
-.mb-btn {
-  display: inline-flex; align-items: center; height: 48px; padding: 0 22px; border-radius: 999px;
-  background: #141414; color: #fff; font: 600 16px var(--mb-font, sans-serif); text-decoration: none;
-  transition: background-color .18s, transform .18s;
-}
-.mb-btn:hover { background: #262626; transform: translateY(-1px); }
-.mb-link { color: #141414; font: 600 16px var(--mb-font, sans-serif); text-decoration: none; }
-.mb-link:hover { color: #0066ff; }
-:root:not([data-theme="light"]) .mb-btn { background: #fff; color: #141414; }
-:root:not([data-theme="light"]) .mb-link { color: #fff; }
+.hero::before { display: none !important; }
+/* and no corner glows on the page itself */
+body::before { display: none !important; }
+:root[data-theme="light"] .hero h1 { font-family: "Bricolage Grotesque", "Geist", system-ui, sans-serif; }
 
 /* ------------------------------------------------- buttons and pills */
 :root[data-theme="light"] .btn { border-radius: 999px !important; }
