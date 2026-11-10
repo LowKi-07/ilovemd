@@ -4,7 +4,7 @@
 <script>/* light/dark: light unless dark was chosen, before first paint (nav.js toggles it) */try{if(localStorage.getItem('ilovemd-theme')!=='dark')document.documentElement.setAttribute('data-theme','light')}catch(e){}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,200..800&family=Geist:wght@100..900&family=Geist+Mono:wght@100..900&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,200..800&family=Inter+Tight:wght@400..700&family=Geist:wght@100..900&family=Geist+Mono:wght@100..900&display=swap">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" href="/favicon.png" type="image/png">
@@ -789,6 +789,7 @@
 </style>
 <link rel="stylesheet" href="/palette.css">
 <link rel="stylesheet" href="/resend.css">
+<link rel="stylesheet" href="/mobbin.css">
 <script src="/palette.js"></script>
 </head>
 <body>
@@ -823,31 +824,19 @@
 
 <!-- ------------------------------------------------------------- hero -->
 <header class="hero wrap snap">
-  <span class="hero__badge reveal" style="animation-delay:.05s">
-    <span class="spark">
-      <svg viewBox="0 0 24 24" fill="#8b7cff" aria-hidden="true"><path d="M12 2.5l2.1 5.9 5.9 2.1-5.9 2.1L12 18.5l-2.1-5.9L4 10.5l5.9-2.1L12 2.5z"/></svg>
-    </span>
-    AI-Powered Markdown
-  </span>
-  <h1 class="reveal" style="animation-delay:.16s">
-    <span class="roller" id="roller" aria-label="Ideas, Design, Docs or Code">
-      <span class="roller__track" id="roller-track">
-        <span class="roller__w">Ideas</span>
-        <span class="roller__w">Design</span>
-        <span class="roller__w">Docs</span>
-        <span class="roller__w">Code</span>
-        <!-- repeat of the first, so the last step rolls onward instead of
-             snapping backwards through the whole list -->
-        <span class="roller__w" aria-hidden="true">Ideas</span>
-      </span>
-    </span>
-    <span>to</span>
-    <span class="grad">Markdown.</span>
+  <h1 class="mb-h1 reveal" style="animation-delay:.08s">
+    <span class="mb-line">Where <span class="hico hico--fig" style="--i:0" aria-hidden="true"><svg viewBox="0 0 24 24"><path fill="#F24E1E" d="M12 2H8.5a3.5 3.5 0 0 0 0 7H12V2z"/><path fill="#FF7262" d="M12 2h3.5a3.5 3.5 0 0 1 0 7H12V2z"/><path fill="#A259FF" d="M12 9H8.5a3.5 3.5 0 0 0 0 7H12V9z"/><path fill="#0ACF83" d="M8.5 16a3.5 3.5 0 1 0 3.5 3.5V16H8.5z"/><circle fill="#1ABCFE" cx="15.5" cy="12.5" r="3.5"/></svg></span> designs,</span>
+    <span class="mb-line"><span class="hico hico--pdf" style="--i:1" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"><path d="M14 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7z"/><path d="M14 2v5h5"/></svg></span> docs and <span class="hico hico--ai" style="--i:2" aria-hidden="true"><svg viewBox="0 0 24 24" fill="#fff"><path d="M12 2.5l2.1 5.9 5.9 2.1-5.9 2.1L12 18.5l-2.1-5.9L4 10.5l5.9-2.1L12 2.5z"/></svg></span> ideas</span>
+    <span class="mb-line">become Markdown.</span>
   </h1>
-  <p class="sub reveal" style="animation-delay:.27s">
-    Turn your ideas, files, and designs into clean Markdown.<br>
-    Convert, create, compare, and start building faster.
+  <p class="sub reveal" style="animation-delay:.2s">
+    The AI Markdown toolchain for design teams. Convert, create and compare<br>
+    documents - every file checked against CommonMark.
   </p>
+  <div class="mb-ctas reveal" style="animation-delay:.3s">
+    <a class="mb-btn" href="/text">Start for free</a>
+    <a class="mb-link" href="/templates">See templates <span aria-hidden="true">&rarr;</span></a>
+  </div>
 </header>
 
 <!-- ------------------------------------------------------- converters -->
