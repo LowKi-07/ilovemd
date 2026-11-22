@@ -916,6 +916,8 @@
 </style>
 <link rel="stylesheet" href="/palette.css">
 <link rel="stylesheet" href="/resend.css">
+<link rel="stylesheet" href="/icons3d.css">
+<script src="/icons3d.js" defer></script>
 <script src="/palette.js"></script>
 </head>
 <body>
@@ -1471,9 +1473,9 @@
       wrap.innerHTML =
         '<div class="placeholder"><div class="dropbox dropbox--beam" style="width:min(440px,90%)">' + BEAM +
         '<div class="fpair">' +
-        '<span class="ftile" style="--tb:' + CT.tint + ';--tl:' + CT.line + '">' + CT.svg + '</span>' +
+        '<span class="ftile" data-icon3d="' + ((new URLSearchParams(location.search).get('type')) || 'file') + '" style="--tb:' + CT.tint + ';--tl:' + CT.line + '">' + CT.svg + '</span>' +
         '<span class="arr">&rarr;</span>' +
-        '<span class="ftile" style="--tb:rgba(139,124,255,.12);--tl:rgba(139,124,255,.3)">' + MD_SVG + '</span>' +
+        '<span class="ftile" data-icon3d="md" style="--tb:rgba(139,124,255,.12);--tl:rgba(139,124,255,.3)">' + MD_SVG + '</span>' +
         '</div>' +
         '<h3>' + esc(CT.label) + ' &rarr; Markdown</h3>' +
         '<p>' + esc(CT.desc) + ' Nothing is rewritten or summarized - same content, better structure.</p>' +
@@ -1581,9 +1583,9 @@
       wrap.innerHTML =
         '<div class="placeholder"><div class="dropbox dropbox--beam" style="width:min(440px,90%)">' + BEAM +
         '<div class="fpair">' +
-        '<span class="ftile">' + FIGMA_SVG + '</span>' +
+        '<span class="ftile" data-icon3d="figma">' + FIGMA_SVG + '</span>' +
         '<span class="arr">&rarr;</span>' +
-        '<span class="ftile" style="--tb:rgba(139,124,255,.12);--tl:rgba(139,124,255,.3)">' + MD_SVG + '</span>' +
+        '<span class="ftile" data-icon3d="md" style="--tb:rgba(139,124,255,.12);--tl:rgba(139,124,255,.3)">' + MD_SVG + '</span>' +
         '</div>' +
         '<h3>Figma &rarr; Markdown</h3>' +
         '<p>Paste a link to a Figma file or frame, plus your Figma access token. ' + aiName() + ' writes structured documentation from the real design data.</p>' +
@@ -1616,9 +1618,9 @@
       wrap.innerHTML =
         '<div class="placeholder"><div class="dropbox dropbox--beam" style="width:min(440px,90%)">' + BEAM +
         '<div class="fpair">' +
-        '<span class="ftile">' + FIGMA_SVG + '</span>' +
+        '<span class="ftile" data-icon3d="figma">' + FIGMA_SVG + '</span>' +
         '<span class="arr">&rarr;</span>' +
-        '<span class="ftile" style="--tb:rgba(139,124,255,.12);--tl:rgba(139,124,255,.3)">' + MD_SVG + '</span>' +
+        '<span class="ftile" data-icon3d="md" style="--tb:rgba(139,124,255,.12);--tl:rgba(139,124,255,.3)">' + MD_SVG + '</span>' +
         '</div>' +
         '<h3>Figma &rarr; Markdown</h3>' +
         '<p>Paste a link to a Figma frame or component. ilovemd retrieves it from the Figma desktop app and ' + aiName() + ' writes structured documentation.</p>' +

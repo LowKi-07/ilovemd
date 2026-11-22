@@ -169,6 +169,7 @@ const PUBLIC_FILES = new Set([
   'hand-ai.webp', 'hand-human.webp',
   'tesla-vsr-card.svg',   // the Figma → MD "See how it works" demo frame
   'ilovemd-film.mp4', 'ilovemd-film.jpg',   // homepage product film + its poster
+  'icons3d.css', 'icons3d.js',               // stage: 3D converter icons
   'mobbin.css',                              // stage: Mobbin-style homepage
   'resend.css',                              // stage: Resend-style light UI
   'palette.css', 'palette.js',               // the Mono palette, applied over the pages' accent colours
