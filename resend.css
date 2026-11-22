@@ -18,7 +18,9 @@
   --rs-r-card: 16px;
   --rs-r-ctl: 12px;
   --rs-r-sm: 10px;
-  --rs-aurora: #ff7a59, #ffc24d, #3ddc97, #4cc9f0, #8e7cff, #ff7a59;
+  /* a black comet: a bright head trailing off to nothing, the rest of the
+     ring empty so the hairline underneath shows */
+  --rs-comet: transparent 0deg, transparent 230deg, rgba(17,17,17,.06) 280deg, rgba(17,17,17,.4) 330deg, #111 354deg, transparent 360deg;
 }
 
 /* ---------------------------------------------------------------- page */
@@ -144,26 +146,27 @@
   border: 1.5px solid transparent !important; border-radius: var(--rs-r-ctl) !important;
   background:
     linear-gradient(var(--rs-surface), var(--rs-surface)) padding-box,
-    conic-gradient(from var(--rs-ga), var(--rs-aurora)) border-box !important;
-  box-shadow: 0 6px 20px -10px rgba(142, 124, 255, .45) !important;
+    linear-gradient(var(--rs-line-2), var(--rs-line-2)) border-box !important;
+  box-shadow: none !important;
 }
-:root[data-theme="light"] .prow:focus-within { box-shadow: 0 6px 22px -8px rgba(142, 124, 255, .6) !important; }
-
-:root[data-theme="light"] .chat.is-busy .prow,
-:root[data-theme="light"] .dropbox--gen { animation: rsSpin 2.4s linear infinite; }
-:root[data-theme="light"] .chat.is-busy,
-:root[data-theme="light"] .shell[data-islands="1"] .chat.is-busy {
-  border: 1.5px solid transparent !important;
+:root[data-theme="light"] .prow:focus-within {
   background:
     linear-gradient(var(--rs-surface), var(--rs-surface)) padding-box,
-    conic-gradient(from var(--rs-ga), var(--rs-aurora)) border-box !important;
-  animation: rsSpin 2.4s linear infinite;
+    linear-gradient(#111, #111) border-box !important;
 }
+
+/* While the AI works, a black comet runs round the edge: the chat input and
+   panel, and the "generating" card. Black and white only. */
+:root[data-theme="light"] .chat.is-busy .prow,
+:root[data-theme="light"] .chat.is-busy,
+:root[data-theme="light"] .shell[data-islands="1"] .chat.is-busy,
 :root[data-theme="light"] .dropbox.dropbox--gen {
   border: 1.5px solid transparent !important;
   background:
     linear-gradient(var(--rs-surface), var(--rs-surface)) padding-box,
-    conic-gradient(from var(--rs-ga), var(--rs-aurora)) border-box !important;
+    conic-gradient(from var(--rs-ga), var(--rs-comet)) border-box,
+    linear-gradient(var(--rs-line), var(--rs-line)) border-box !important;
+  animation: rsSpin 2.2s linear infinite;
 }
 @media (prefers-reduced-motion: reduce) {
   :root[data-theme="light"] .chat.is-busy,
