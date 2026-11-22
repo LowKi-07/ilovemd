@@ -221,3 +221,11 @@
   border-color: rgba(255, 255, 255, .08) !important;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .06), 0 8px 30px -12px rgba(0, 0, 0, .6) !important;
 }
+
+/* Workspace before a document exists: the single pane is just the page -
+   no card border or shadow around it, and no corner glow behind it. */
+:root[data-theme="light"] .shell:not([data-islands="1"]) .panel {
+  border: 0 !important; box-shadow: none !important; border-radius: 0 !important; background: transparent !important;
+}
+:root[data-theme="light"] body:has(.shell)::before { display: none !important; }
+:root[data-theme="light"] body:has(.shell) { background: #fff !important; }
