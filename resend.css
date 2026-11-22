@@ -175,7 +175,6 @@
 }
 
 /* nav bar: a rounded rectangle, and square-ish hover states */
-:root[data-theme="light"] .nav { border-radius: var(--rs-r-card) !important; }
 :root[data-theme="light"] .nav__links a,
 :root[data-theme="light"] .navdrop__btn { border-radius: 8px !important; }
 
@@ -209,30 +208,22 @@
   :root[data-theme="light"] .shell[data-islands="1"] .chat { border-top-color: var(--rs-line) !important; }
 }
 
-/* Main header: Liquid Glass, after macOS Control Center - very see-through,
-   a heavy blur that saturates what passes under it, a bright rim along the
-   top-left that fades round the edge, a soft inner glow at the bottom, and a
-   faint lift off the page. */
+/* Main header: a clear glass pill, after the designer's "Recreated header"
+   - fully rounded ends, almost no tint so the page reads straight through
+   (blurred and brightened), one thin light outline and a faint top rim; no
+   drop shadow and no white fill. */
 :root .nav {
-  background: linear-gradient(180deg, rgba(255, 255, 255, .34), rgba(255, 255, 255, .16)) !important;
-  backdrop-filter: blur(28px) saturate(210%) brightness(1.06) !important;
-  -webkit-backdrop-filter: blur(28px) saturate(210%) brightness(1.06) !important;
-  border: 1px solid rgba(255, 255, 255, .5) !important;
-  box-shadow:
-    inset 1.5px 1.5px 0 rgba(255, 255, 255, .85),
-    inset -1px -1px 0 rgba(255, 255, 255, .35),
-    inset 0 -10px 22px -12px rgba(255, 255, 255, .55),
-    0 0 0 .5px rgba(0, 0, 0, .05),
-    0 10px 34px -14px rgba(0, 0, 0, .22) !important;
+  border-radius: 999px !important;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .22), rgba(255, 255, 255, .08)) !important;
+  backdrop-filter: blur(24px) saturate(190%) brightness(1.04) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(190%) brightness(1.04) !important;
+  border: 1px solid #f0f0f0 !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .8), inset 0 -1px 0 rgba(255, 255, 255, .25) !important;
 }
 :root:not([data-theme="light"]) .nav {
-  background: linear-gradient(180deg, rgba(255, 255, 255, .10), rgba(255, 255, 255, .04)) !important;
-  border-color: rgba(255, 255, 255, .16) !important;
-  box-shadow:
-    inset 1.5px 1.5px 0 rgba(255, 255, 255, .22),
-    inset -1px -1px 0 rgba(255, 255, 255, .08),
-    inset 0 -10px 22px -12px rgba(255, 255, 255, .12),
-    0 10px 34px -14px rgba(0, 0, 0, .6) !important;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .07), rgba(255, 255, 255, .02)) !important;
+  border-color: rgba(255, 255, 255, .12) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .14) !important;
 }
 
 /* Workspace before a document exists: the single pane is just the page -
