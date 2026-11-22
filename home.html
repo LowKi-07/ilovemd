@@ -98,15 +98,16 @@
   /* --------------------------------------------------------------- hero
      The nav is fixed, so it reserves no flow space - clear it with --navh. */
   .hero { padding: calc(var(--navh) + 56px) 0 30px; text-align: center; }
-  /* Flickering grid behind the hero, after Magic UI's: a rounded box of
-     small squares whose opacity flickers at random, drawn on a canvas and
-     shown at half strength, its edges fading out into the page. */
+  /* Flickering grid behind the hero, after Magic UI's: small squares whose
+     opacity flickers at random, drawn on a canvas across the whole hero at
+     80% strength. */
   .hero { position: relative; isolation: isolate; }
   .flick {
-    position: absolute; z-index: -1; left: 0; right: 0; top: calc(var(--navh) + 14px); bottom: 18px;
-    border-radius: 28px; overflow: hidden; opacity: .5; pointer-events: none;
-    -webkit-mask-image: radial-gradient(130% 120% at 50% 50%, #000 55%, transparent 100%);
-            mask-image: radial-gradient(130% 120% at 50% 50%, #000 55%, transparent 100%);
+    /* the full hero, edge to edge across the window, fading out at the bottom */
+    position: absolute; z-index: -1; top: 0; bottom: 0; left: 50%; width: 100vw; transform: translateX(-50%);
+    opacity: .8; pointer-events: none;
+    -webkit-mask-image: linear-gradient(#000 75%, transparent);
+            mask-image: linear-gradient(#000 75%, transparent);
   }
   .flick canvas { display: block; width: 100%; height: 100%; }
   /* Dot pattern behind the hero, after Magic UI's: a 16px grid of 1px dots,
