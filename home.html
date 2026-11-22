@@ -98,6 +98,17 @@
   /* --------------------------------------------------------------- hero
      The nav is fixed, so it reserves no flow space - clear it with --navh. */
   .hero { padding: calc(var(--navh) + 56px) 0 30px; text-align: center; }
+  /* Flickering grid behind the hero, after Magic UI's: a rounded box of
+     small squares whose opacity flickers at random, drawn on a canvas and
+     shown at half strength, its edges fading out into the page. */
+  .hero { position: relative; isolation: isolate; }
+  .flick {
+    position: absolute; z-index: -1; left: 0; right: 0; top: calc(var(--navh) + 14px); bottom: 18px;
+    border-radius: 28px; overflow: hidden; opacity: .5; pointer-events: none;
+    -webkit-mask-image: radial-gradient(130% 120% at 50% 50%, #000 55%, transparent 100%);
+            mask-image: radial-gradient(130% 120% at 50% 50%, #000 55%, transparent 100%);
+  }
+  .flick canvas { display: block; width: 100%; height: 100%; }
   /* Dot pattern behind the hero, after Magic UI's: a 16px grid of 1px dots,
      faded out from the headline by a radial mask. Full viewport width,
      although the hero itself is a centred .wrap. */
@@ -872,6 +883,7 @@
 
 <!-- ------------------------------------------------------------- hero -->
 <header class="hero wrap snap">
+  <div class="flick" aria-hidden="true"><canvas id="flick"></canvas></div>
   <span class="hero__badge reveal" style="animation-delay:.05s">
     <span class="spark">
       <svg viewBox="0 0 24 24" fill="#8b7cff" aria-hidden="true"><path d="M12 2.5l2.1 5.9 5.9 2.1-5.9 2.1L12 18.5l-2.1-5.9L4 10.5l5.9-2.1L12 2.5z"/></svg>
@@ -1380,6 +1392,54 @@
     window.ilovemdTemplates = list;
     document.dispatchEvent(new CustomEvent('ilovemd:templates'));
   }).catch(function () { /* the View Templates button still works */ });
+})();
+</script>
+<script>
+/* Flickering grid (hero background): squares on a fixed pitch, each holding
+   a random opacity that, a few times a second, a random few re-roll. Only
+   runs while the hero is on screen; drawn once and held for reduced motion. */
+(function () {
+  var cv = document.getElementById('flick');
+  if (!cv || !cv.getContext) return;
+  var cx = cv.getContext('2d'), SQ = 4, GAP = 6, PITCH = SQ + GAP, MAX = .3, CHANCE = .3;
+  var cols = 0, rows = 0, op = null, dpr = 1, live = true, last = 0, raf = 0;
+  var still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function size() {
+    var r = cv.getBoundingClientRect(); dpr = window.devicePixelRatio || 1;
+    cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr);
+    cols = Math.ceil(r.width / PITCH); rows = Math.ceil(r.height / PITCH);
+    op = new Float32Array(cols * rows);
+    for (var i = 0; i < op.length; i++) op[i] = Math.random() * MAX;
+    draw();
+  }
+  function draw() {
+    cx.clearRect(0, 0, cv.width, cv.height);
+    var light = document.documentElement.getAttribute('data-theme') === 'light';
+    var rgb = light ? '20,20,20' : '235,235,235', s = SQ * dpr;
+    for (var c = 0; c < cols; c++) for (var r = 0; r < rows; r++) {
+      cx.fillStyle = 'rgba(' + rgb + ',' + op[c * rows + r].toFixed(3) + ')';
+      cx.fillRect(c * PITCH * dpr, r * PITCH * dpr, s, s);
+    }
+  }
+  function tick(t) {
+    raf = 0;
+    if (!live) return;
+    var dt = last ? (t - last) / 1000 : 0; last = t;
+    var p = CHANCE * dt;
+    for (var i = 0; i < op.length; i++) if (Math.random() < p) op[i] = Math.random() * MAX;
+    draw();
+    raf = requestAnimationFrame(tick);
+  }
+  size();
+  window.addEventListener('resize', size);
+  document.addEventListener('ilovemd:theme', draw);
+  if (still) return;
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver(function (es) {
+      live = es[0].isIntersecting; last = 0;
+      if (live && !raf) raf = requestAnimationFrame(tick);
+    }).observe(cv);
+  } else raf = requestAnimationFrame(tick);
 })();
 </script>
 <script>
