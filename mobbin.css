@@ -20,7 +20,6 @@
 :root[data-theme="light"] h1, :root[data-theme="light"] h2, :root[data-theme="light"] h3 { font-family: var(--mb-font); color: var(--mb-ink); }
 
 /* nav: no floating pill, just the bar on the page */
-:root[data-theme="light"] .nav { background: rgba(255, 255, 255, .86) !important; border-color: transparent !important; box-shadow: none !important; }
 
 /* ------------------------------------------------------------- hero */
 /* The original hero - badge, rolling word, two-line subtitle - alone on the
